@@ -126,7 +126,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
     && feePreviewState.data.principalUsd === Number(deposit)
     && feePreviewState.data.windowDays === coverageDays
     && feePreviewState.targetInput === feeTargetInput ? feePreviewState.data : null;
-  const capacity = activeBid ? Number(formatUnits(BigInt(activeBid.available), 6)) : 0;
+  const capacity = activeBid ? Math.min(Number(formatUnits(BigInt(activeBid.unreservedCapital ?? activeBid.available), 6)), activeBid.capPerPosition ? Number(formatUnits(BigInt(activeBid.capPerPosition), 6)) : Infinity) : 0;
   const feeTarget = feePreview ? (bid && !feeTargetInput.trim() ? Math.min(feePreview.feeTargetUsd, capacity) : feePreview.feeTargetUsd) : undefined;
   const feeCap = feeTarget && Number.isFinite(feeTarget) && feeTarget > 0 ? parseUnits(feeTarget.toFixed(6), 6) : 0n;
   const bidReady = !!activeBid && !!coverage && !coverageError && availableBid(activeBid, coverage.currentTick, walletAccount, feeCap);
@@ -448,7 +448,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
               {!isTestWeth && faucetMarket && <Button asChild variant="outline"><Link href={`/dashboard/pools/${faucetMarket.id}`}>Use the free nWETH pool <ArrowRight size={14} /></Link></Button>}
             </div>
             <CoverageRequestForm bidAddress={bid?.address} poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
-              feeTarget={feeTarget} maximumTarget={feePreview?.maximumFeeTargetUsd} refreshKey={tokenRefresh} />
+              feeTarget={feeTarget} maximumTarget={feePreview ? Math.min(feePreview.maximumFeeTargetUsd, bid ? capacity : Infinity) : undefined} refreshKey={tokenRefresh} />
           </div>
         </Card> : <><CoverageFunding poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} onConnect={onConnect} lower={lower} upper={upper} /><details className="cw-calculator"><summary>Historical risk calculator</summary><Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><ShieldCheck size={16} /> Backtest estimates</h2><span>RESEARCH</span></div>

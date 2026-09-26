@@ -34,7 +34,7 @@ export function PoolRangeEditor({ minimum, maximum, current, currentLabel, onCha
   const left = Math.max(0, Math.min(100, (shownLower - minimum) / width * 100));
   const right = Math.max(0, Math.min(100, (shownUpper - minimum) / width * 100));
   const spot = Math.max(0, Math.min(100, (current - minimum) / width * 100));
-  const totalBins = Math.max(0, (priceToRawTick(shownUpper) - priceToRawTick(shownLower)) / 10);
+  const totalBins = shownUpper > 0 && shownLower > 0 ? Math.max(0, (priceToRawTick(shownUpper) - priceToRawTick(shownLower)) / 10) : 0;
   const bars = Array.from({ length: 42 }, (_, index) => {
     const offset = index / 41;
     const height = 22 + 44 * Math.exp(-Math.pow((offset - spot / 100) * 3.2, 2)) + 12 * Math.sin(index * .85) ** 2;

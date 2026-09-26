@@ -6,11 +6,13 @@ import { formatUnits, parseUnits, type Address, type Hex } from "viem";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { baseClient, injectedClient, ensureBaseSepolia, erc20Abi, priceToRawTick, basescanTx } from "@/lib/nacre-chain";
+import { baseClient, injectedClient, ensureBaseSepolia, erc20Abi, priceInputToTick, basescanTx } from "@/lib/nacre-chain";
 import { LEGACY_WETH_POOL, testPool } from "@/lib/test-pools";
 import { COVERAGE_APP, COVERAGE_TOKEN, COVERAGE_VAULT, COVERAGE_POSITIONS,
-  coverageVaultAbi, coverageNftAbi, coverageAppAbi, rangeFactoryAbi, rangeOfferAbi,
+  coverageVaultAbi, coverageNftAbi, coverageAppAbi, rangeOfferAbi,
   tickPrice, type CoverageOffer, type CoverageRequest, type CoverageSnapshot } from "@/lib/coverage-contracts";
+import { LIMITED_FACTORY, limitedFactoryAbi, limitedOfferAbi } from "@/lib/limited-bids";
+import { maximumSpots } from "@/lib/bid-guidance";
 import type { BidFundingTerms } from "@/lib/bid-profit";
 import { availableBid, bidMatchesPosition } from "@/lib/funded-bids";
 import { useCoverage, refreshCoverage } from "@/lib/use-coverage";
@@ -21,9 +23,15 @@ const same = (a: string, b?: string | null) => !!b && a.toLowerCase() === b.toLo
 const statuses = ["Unknown", "Awaiting purchase", "Covered", "Settled", "Cancelled"];
 const rangeText = (lower: number, upper: number) => `${dollars(tickPrice(lower))} – ${dollars(tickPrice(upper))}`;
 const durationOptions = [7, 14, 30, 60, 90];
+function displayedPremium(offer: CoverageOffer, request: CoverageRequest) {
+  return (offer.reservations?.[request.id] ?? 0) >= Date.now() / 1000 && offer.lockedPremiums?.[request.id]
+    ? BigInt(offer.lockedPremiums[request.id]) : (BigInt(request.payoutCap) * BigInt(offer.premiumBps) + 9999n) / 10000n;
+}
 function matches(offer: CoverageOffer, request: CoverageRequest) {
   return offer.poolId === request.poolId && !offer.closed && offer.tickLower === request.tickLower && offer.tickUpper === request.tickUpper
     && offer.duration === request.duration && BigInt(offer.available) >= BigInt(request.payoutCap)
+    && (!offer.capPerPosition || BigInt(request.payoutCap) <= BigInt(offer.capPerPosition))
+    && (offer.availableSpots === undefined || (offer.reservations?.[request.id] ?? 0) >= Date.now() / 1000 || (offer.availableSpots > 0 && BigInt(offer.unreservedCapital ?? offer.available) >= BigInt(request.payoutCap)))
     && !same(offer.owner, request.lp);
 }
 export function useCoverageAction(account: string | null) {
@@ -70,15 +78,19 @@ export function useCoverageAction(account: string | null) {
       {hash && <a className="mw-evidence-link" href={basescanTx(hash)} target="_blank" rel="noreferrer">View transaction <ExternalLink size={13} /></a>}</> };
 }
 
-export function CoverageFunding({ account, onConnect, lower, upper, poolId, initialDays = 30, initialCapital = "100", terms, onTermsChange }: {
-  account: string | null; onConnect: () => Promise<void>; lower: number; upper: number; poolId?: string; initialDays?: number; initialCapital?: string; terms?: BidFundingTerms; onTermsChange?: (terms: BidFundingTerms) => void;
+export function CoverageFunding({ account, onConnect, lower, upper, poolId, initialDays = 30, initialCapital = "100", terms, onTermsChange, rangeValid = true }: {
+  rangeValid?: boolean; account: string | null; onConnect: () => Promise<void>; lower: number; upper: number; poolId?: string; initialDays?: number; initialCapital?: string; terms?: BidFundingTerms; onTermsChange?: (terms: BidFundingTerms) => void;
 }) {
   const { data, error } = useCoverage(poolId);
-  const RANGE_FACTORY = data?.poolConfig?.factory ?? testPool(poolId)?.factory;
+  const RANGE_FACTORY = LIMITED_FACTORY;
   const action = useCoverageAction(account);
-  const [localTerms, setLocalTerms] = useState<BidFundingTerms>({ capital: initialCapital, days: initialDays, rate: "8" });
+  const [localTerms, setLocalTerms] = useState<BidFundingTerms>({ capital: initialCapital, days: initialDays, rate: "8", cap: "10", spots: "10" });
   const values = terms ?? localTerms;
   const { capital, days, rate } = values;
+  const cap = values.cap ?? "10", spots = values.spots ?? "10";
+  const max = maximumSpots(capital, cap);
+  type PendingBid = { fee: number; amount: bigint; lower: number; upper: number; duration: number; premiumBps: number; cap: bigint; spots: number };
+  const [queue, setQueue] = useState<PendingBid[]>([]);
   const changeTerms = (patch: Partial<BidFundingTerms>) => (onTermsChange ?? setLocalTerms)({ ...values, ...patch });
   const [balance, setBalance] = useState<bigint | null>(null);
   useEffect(() => {
@@ -90,36 +102,44 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
       .catch(() => { if (active) setBalance(null); });
     return () => { active = false; };
   }, [account, data?.blockNumber]);
-  const tickLower = priceToRawTick(lower);
-  const tickUpper = priceToRawTick(upper);
+  const tickLower = priceInputToTick(String(lower));
+  const tickUpper = priceInputToTick(String(upper));
   const bps = Math.round(Number(rate) * 100);
-  const valid = /^\d+(\.\d{1,6})?$/.test(capital) && Number(capital) > 0
-    && Number.isFinite(bps) && bps > 0 && bps <= 10000 && tickLower < tickUpper;
+  const valid = rangeValid && /^\d+(\.\d{1,6})?$/.test(capital) && Number(capital) > 0
+    && Number.isFinite(bps) && bps > 0 && bps <= 10000 && tickLower < tickUpper
+    && /^\d+(\.\d{1,6})?$/.test(cap) && Number(cap) > 0 && Number.isInteger(Number(spots)) && Number(spots) > 0 && Number(spots) <= max;
+  const draftBid = (): PendingBid => ({ fee: data?.poolConfig?.fee ?? 500, amount: parseUnits(capital, 6), lower: tickLower, upper: tickUpper, duration: days * 86400, premiumBps: bps, cap: parseUnits(cap, 6), spots: Number(spots) });
   const fund = () => action.run(async (owner) => {
-    if (!valid || !data?.configured || error) throw new Error("Enter valid terms and wait for the live coverage connection.");
-    const value = parseUnits(capital, 6);
-    if (!RANGE_FACTORY) throw new Error("Select a deployed pool first.");
+    if ((!queue.length && !valid) || !data?.configured || error) throw new Error("Enter valid terms and wait for the live coverage connection.");
+    const bids = queue.length ? queue : [draftBid()];
+    const value = bids.reduce((n, bid) => n + bid.amount, 0n);
+    if (!BigInt(RANGE_FACTORY)) throw new Error("Select a deployed pool first.");
     await action.approve(owner, RANGE_FACTORY, value);
     action.setStep("Fund this range in your wallet…");
     await action.confirm(await injectedClient().writeContract({ account: owner, address: RANGE_FACTORY,
-      abi: rangeFactoryAbi, functionName: "createOffer", args: [value, tickLower, tickUpper, days * 86400, bps] }));
+      abi: limitedFactoryAbi, functionName: "createOffers", args: [bids], gas: BigInt(bids.length) * 3500000n }));
+    setQueue([]);
   });
   return <Card className="kd-card mw-trade-card"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Post a funded bid</h2><span>FUNDED ON-CHAIN</span></div>
     <div className="mw-trade-inner">
       <p>Fund the selected bins. Each matching LP purchases cover for the duration and premium you set.</p>
-      <div className="cw-terms"><strong>{rangeText(tickLower, tickUpper)}</strong><span>Ticks {tickLower} to {tickUpper} · {(tickUpper - tickLower) / 10} bins</span></div>
+      <div className="cw-terms"><strong>{Number.isFinite(tickLower) && Number.isFinite(tickUpper) ? rangeText(tickLower, tickUpper) : "Choose a valid range"}</strong><span>Ticks {tickLower} to {tickUpper} · {(tickUpper - tickLower) / 10} bins</span></div>
       {account && <small>Wallet balance: {balance === null ? "…" : amount(balance)} nUSDC</small>}
       <fieldset disabled={action.busy} className="cw-fields">
         <label className="mw-field"><span>Coverage capital (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={capital} onChange={(event) => changeTerms({ capital: event.target.value })} /></label>
+        <label className="mw-field"><span>Maximum payout per position (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={cap} onChange={(event) => changeTerms({ cap: event.target.value })} /></label>
+        <label className="mw-field"><span>Simultaneous spots · maximum {max}</span><Input type="number" min="1" max={max} step="1" value={spots} onChange={(event) => changeTerms({ spots: event.target.value })} /><small>{capital || "0"} backing ÷ {cap || "0"} cap = {max} spots (contract limit 100). Each purchase occupies one spot until settlement; an unpaid checkout reserves it for 15 minutes.</small></label>
         <label className="mw-field"><span>Coverage duration</span><select value={days} onChange={(event) => changeTerms({ days: Number(event.target.value) })}>{durationOptions.map((value) => <option key={value} value={value}>{value} days</option>)}</select></label>
-        <label className="mw-field"><span>Premium · % of each protected fee cap</span><Input type="number" min="0.01" max="100" step="0.01" value={rate} onChange={(event) => changeTerms({ rate: event.target.value })} /></label>
+        <label className="mw-field"><span>Premium · % of each protected fee cap</span><Input type="number" min="0.01" max="100" step="0.01" value={rate} onChange={(event) => changeTerms({ rate: event.target.value, autoRate: false })} /></label>
       </fieldset>
-      <div className="cw-terms"><span>For a 10 nUSDC cap over {days} days</span><strong>{Number.isFinite(bps) ? (10 * bps / 10000).toFixed(2) : "—"} nUSDC premium</strong></div>
-      {valid && <div className="mw-underwriter-sim"><div><span>Premium if all capacity is purchased once</span><strong>{(Number(capital) * bps / 10000).toFixed(4)} nUSDC</strong></div><div><span>Net loss if those claims use every cap</span><strong>{(Number(capital) * (1 - bps / 10000)).toFixed(4)} nUSDC</strong></div></div>}
+      <div className="cw-terms"><span>For a {cap} nUSDC cap over {days} days</span><strong>{Number.isFinite(bps) ? (Number(cap) * bps / 10000).toFixed(2) : "—"} nUSDC premium</strong></div>
+      {valid && <div className="mw-underwriter-sim"><div><span>Premium if all selected spots buy the maximum cap</span><strong>{(Number(spots) * Number(cap) * bps / 10000).toFixed(4)} nUSDC</strong></div><div><span>Net loss if those claims use every cap</span><strong>{(Number(spots) * Number(cap) * (1 - bps / 10000)).toFixed(4)} nUSDC</strong></div></div>}
       <p className="mw-risk-note">Premiums are earned when an LP buys coverage. Claims can consume the full cap. Unused capital can be withdrawn; active collateral stays reserved until settlement.</p>
+      <Button variant="outline" disabled={action.busy || !valid || queue.length >= 4} onClick={() => setQueue([...queue, draftBid()])}>Add this range to batch ({queue.length}/4)</Button>
+      {!!queue.length && <div className="cw-terms"><strong>Batch · {queue.length} bids · {amount(queue.reduce((n, b) => n + b.amount, 0n))} nUSDC</strong>{queue.map((bid, i) => <div key={i}><span>{rangeText(bid.lower, bid.upper)} · {bid.spots} spots · {bid.premiumBps / 100}%</span> <button disabled={action.busy} type="button" onClick={() => setQueue(queue.filter((_, j) => i !== j))}>Remove</button></div>)}<small>Only these queued bids are submitted. Edit the range and add another to compete across multiple ranges.</small></div>}
       {error && <p role="alert" className="mw-premium-warning">{error}</p>}
       {!account ? <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet to fund</Button>
-        : <Button className="kd-apply-button" disabled={action.busy || !valid || !data?.configured || !!error} onClick={() => void fund()}>{action.busy ? action.step : "Fund bid for these bins"}</Button>}
+        : <Button className="kd-apply-button" disabled={action.busy || (!queue.length && !valid) || !data?.configured || !!error || !BigInt(LIMITED_FACTORY)} onClick={() => void fund()}>{action.busy ? action.step : queue.length ? `Fund ${queue.length} bids in one transaction` : "Fund limited bid for these bins"}</Button>}
       {action.feedback}
       <Button asChild variant="outline" className="mw-faucet-link"><Link href="/dashboard/faucet">Get test nUSDC</Link></Button>
     </div></Card>;
@@ -137,7 +157,7 @@ export function CoverageRequestForm({ poolId, bidAddress, account, days, feeTarg
   const inRange = !!selected && !!data && data.currentTick >= selected.tickLower && data.currentTick < selected.tickUpper;
   const availableOffers = selected && feeTarget ? data?.offers.filter((offer) => offer.poolId === selected.poolId && !offer.closed && (!bidAddress || same(offer.address, bidAddress))
     && !same(offer.owner, account) && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper
-    && offer.duration === days * 86400 && BigInt(offer.available) >= parseUnits(feeTarget.toFixed(6), 6)) ?? [] : [];
+    && offer.duration === days * 86400 && availableBid(offer, data!.currentTick, account, parseUnits(feeTarget.toFixed(6), 6))) ?? [] : [];
   const ownRangeOffer = !!selected && !!data?.offers.some((offer) => offer.poolId === selected.poolId
     && same(offer.owner, account) && !offer.closed && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper);
   const valid = !!account && !!data?.configured && !!feeTarget && Number.isFinite(feeTarget)
@@ -203,10 +223,12 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled, 
   const available = offers.filter((offer) => matches(offer, request));
   const canBuy = request.status === 1 && request.quoteDeadline > now && currentTick >= request.tickLower && currentTick < request.tickUpper;
   const buy = (offer: CoverageOffer) => action.run(async (owner) => {
+    const shownPremium = displayedPremium(offer, request);
     action.setStep("Prepare the matched range offer…");
     await action.confirm(await injectedClient().writeContract({ account: owner, address: offer.address,
       abi: rangeOfferAbi, functionName: "publish", args: [BigInt(request.id)] }));
     const quote = await baseClient.readContract({ address: offer.address, abi: rangeOfferAbi, functionName: "quoteFor", args: [BigInt(request.id)] });
+    if (quote.premium !== shownPremium) { refreshCoverage(); throw new Error("The premium changed. Review the refreshed quote before buying."); }
     await action.approve(owner, COVERAGE_APP, quote.premium);
     const fillable = await baseClient.readContract({ address: COVERAGE_APP, abi: coverageAppAbi, functionName: "canFill", args: [quote] });
     if (!fillable) throw new Error("This offer is no longer available. Refresh to choose another.");
@@ -236,7 +258,7 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled, 
     </>}
     {role === "lp" && request.status === 1 && same(request.lp, account) && <>
       <small>Unfilled request deadline: {new Date(request.quoteDeadline * 1000).toLocaleString()}</small>
-      {canBuy && available.map((offer) => <div className="cw-offer-choice" key={offer.address}><span>{offer.premiumBps / 100}% premium · <strong>{amount((BigInt(request.payoutCap) * BigInt(offer.premiumBps) + BigInt(9999)) / BigInt(10000))} nUSDC</strong></span><Button className="kd-apply-button" disabled={action.busy || disabled} onClick={() => void buy(offer)}>Buy coverage</Button></div>)}
+      {canBuy && available.map((offer) => <div className="cw-offer-choice" key={offer.address}><span>Premium · <strong>{amount(displayedPremium(offer, request))} nUSDC</strong></span><Button className="kd-apply-button" disabled={action.busy || disabled} onClick={() => void buy(offer)}>Buy coverage</Button></div>)}
       {canBuy && !available.length && <p>No funded offer matches these bins, days, and cap yet.</p>}
       {!canBuy && now <= request.quoteDeadline && <p>Coverage cannot start while the position is outside its range.</p>}
       {now > request.quoteDeadline && <Button variant="outline" disabled={action.busy || disabled} onClick={() => void finish("cancel")}>Reclaim unfilled position</Button>}
@@ -248,11 +270,18 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled, 
 
 export function OfferRow({ offer, account, disabled, onChoose, canManage }: { offer: CoverageOffer; account: string | null; disabled: boolean; canManage: boolean; onChoose?: (offer: CoverageOffer) => void }) {
   const action = useCoverageAction(account);
+  const [topUp, setTopUp] = useState("10");
+  const [extraSpots, setExtraSpots] = useState("1");
+  const [newRate, setNewRate] = useState(String(offer.premiumBps / 100));
+  const topValid = /^\d+(\.\d{1,6})?$/.test(topUp) && Number(topUp) > 0 && Number.isInteger(Number(extraSpots)) && Number(extraSpots) >= 0 && (offer.maxSpots ?? 0) + Number(extraSpots) <= 100 && Number(topUp) >= Number(extraSpots) * Number(offer.capPerPosition ?? 0) / 1e6;
   return <div className="cw-policy"><div className="cw-row"><strong>{offer.duration / 86400} days · {offer.premiumBps / 100}% premium</strong><span>{offer.closed ? "Closed to new coverage" : "Funded offer"}</span></div>
     <p>{testPool(offer.poolId)?.symbol ?? "nWETH"} / nUSDC · {rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>
     {offer.poolId === LEGACY_WETH_POOL && !offer.closed && <p className="mw-risk-note">This offer backs the old WETH pool only. To back nWETH positions, withdraw unused funds and fund their exact bins in the nWETH pool.</p>}
     <div className="cw-row"><span>Available <strong>{amount(offer.available)} nUSDC</strong></span><a href={`https://sepolia.basescan.org/address/${offer.address}`} target="_blank" rel="noreferrer">Contract <ExternalLink size={12} /></a></div>
-    {onChoose && !offer.closed && BigInt(offer.available) > BigInt(0) && !same(offer.owner, account) && <Button variant="outline" onClick={() => onChoose(offer)}>Use these bins & duration</Button>}
+    {offer.maxSpots !== undefined && <div className="cw-terms"><strong>{offer.availableSpots} / {offer.maxSpots} spots free</strong><span>Up to {amount(offer.capPerPosition!)} nUSDC per position · {amount(offer.unreservedCapital!)} nUSDC unreserved</span></div>}
+    {offer.maxSpots !== undefined && canManage && same(offer.owner, account) && !offer.closed && <details><summary>Top up backing or update your premium</summary><div className="cw-fields"><label className="mw-field"><span>Add backing (nUSDC)</span><Input type="number" value={topUp} onChange={(e) => setTopUp(e.target.value)} /></label><label className="mw-field"><span>Additional spots (0 to replenish existing backing)</span><Input type="number" value={extraSpots} onChange={(e) => setExtraSpots(e.target.value)} /></label><Button variant="outline" disabled={disabled || action.busy || !topValid} onClick={() => void action.run(async (owner) => { const value = parseUnits(topUp, 6); await action.approve(owner, offer.address, value); await action.confirm(await injectedClient().writeContract({ account: owner, address: offer.address, abi: limitedOfferAbi, functionName: "topUp", args: [value, Number(extraSpots)] })); })}>Add backing & spots</Button>
+    <label className="mw-field"><span>New premium (% of cap)</span><Input type="number" value={newRate} onChange={(e) => setNewRate(e.target.value)} /></label><small>Review the pool earnings guide above. Higher premiums can consume LP returns. Reserved quotes keep their price for up to 15 minutes; this changes future quotes.</small><Button variant="outline" disabled={disabled || action.busy || !(Number(newRate) >= .01 && Number(newRate) <= 100)} onClick={() => void action.run(async (owner) => { await action.confirm(await injectedClient().writeContract({ account: owner, address: offer.address, abi: limitedOfferAbi, functionName: "setPremiumBps", args: [Math.round(Number(newRate) * 100)] })); })}>Update premium</Button></div></details>}
+    {onChoose && !offer.closed && !same(offer.owner, account) && <Button variant="outline" onClick={() => onChoose(offer)}>Compete in these bins</Button>}
     {canManage && same(offer.owner, account) && (!offer.closed || BigInt(offer.available) > BigInt(0)) && <Button variant="outline" disabled={action.busy || disabled} onClick={() => void action.run(async (owner) => {
       action.setStep("Withdraw available funds…");
       await action.confirm(await injectedClient().writeContract({ account: owner, address: offer.address,

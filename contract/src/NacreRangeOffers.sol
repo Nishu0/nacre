@@ -60,7 +60,7 @@ contract NacreRangeOffer is ReentrancyGuard {
     /// @notice Conservative fee ceiling independent of manipulable DEX spot.
     /// Value the two endpoint inventories with the configured fee oracle and
     /// use the lower value, then cap fees at 20% annualized for this duration.
-    function maximumCap(uint256 tokenId) public view returns (uint256) {
+    function maximumCap(uint256 tokenId) public view virtual returns (uint256) {
         (PoolKey memory key, uint256 packed) = vault.positionManager().getPoolAndPositionInfo(tokenId);
         PositionInfo info = PositionInfo.wrap(packed);
         uint128 liquidity = IPositionLiquidity(address(vault.positionManager())).getPositionLiquidity(tokenId);
@@ -75,7 +75,7 @@ contract NacreRangeOffer is ReentrancyGuard {
         return principal * MAX_FEE_APR_BPS * duration / (10000 * 365 days);
     }
 
-    function quoteFor(uint256 requestId) public view returns (NacreAquaUnderwriter.Quote memory q) {
+    function quoteFor(uint256 requestId) public view virtual returns (NacreAquaUnderwriter.Quote memory q) {
         require(!closed, "Offer closed");
         (bool ok, bytes memory data) = address(vault).staticcall(
             abi.encodeWithSelector(vault.requests.selector, requestId));
@@ -96,7 +96,7 @@ contract NacreRangeOffer is ReentrancyGuard {
     }
 
     /// @notice Anyone, including the buying LP, can prepare a matching offer.
-    function publish(uint256 requestId) external nonReentrant {
+    function publish(uint256 requestId) public virtual nonReentrant {
         NacreAquaUnderwriter.Quote memory q = quoteFor(requestId);
         // Exact current balance, never an unlimited allowance. The real balance
         // is also checked atomically by Aqua, so concurrent fills cannot reuse it.

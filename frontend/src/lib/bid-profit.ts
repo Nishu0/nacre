@@ -1,14 +1,15 @@
 import type { YieldDay } from "./underwriting-simulator";
-export type BidFundingTerms = { capital: string; days: number; rate: string };
+export type BidFundingTerms = { capital: string; days: number; rate: string; cap?: string; spots?: string; principal?: string; autoRate?: boolean };
 export function bidProfitScenarios(history: YieldDay[], input: {
-  capital: number; days: number; premiumPct: number; principal: number; cap: number;
+  capital: number; days: number; premiumPct: number; principal: number; cap: number; spots?: number;
 }) {
   const { capital, days, premiumPct, principal, cap } = input;
+  if (input.spots !== undefined && (!Number.isInteger(input.spots) || input.spots < 1 || input.spots > 100)) return null;
   if (Object.values(input).some((value) => !Number.isFinite(value)) || capital <= 0 || principal <= 0 || cap <= 0
     || Math.round(premiumPct * 100) < 1 || premiumPct > 100 || !Number.isInteger(days) || days < 1 || days > 90) return null;
   const capitalUnits = Math.round(capital * 1e6), capUnits = Math.round(cap * 1e6);
   if (!Number.isSafeInteger(capitalUnits) || !Number.isSafeInteger(capUnits) || capUnits < 1) return null;
-  const count = Number(BigInt(capitalUnits) / BigInt(capUnits));
+  const count = Math.min(Number(BigInt(capitalUnits) / BigInt(capUnits)), input.spots ?? 100);
   const reserved = count * cap;
   const premiums = count * Number((BigInt(capUnits) * BigInt(Math.round(premiumPct * 100)) + 9999n) / 10000n) / 1e6;
   const sorted = [...history].sort((a, b) => a.date.localeCompare(b.date));

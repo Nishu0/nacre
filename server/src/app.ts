@@ -1,3 +1,4 @@
+import { poolActivity } from "./pool-activity";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { readFileSync } from "node:fs";
@@ -112,6 +113,15 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     const market = deployment && getMarket(db, deployment.market_id);
     if (!market) return reply.code(404).send({ error: "The nWETH market is not configured." });
     return { market: presentMarket(db, market) };
+  });
+
+  app.get<{ Querystring: { poolId?: string } }>("/api/pool-activity", async (request, reply) => {
+    const poolId = request.query.poolId;
+    if (!poolId || !registeredPool(db, poolId)) return reply.code(400).send({ error: "Unknown pool" });
+    const row = db.query("SELECT tx_hash FROM market_deployments WHERE pool_id = ? ORDER BY deployed_at DESC LIMIT 1").get(poolId) as { tx_hash: Hex } | null;
+    if (!row) return reply.code(404).send({ error: "Pool deployment unavailable" });
+    try { return await poolActivity(poolId as Hex, row.tx_hash); }
+    catch (error) { app.log.error(error); return reply.code(503).send({ error: "Pool fee activity unavailable; retry shortly." }); }
   });
 
   app.get("/api/bid-markets", async () => {

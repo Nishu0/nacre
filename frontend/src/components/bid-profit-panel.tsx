@@ -18,8 +18,10 @@ function ScenarioMotion({ kind, claimShare }: { kind: "best" | "median" | "worst
 export function BidProfitPanel({ terms, validRange, inRange, feeTier }: { terms: BidFundingTerms; validRange: boolean; inRange: boolean; feeTier: string }) {
   const [history, setHistory] = useState<YieldDay[]>([]);
   const [historyError, setHistoryError] = useState("");
-  const [principal, setPrincipal] = useState("1000");
-  const [cap, setCap] = useState("10");
+  const [examplePrincipal, setPrincipal] = useState("1000");
+  const [exampleCap, setCap] = useState("10");
+  const principal = terms.principal ?? examplePrincipal;
+  const cap = terms.cap ?? exampleCap;
   const [replay, setReplay] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
@@ -30,7 +32,7 @@ export function BidProfitPanel({ terms, validRange, inRange, feeTier }: { terms:
     return () => controller.abort();
   }, []);
   const result = validRange && /^\d+(\.\d{1,6})?$/.test(terms.capital) && /^\d+(\.\d{1,6})?$/.test(cap)
-    ? bidProfitScenarios(history, { capital: Number(terms.capital), days: terms.days, premiumPct: Number(terms.rate), principal: Number(principal), cap: Number(cap) }) : null;
+    ? bidProfitScenarios(history, { capital: Number(terms.capital), days: terms.days, premiumPct: Number(terms.rate), principal: Number(principal), cap: Number(cap), spots: terms.spots === undefined ? 100 : Number(terms.spots) }) : null;
   const rows = result ? [
     { kind: "best" as const, title: "Best case", note: "LP fees meet every target. You keep all premiums.", value: result.best },
     { kind: "median" as const, title: "Median case", note: "Median payout across historical fee windows, assuming the range stays active.", value: result.median },
@@ -40,20 +42,20 @@ export function BidProfitPanel({ terms, validRange, inRange, feeTier }: { terms:
     <div className="kd-card-heading"><h2><ChartNoAxesCombined size={16} /> Your profit scenarios</h2><button type="button" className="bps-replay" onClick={() => setReplay((n) => n + 1)} aria-label="Replay scenario animations"><RotateCcw size={14} /> Replay</button></div>
     <div className="bps-body">
       <p className="bps-intro">Premiums earned − claims paid = your net profit</p>
-      <div className="bps-presets" role="group" aria-label="Example LP positions">
+      {!terms.cap && <div className="bps-presets" role="group" aria-label="Example LP positions">
         {[{ principal: "1000", cap: "10" }, { principal: "10000", cap: "100" }].map((example) => <button type="button" key={example.principal}
           aria-pressed={principal === example.principal && cap === example.cap}
           onClick={() => { setPrincipal(example.principal); setCap(example.cap); }}>
           <strong>{amount(Number(example.principal))} nUSDC LP</strong><span>{example.cap} nUSDC payout cap</span>
         </button>)}
-      </div>
-      <details className="bps-assumptions"><summary>Example: {amount(Number(principal) || 0)} nUSDC LP · {amount(Number(cap) || 0)} nUSDC fee cap <span>Edit</span></summary><div className="bps-inputs">
+      </div>}
+      {!terms.cap && <details className="bps-assumptions"><summary>Example: {amount(Number(principal) || 0)} nUSDC LP · {amount(Number(cap) || 0)} nUSDC fee cap <span>Edit</span></summary><div className="bps-inputs">
         <label className="mw-field"><span>LP deposit amount (nUSDC)</span><Input type="number" min="1" value={principal} onChange={(event) => setPrincipal(event.target.value)} /><small>Total amount the investor supplies as liquidity.</small></label>
         <label className="mw-field"><span>Maximum fee payout per LP (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={cap} onChange={(event) => setCap(event.target.value)} /><small>Maximum you would pay for that position’s fee shortfall.</small></label>
-      </div><p>These inputs only change the simulation. Each LP chooses its fee cap, subject to its position’s contract limit.</p></details>
+      </div><p>These inputs only change the simulation. Each LP chooses its fee cap, subject to its position’s contract limit.</p></details>}
       {!result ? <p role="status">Enter valid bid terms, an ordered range, and positive example amounts to see profit scenarios.</p> : <>
         <div className="bps-summary"><span><strong>{result.count}</strong> positions you can cover</span><span><strong>{terms.days}</strong> days</span><span><strong>{amount(result.premiums)}</strong> nUSDC premiums</span></div>
-        <p className="bps-capacity">{amount(Number(terms.capital))} nUSDC backing ÷ {amount(Number(cap))} payout cap = {result.count} whole positions of {amount(Number(principal))} nUSDC each.</p>
+        <p className="bps-capacity">{amount(Number(terms.capital))} nUSDC backing ÷ {amount(Number(cap))} payout cap with your spot limit allows {result.count} whole positions of {amount(Number(principal))} nUSDC each.</p>
         {Number(cap) > Number(principal) * .2 * terms.days / 365 && <p role="status" className="bps-note">This example cap exceeds the indicative position limit for {terms.days} days. Reduce it in the example settings; actual limits depend on the LP position.</p>}
         {result.count === 0 && <p role="status">One position with this payout cap needs {amount(Number(cap))} nUSDC backing. You have entered {amount(Number(terms.capital))} nUSDC backing.</p>}
         {!inRange && <p className="bps-note">The pool price is outside these bins. These scenarios assume purchases become available after it returns inside.</p>}

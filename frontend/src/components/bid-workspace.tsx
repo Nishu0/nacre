@@ -5,16 +5,17 @@ import { ArrowLeft, ArrowRight, ExternalLink, ShieldCheck } from "lucide-react";
 import { formatUnits } from "viem";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { TokenPairIcon } from "@/components/token-pair-icon";
+import { PoolRangeEditor } from "@/components/pool-range-editor";
+import { BidRateGuide } from "@/components/bid-rate-guide";
 import { BidProfitPanel } from "@/components/bid-profit-panel";
 import type { BidFundingTerms } from "@/lib/bid-profit";
 import { CoverageFunding, OfferRow } from "@/components/coverage-workspace";
 import { WorkspacePools, type Market, type WorkspaceRole } from "@/components/market-workspace";
 
 import { basescanTx, priceToRawTick, priceInputToTick } from "@/lib/nacre-chain";
-import { tickPrice } from "@/lib/coverage-contracts";
+import { tickPrice, type CoverageOffer } from "@/lib/coverage-contracts";
 import { availableBid } from "@/lib/funded-bids";
 import { useCoverage } from "@/lib/use-coverage";
 
@@ -57,8 +58,9 @@ export function BidWorkspace(props: BidWorkspaceProps) {
 }
 function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidWorkspaceProps & { market: Market }) {
   const { data, error, refresh } = useCoverage(market.deployment!.poolId);
+  const [compete, setCompete] = useState<CoverageOffer | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
-  const bids = data?.offers.filter((bid) => !bid.closed && BigInt(bid.available) > 0n) ?? [];
+  const bids = data?.offers.filter((bid) => !bid.closed).sort((a, b) => a.premiumBps - b.premiumBps) ?? [];
   const selected = bids.find((bid) => bid.address === chosen);
   if (role === "lp" && chosen && market && selected) return <div className="mw-page">
     <Button variant="outline" onClick={() => setChosen(null)}><ArrowLeft size={14} /> All funded bids</Button>
@@ -67,16 +69,17 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
   return <div className="mw-page">
     {error && <p role="alert" className="mw-premium-warning">{error}</p>}
     {chosen && !selected && data && <p role="status">That bid is no longer available. Choose another funded bid.</p>}
-    {role === "underwriter" && market && data && <BidForm key={walletAccount ?? "disconnected"} market={market} current={tickPrice(data.currentTick)} account={walletAccount} onConnect={onConnect} />}
+    {role === "underwriter" && market && data && <BidForm compete={compete} key={`${walletAccount}:${compete?.address}`} market={market} current={tickPrice(data.currentTick)} account={walletAccount} onConnect={onConnect} />}
     <Card className="kd-card cw-board"><div className="kd-card-heading"><h2><ShieldCheck size={16} />{role === "underwriter" ? "Funded bids" : "Available coverage bids"}</h2><button type="button" onClick={() => void refresh()}>Refresh</button></div><div className="mw-trade-inner">
       {!data ? <p>Loading funded bids…</p> : !bids.length ? <div className="mw-portfolio-empty"><h3>No funded bids yet</h3><p>{role === "underwriter" ? "Choose your range and fund the first bid above." : "An underwriter must fund a range before you can provide liquidity and buy coverage."}</p></div> : bids.map((bid) => {
         const mine = bid.owner.toLowerCase() === walletAccount?.toLowerCase();
         const inRange = data.currentTick >= bid.tickLower && data.currentTick < bid.tickUpper;
-        return role === "underwriter" ? <OfferRow key={bid.address} offer={bid} account={walletAccount} disabled={!!error} canManage />
+        return role === "underwriter" ? <OfferRow key={bid.address} offer={bid} account={walletAccount} disabled={!!error} canManage onChoose={setCompete} />
           : <div className="cw-policy" key={bid.address}>
             <div className="cw-row"><strong>nWETH / nUSDC</strong><span>{bid.duration / 86400} days</span></div>
             <h3>{money(tickPrice(bid.tickLower))} – {money(tickPrice(bid.tickUpper))}</h3>
             <div className="cw-terms"><span>{(bid.tickUpper - bid.tickLower) / 10} bins · fixed range</span><span>Available cover: {formatUnits(BigInt(bid.available), 6)} nUSDC</span><strong>Premium: {bid.premiumBps / 100}% of your fee cap</strong></div>
+            {bid.maxSpots !== undefined && <strong>{bid.availableSpots} of {bid.maxSpots} spots remaining · max {formatUnits(BigInt(bid.capPerPosition!), 6)} nUSDC cap per position</strong>}
             <small>Underwriter {bid.owner.slice(0, 6)}…{bid.owner.slice(-4)}</small>
             {mine && <p>This is your bid. Another wallet can buy it.</p>}
             {!inRange && <p>Currently outside this range. Purchases resume when the pool price returns inside.</p>}
@@ -87,10 +90,10 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
   </div>;
 }
 
-function BidForm({ market, current, account, onConnect }: { market: Market; current: number; account: string | null; onConnect: () => Promise<void> }) {
-  const [terms, setTerms] = useState<BidFundingTerms>({ capital: "100", days: 30, rate: "8" });
-  const [lower, setLower] = useState((current * .9).toFixed(2));
-  const [upper, setUpper] = useState((current * 1.1).toFixed(2));
+function BidForm({ market, current, account, onConnect, compete }: { compete?: CoverageOffer | null; market: Market; current: number; account: string | null; onConnect: () => Promise<void> }) {
+  const [terms, setTerms] = useState<BidFundingTerms>({ capital: "100", days: compete ? compete.duration / 86400 : 30, rate: "8", cap: "10", spots: "10", principal: "1000", autoRate: true });
+  const [lower, setLower] = useState(String(compete ? tickPrice(compete.tickLower) : current * .9));
+  const [upper, setUpper] = useState(String(compete ? tickPrice(compete.tickUpper) : current * 1.1));
   const minimum = tickPrice(priceToRawTick(market.lowerPriceUsd) + 10);
   const maximum = tickPrice(priceToRawTick(market.upperPriceUsd));
   const valid = Number.isFinite(Number(lower)) && Number.isFinite(Number(upper)) && tickPrice(priceInputToTick(lower)) >= minimum
@@ -98,8 +101,9 @@ function BidForm({ market, current, account, onConnect }: { market: Market; curr
   return <div className="bw-form-grid"><div className="bw-left-column"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
     <p>Set the price range you want to cover. Investors will use these exact bins and your bid’s duration.</p>
     <div className="cw-terms"><span>On-chain pool price</span><strong>{money(current)}</strong></div>
-    <label className="mw-field"><span>Minimum nWETH price (USD)</span><Input type="number" value={lower} onChange={(event) => setLower(event.target.value)} /></label>
-    <label className="mw-field"><span>Maximum nWETH price (USD)</span><Input type="number" value={upper} onChange={(event) => setUpper(event.target.value)} /></label>
+    <div className="bps-presets">{[2, 5, 10].map((pct) => <Button key={pct} variant="outline" onClick={() => { setLower(Math.max(minimum, current * (1 - pct / 100)).toFixed(2)); setUpper(Math.min(maximum, current * (1 + pct / 100)).toFixed(2)); }}>±{pct}% spread</Button>)}</div>
+    <PoolRangeEditor minimum={minimum} maximum={maximum} current={current} currentLabel="POOL PRICE" lower={Number(lower)} upper={Number(upper)} onLower={(v) => setLower(String(v))} onUpper={(v) => setUpper(String(v))} />
+    <small>Range illustration; bars are not measured liquidity distribution.</small>
     {!valid && <p role="status">Enter a range inside {money(minimum)}–{money(maximum)}.</p>}
-  </div></Card><BidProfitPanel terms={terms} validRange={valid} inRange={current >= tickPrice(priceInputToTick(lower)) && current < tickPrice(priceInputToTick(upper))} feeTier={market.feeTier} /></div>{valid && <CoverageFunding terms={terms} onTermsChange={setTerms} account={account} onConnect={onConnect} poolId={market.deployment!.poolId} lower={Number(lower)} upper={Number(upper)} />}</div>;
+  </div></Card><BidRateGuide poolId={market.deployment!.poolId} terms={terms} onChange={setTerms} onRange={(low, high) => { setLower(Math.max(minimum, low).toFixed(2)); setUpper(Math.min(maximum, high).toFixed(2)); }} /><BidProfitPanel terms={terms} validRange={valid} inRange={current >= tickPrice(priceInputToTick(lower)) && current < tickPrice(priceInputToTick(upper))} feeTier={market.feeTier} /></div><CoverageFunding rangeValid={valid} terms={terms} onTermsChange={setTerms} account={account} onConnect={onConnect} poolId={market.deployment!.poolId} lower={Number(lower)} upper={Number(upper)} /></div>;
 }

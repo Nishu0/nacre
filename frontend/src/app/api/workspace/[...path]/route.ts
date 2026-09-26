@@ -4,6 +4,7 @@ function allowed(path: string[], method: string): boolean {
   if (path.length === 1 && path[0] === "open-pools") return method === "POST";
   if (path.length === 1 && path[0] === "bid-markets") return method === "GET";
   if (path.length === 1 && path[0] === "bid-market") return method === "GET";
+  if (path.length === 1 && path[0] === "pool-activity") return method === "GET";
   if (path.length === 1 && path[0] === "coverage") return method === "GET";
   if (path.length === 1 && path[0] === "markets") return method === "GET" || method === "POST";
   if (path.length === 1 && path[0] === "chain-positions") return method === "GET";
@@ -36,7 +37,7 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
       headers: request.method === "GET" ? undefined : { "content-type": "application/json" },
       body: request.method === "GET" ? undefined : await request.text(),
       cache: "no-store",
-      signal: AbortSignal.timeout(["coverage", "open-pools"].includes(path[0]) ? 20000 : 8000),
+      signal: AbortSignal.timeout(["coverage", "open-pools", "pool-activity"].includes(path[0]) ? 60000 : 8000),
     });
     return new Response(await response.text(), {
       status: response.status,
