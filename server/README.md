@@ -29,6 +29,7 @@ These pools ranked among GeckoTerminal's highest 24-hour-volume Ethereum Uniswap
 - `GET /api/live-price-history` — Pyth hourly benchmark samples and newly observed live prices for the pool chart
 - `GET /api/markets` and `GET /api/markets/:marketId`
 - `GET /api/markets/:marketId/price-history` — recorded manual sandbox price scenarios
+- `GET /api/markets/:marketId/risk?depositUsd=1000` — underwriter research for an example position: six-month monthly fee evidence, overlapping 30-day shortfalls, fully backed payout cap, and current indicative quote
 - `POST /api/markets/:marketId/oracle-sync` — re-read a fresh oracle quote on the server and move the sandbox tick
 - `GET /api/portfolio?participant=...` — LP deposits for one local participant
 - `GET /api/underwriting?participant=...` — underwriting pledges for one local participant

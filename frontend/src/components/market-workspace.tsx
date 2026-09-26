@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TokenPairIcon } from "@/components/token-pair-icon";
 import { PoolPriceChart, type OraclePoint } from "@/components/pool-price-chart";
+import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
 
 export type WorkspaceRole = "lp" | "underwriter";
 
@@ -77,6 +78,8 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
   const initializedCreatePrice = useRef(false);
   const [selectedId, setSelectedId] = useState(marketId ?? "");
   const [quoteState, setQuoteState] = useState<{ marketId: string; data: Quote } | null>(null);
+  const [riskState, setRiskState] = useState<{ marketId: string; depositUsd: number; data: RiskReport } | null>(null);
+  const [riskError, setRiskError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -93,6 +96,8 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
   const selected = markets.find((market) => market.id === selectedId);
   const quote = quoteState?.marketId === selectedId && quoteState.data.depositUsd === Number(deposit)
     ? quoteState.data : null;
+  const risk = riskState?.marketId === selectedId && riskState.depositUsd === Number(deposit)
+    ? riskState.data : null;
 
   useEffect(() => {
     let active = true;
@@ -143,6 +148,17 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
     }, 180);
     return () => { controller.abort(); clearTimeout(timeout); };
   }, [marketId, selectedId, deposit, refreshKey]);
+
+  useEffect(() => {
+    if (!marketId || !selectedId || role !== "underwriter" || !Number(deposit)) return;
+    let active = true;
+    const timeout = setTimeout(() => {
+      void api<RiskReport>(`markets/${selectedId}/risk?depositUsd=${encodeURIComponent(deposit)}`)
+        .then((data) => { if (active) { setRiskState({ marketId: selectedId, depositUsd: Number(deposit), data }); setRiskError(""); } })
+        .catch((reason) => { if (active) { setRiskState(null); setRiskError(reason instanceof Error ? reason.message : "Risk evidence unavailable"); } });
+    }, 180);
+    return () => { active = false; clearTimeout(timeout); };
+  }, [marketId, selectedId, role, deposit, refreshKey]);
 
   async function change<T>(request: () => Promise<T>, success: string) {
     setBusy(true); setError(""); setNotice("");
@@ -196,40 +212,26 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
     {!marketId && !markets.length && !creating && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre pool drafts yet</h2><p>Create a sandbox market to test liquidity funding, underwriting interest, tick movement, and limited cover.</p><Button className="kd-apply-button" onClick={() => setCreating(true)}><Plus size={15} /> Create first pool</Button></div></Card>}
     {!marketId && !!markets.length && <><div className="mw-directory-summary"><span>MARKETS <strong>{markets.length}</strong></span><span>LP CAPITAL <strong>{usd(markets.reduce((sum, market) => sum + market.investedUsd, 0))}</strong></span><span>AVAILABLE COVER <strong>{usd(markets.reduce((sum, market) => sum + market.coverRemainingUsd, 0))}</strong></span></div><div className="mw-directory-header"><h3>Available markets</h3><span>LOCAL SANDBOX · WETH / USDC</span></div><div className="mw-directory-grid">{markets.map((market) => <Link key={market.id} href={`/dashboard/pools/${market.id}`} className="mw-directory-card"><div className="mw-directory-top"><TokenPairIcon pair={market.pair} size="large" /><Badge variant="outline">{market.status.replaceAll("_", " ")}</Badge></div><div><h3>{market.pair}</h3><p>{market.feeTier} fee · {usd(market.priceUsd)} / ETH</p></div><div className="mw-directory-metrics"><div><span>LP funded</span><strong>{usd(market.investedUsd)}</strong><small>of {usd(market.liquidityTargetUsd)}</small></div><div><span>Cover left</span><strong>{usd(market.coverRemainingUsd)}</strong><small>{usd(market.pledgedUsd)} pledged</small></div></div><div className="mw-directory-progress"><span>Liquidity funding</span><progress max={market.liquidityTargetUsd} value={market.investedUsd} /></div><div className="mw-directory-open">View pool <ArrowRight size={15} /></div></Link>)}</div></>}
     {marketId && !selected && !!markets.length && <Card className="kd-card mw-missing"><h3>Pool not found</h3><p>This market may have been removed from the local sandbox.</p><Link href="/dashboard/pools">Back to pool directory <ArrowRight size={15} /></Link></Card>}
-    {marketId && selected && <div className="mw-market-layout">
-      <aside className="mw-market-sidebar" aria-label="Pool summary">
-        <Card className="kd-card mw-market-overview">
-          <div className="kd-card-heading"><h2>Pool overview</h2><Badge variant="outline">{selected.feeTier} FEE</Badge></div>
-          <div className="mw-market-overview-inner">
-            <div className="mw-overview-pair"><TokenPairIcon pair={selected.pair} size="large" /><div><strong>{selected.pair}</strong><span>V4 CONCEPT · SANDBOX</span></div></div>
-            <div className="mw-overview-price"><span>Sandbox pool price</span><strong>{usd(selected.priceUsd)}</strong><small>per WETH · tick {selected.currentTick}</small></div>
-            <div className="mw-overview-row"><span>LP capital</span><strong>{usd(selected.investedUsd)}</strong></div>
-            <div className="mw-overview-row"><span>Protection pledged</span><strong>{usd(selected.pledgedUsd)}</strong></div>
-            <div className="mw-overview-row"><span>Cover available</span><strong>{usd(selected.coverRemainingUsd)}</strong></div>
+    {marketId && selected && <div className="mw-pool-detail">
+      <Card className="kd-card mw-overview-wide">
+        <div className="kd-card-heading"><h2><Activity size={16} /> Pool overview</h2><Badge variant="outline">{selected.feeTier} FEE · SANDBOX</Badge></div>
+        <div className="mw-overview-wide-inner">
+          <div className="mw-overview-tiles">
+            <div><span>SANDBOX POOL PRICE</span><strong>{usd(selected.priceUsd)}</strong><small>per WETH · tick {selected.currentTick}</small></div>
+            <div><span>LIVE WETH / USDC</span><strong>{livePrices ? usd(livePrices.wethUsdc) : "—"}</strong><small>{livePrices ? `${livePrices.source} · ${new Date(livePrices.assets.WETH.publishedAt).toLocaleTimeString()}` : liveError ? "Oracle unavailable" : "Fetching oracle…"}</small></div>
+            <div><span>LP CAPITAL</span><strong>{usd(selected.investedUsd)}</strong><small>of {usd(selected.liquidityTargetUsd)} target</small></div>
+            <div><span>PROTECTION PLEDGED</span><strong>{usd(selected.pledgedUsd)}</strong><small>of {usd(selected.collateralBudgetUsd)} target</small></div>
+            <div><span>COVER AVAILABLE</span><strong>{usd(selected.coverRemainingUsd)}</strong><small>{usd(selected.reservedUsd)} reserved</small></div>
           </div>
-        </Card>
-        <Card className="kd-card mw-oracle-card">
-          <div className="kd-card-heading"><h2><Activity size={15} /> Live oracle</h2><span>{livePrices ? livePrices.source.toUpperCase() : "UNAVAILABLE"}</span></div>
-          <div className="mw-oracle-inner">
-            {livePrices ? <>
-              <div className="mw-oracle-primary"><span>WETH / USDC</span><strong>{usd(livePrices.wethUsdc)}</strong><small>derived from WETH/USD ÷ USDC/USD</small></div>
-              <div className="mw-oracle-row"><span>WETH / USD</span><strong>{usd(livePrices.assets.WETH.usd)}</strong></div>
-              <div className="mw-oracle-row"><span>USDC / USD</span><strong>{usd(livePrices.assets.USDC.usd)}</strong></div>
-              <p>{livePrices.source} · {livePrices.network} · published {new Date(livePrices.assets.WETH.publishedAt).toLocaleTimeString()}. Refreshes every 30 seconds.</p>
-              <a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">View feed <ArrowRight size={12} /></a>
-            </> : <p>{liveError ? "Fresh oracle quotes are temporarily unavailable. The sandbox price has not changed." : "Fetching fresh WETH and USDC quotes…"}</p>}
+          <div className="mw-overview-range">
+            <div><span>SELECTED LP RANGE</span><strong>{usd(selected.lowerPriceUsd)} <em>to</em> {usd(selected.upperPriceUsd)}</strong><small>ticks {selected.tickLower}–{selected.tickUpper}</small></div>
+            <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (selected.priceUsd - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div>
+            <Badge variant="outline" className={selected.inRange ? "is-in-range" : "is-out-of-range"}>{selected.inRange ? "SANDBOX IN RANGE" : "SANDBOX OUT OF RANGE"}</Badge>
           </div>
-        </Card>
-        <Card className="kd-card mw-market-overview">
-          <div className="kd-card-heading"><h2><Activity size={15} /> Selected range</h2></div>
-          <div className="mw-range-summary">
-            <div><span>MIN PRICE</span><strong>{usd(selected.lowerPriceUsd)}</strong></div>
-            <div><span>MAX PRICE</span><strong>{usd(selected.upperPriceUsd)}</strong></div>
-            <div className="mw-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (selected.priceUsd - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div>
-            <p>New coverage is unavailable outside ticks {selected.tickLower}–{selected.tickUpper}.</p>
-          </div>
-        </Card>
-      </aside>
+          <div className="mw-overview-oracle-foot">{livePrices ? <><span>Oracle inputs: WETH/USD {usd(livePrices.assets.WETH.usd)} · USDC/USD {usd(livePrices.assets.USDC.usd)}</span><a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">{livePrices.source} feed <ArrowRight size={12} /></a></> : <span>{liveError ? "Fresh oracle inputs are unavailable; sandbox calculations retain their recorded tick." : "Checking live oracle inputs…"}</span>}</div>
+        </div>
+      </Card>
+      <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
         <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={selected.lowerPriceUsd} upper={selected.upperPriceUsd} current={selected.priceUsd} />
         <Card className="kd-card mw-funding-card">
@@ -279,6 +281,10 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
           <div className="mw-trade-inner"><AmountField label="New WETH price (USD)" value={simulatedPrice} onChange={setSimulatedPrice} min={1} /><Button variant="outline" disabled={busy || !simulatedPrice} onClick={() => void movePrice()}>Record manual move</Button><Button variant="outline" disabled={busy || !livePrices} onClick={() => void syncOraclePrice()}>Use fresh oracle price <RefreshCw size={13} /></Button><small className="mw-action-note">Oracle sync re-reads the feed on the server and updates this shared sandbox tick. It does not settle an on-chain policy.</small></div>
         </Card>
       </aside>
+      </div>
+      {role === "underwriter" && (risk
+        ? <PoolRiskAnalysis report={risk} capacityUsd={selected.pledgedUsd} reservedUsd={selected.reservedUsd} />
+        : <Card className="kd-card mw-risk-loading"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Pool risk analysis</h2></div><div>{riskError || "Loading historical fee and coverage evidence…"}</div></Card>)}
     </div>}
   </div>;
 }

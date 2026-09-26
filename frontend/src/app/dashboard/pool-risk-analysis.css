@@ -1,0 +1,50 @@
+.mw-risk-section { display: grid; gap: 14px; min-width: 0; margin-top: 8px; }
+.mw-risk-intro { display: flex; align-items: end; justify-content: space-between; gap: 14px; }
+.mw-risk-intro > div > span { color: #78a282; font: 10px var(--font-geist-mono), monospace; letter-spacing: .08em; }
+.mw-risk-intro h2 { margin: 5px 0 3px; color: #294331; font: 600 25px var(--font-noto-serif), Georgia, serif; letter-spacing: -.04em; }
+.mw-risk-intro p { margin: 0; color: #8b9a8f; font-size: 12px; line-height: 1.5; }
+.mw-risk-intro [data-slot=badge] { border-color: #d7e6da; background: #f5faf5; color: #688a70; font: 9px var(--font-geist-mono), monospace; white-space: nowrap; }
+.mw-risk-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.mw-risk-metrics > div { display: grid; align-content: center; gap: 7px; min-height: 105px; padding: 15px 16px; border: 1px solid #e1ebe3; border-radius: 10px; background: #fff; box-shadow: 0 3px 11px #20392809; }
+.mw-risk-metrics span { color: #889b8d; font: 9px var(--font-geist-mono), monospace; letter-spacing: .045em; }
+.mw-risk-metrics strong { color: #315a3d; font-size: 26px; font-weight: 660; letter-spacing: -.05em; line-height: 1; }
+.mw-risk-metrics small { color: #9daaa0; font-size: 11px; line-height: 1.4; }
+.mw-risk-panels { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(265px, .8fr); align-items: start; gap: 14px; min-width: 0; }
+.mw-risk-evidence-inner, .mw-risk-exposure-inner { border: 1px solid #e8ece9; border-radius: 9px; background: #fff; }
+.mw-risk-evidence-inner { display: grid; gap: 17px; padding: 19px; }
+.mw-risk-chart-head { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.mw-risk-chart-head > div { display: grid; gap: 3px; }
+.mw-risk-chart-head small { color: #8ca091; font: 9px var(--font-geist-mono), monospace; letter-spacing: .04em; }
+.mw-risk-chart-head strong { color: #294632; font-size: 23px; font-weight: 650; letter-spacing: -.045em; }
+.mw-risk-chart-head span { color: #a0aea3; font-size: 11px; }
+.mw-risk-bar-chart { display: flex; align-items: stretch; gap: 8px; height: 172px; padding: 10px 0 0; border-bottom: 1px solid #dfe9e1; background: repeating-linear-gradient(to top, transparent 0, transparent 39px, #edf2ed 40px); }
+.mw-risk-bar-column { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+.mw-risk-bar-track { display: flex; flex: 1; align-items: flex-end; width: min(48px, 70%); }
+.mw-risk-bar-track i { display: block; width: 100%; min-height: 4px; border: 1px solid #79a986; border-radius: 5px 5px 0 0; background: linear-gradient(#83bb8e, #cbe5cf); }
+.mw-risk-bar-column:last-child .mw-risk-bar-track i { border-color: #376a45; background: linear-gradient(#3f7a50, #84b690); }
+.mw-risk-bar-column > span { padding-bottom: 6px; color: #8d9d91; font: 10px var(--font-geist-mono), monospace; white-space: nowrap; }
+.mw-risk-table-wrap { overflow-x: auto; border: 1px solid #e8ede8; border-radius: 8px; }
+.mw-risk-table-wrap table { width: 100%; min-width: 590px; border-collapse: collapse; text-align: left; }
+.mw-risk-table-wrap th { padding: 10px 11px; border-bottom: 1px solid #e7ede8; background: #f7faf7; color: #94a49a; font: 9px var(--font-geist-mono), monospace; white-space: nowrap; }
+.mw-risk-table-wrap td { padding: 10px 11px; border-bottom: 1px solid #edf1ed; color: #526958; font-size: 11px; white-space: nowrap; }
+.mw-risk-table-wrap tr:last-child td { border-bottom: 0; }
+.mw-risk-table-wrap tr:last-child td:first-child { color: #305c3e; font-weight: 700; }
+.mw-risk-exposure-inner { display: grid; gap: 14px; padding: 17px; }
+.mw-risk-exposure-lead { display: grid; gap: 5px; padding: 13px 14px; border: 1px solid #dfeae1; border-radius: 8px; background: #f7faf7; }
+.mw-risk-exposure-lead span { color: #738e79; font-size: 11px; font-weight: 600; }
+.mw-risk-exposure-lead strong { color: #315a3d; font-size: 29px; font-weight: 660; letter-spacing: -.055em; }
+.mw-risk-exposure-lead small { color: #9baa9e; font-size: 11px; line-height: 1.4; }
+.mw-risk-exposure-inner dl { display: grid; gap: 0; margin: 0; }
+.mw-risk-exposure-inner dl > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid #edf1ed; }
+.mw-risk-exposure-inner dt { color: #899a8d; font-size: 11px; }
+.mw-risk-exposure-inner dd { margin: 0; color: #3a6044; font-size: 12px; font-weight: 650; text-align: right; white-space: nowrap; }
+.mw-risk-capacity { display: flex; align-items: center; gap: 6px; padding: 9px 10px; border: 1px solid #ecdfcf; border-radius: 7px; background: #fff9f1; color: #97714c; font-size: 10px; font-weight: 600; }
+.mw-risk-capacity.is-sufficient { border-color: #d6ead9; background: #f4faf5; color: #4a8256; }
+.mw-risk-conditions, .mw-risk-period, .mw-risk-disclosure { margin: 0; color: #96a39a; font-size: 11px; line-height: 1.55; }
+.mw-risk-conditions { color: #a0774d; }
+.mw-risk-disclosure { padding: 0 2px; }
+.mw-risk-disclosure a { display: inline-flex; align-items: center; gap: 2px; color: #4d8058; text-decoration: underline; }
+.mw-risk-loading > div:last-child { padding: 18px; color: #839687; font-size: 12px; }
+@media (max-width: 1200px) { .mw-risk-panels { grid-template-columns: 1fr; } }
+@media (max-width: 800px) { .mw-risk-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .mw-risk-intro { align-items: flex-start; flex-direction: column; } .mw-risk-chart-head { gap: 12px; } .mw-risk-evidence-inner { padding: 12px; } .mw-risk-metrics > div { min-height: 96px; padding: 12px; } .mw-risk-metrics strong { font-size: 22px; } }

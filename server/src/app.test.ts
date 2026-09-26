@@ -50,6 +50,19 @@ test("sandbox funding, position coverage, and tick exit remain capacity bounded"
     expect(before.split.ethPercent).toBeGreaterThan(0);
     expect(before.split.ethPercent).toBeLessThan(100);
 
+    const risk = await app.inject({ method: "GET",
+      url: `/api/markets/${marketId}/risk?depositUsd=10000` });
+    expect(risk.statusCode).toBe(200);
+    expect(risk.json().mode).toBe("research");
+    expect(risk.json().referencePool.id).toBe("usdc-weth-005");
+    expect(risk.json().analysis.sampleDays).toBe(180);
+    expect(risk.json().analysis.windowCount).toBe(151);
+    expect(risk.json().analysis.monthly.length).toBeGreaterThan(5);
+    expect(risk.json().analysis.payoutCapUsd).toBe(before.payoutCapUsd);
+    expect(risk.json().quote.premiumUsd).toBe(before.premiumUsd);
+    expect((await app.inject({ method: "GET",
+      url: `/api/markets/${marketId}/risk?depositUsd=0` })).statusCode).toBe(400);
+
     const pledge = await app.inject({ method: "POST", url: `/api/markets/${marketId}/pledges`,
       payload: { participant: "participant-maker", amountUsd: 200 } });
     expect(pledge.statusCode).toBe(201);

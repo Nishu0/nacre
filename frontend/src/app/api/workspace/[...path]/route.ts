@@ -9,6 +9,7 @@ function allowed(path: string[], method: string): boolean {
   if (path[0] !== "markets" || !uuid.test(path[1] ?? "")) return false;
   if (path.length === 2) return method === "GET";
   if (path.length === 3 && path[2] === "quote") return method === "GET";
+  if (path.length === 3 && path[2] === "risk") return method === "GET";
   if (path.length === 3 && path[2] === "price-history") return method === "GET";
   if (path.length === 3 && path[2] === "price") return method === "PATCH";
   if (path.length === 3 && path[2] === "oracle-sync") return method === "POST";

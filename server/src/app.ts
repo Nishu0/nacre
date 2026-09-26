@@ -5,6 +5,7 @@ import { backtest, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
 import { getLivePrices, type LivePrices } from "./live-prices";
+import { buildRiskAnalysis } from "./risk-analysis";
 import { getMarket, listMarkets, listPositions, presentMarket, priceToTick, quotePosition, VALID_REFERENCE } from "./market-model";
 
 type CreateMarket = { creator: string; priceUsd: number; lowerPriceUsd: number;
@@ -168,6 +169,38 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         return reply.code(400).send({ error: "Deposit must be between $100 and $1,000,000." });
       }
       return { market: presentMarket(db, row), quote: quotePosition(db, row, depositUsd) };
+    },
+  );
+
+  app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string } }>(
+    "/api/markets/:marketId/risk", async (request, reply) => {
+      const row = getMarket(db, request.params.marketId);
+      if (!row) return reply.code(404).send({ error: "Unknown market" });
+      const depositUsd = Number(request.query.depositUsd ?? "1000");
+      if (!inRange(depositUsd, 100, 1_000_000)) {
+        return reply.code(400).send({ error: "Deposit must be between $100 and $1,000,000." });
+      }
+      const quote = quotePosition(db, row, depositUsd);
+      const reference = POOLS.find((pool) => pool.id === row.reference_pool_id)!;
+      return {
+        mode: "research",
+        marketId: row.id,
+        referencePool: {
+          id: reference.id, symbol: reference.symbol, feeTier: reference.feeTier,
+          volumeUrl: `https://www.geckoterminal.com/eth/pools/${reference.address}`,
+          yieldUrl: `https://defillama.com/yields/pool/${reference.llamaId}`,
+        },
+        analysis: buildRiskAnalysis(getObservations(db, reference.id), depositUsd,
+          quote.feeFloorUsd, quote.payoutCapUsd),
+        quote: {
+          premiumUsd: quote.premiumUsd,
+          expectedPayoutUsd: quote.expectedPayoutUsd,
+          underwriterMarginUsd: quote.underwriterMarginUsd,
+          edgeRiskPct: quote.edgeRiskPct,
+          available: quote.available,
+          reasons: quote.reasons,
+        },
+      };
     },
   );
 
