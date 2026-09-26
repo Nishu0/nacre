@@ -1,4 +1,5 @@
 "use client";
+import { shortfallTotal } from "@/lib/shortfall";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ShieldCheck, ExternalLink, LoaderCircle } from "lucide-react";
@@ -105,9 +106,10 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
   const tickLower = priceInputToTick(String(lower));
   const tickUpper = priceInputToTick(String(upper));
   const bps = Math.round(Number(rate) * 100);
-  const valid = rangeValid && /^\d+(\.\d{1,6})?$/.test(capital) && Number(capital) > 0
+  const valid = !values.quoteIssue && rangeValid && /^\d+(\.\d{1,6})?$/.test(capital) && Number(capital) > 0
     && Number.isFinite(bps) && bps > 0 && bps <= 10000 && tickLower < tickUpper
     && /^\d+(\.\d{1,6})?$/.test(cap) && Number(cap) > 0 && Number.isInteger(Number(spots)) && Number(spots) > 0 && Number(spots) <= max;
+  const premiumPerPosition = valid ? Number((parseUnits(cap, 6) * BigInt(bps) + 9999n) / 10000n) / 1e6 : 0;
   const draftBid = (): PendingBid => ({ fee: data?.poolConfig?.fee ?? 500, amount: parseUnits(capital, 6), lower: tickLower, upper: tickUpper, duration: days * 86400, premiumBps: bps, cap: parseUnits(cap, 6), spots: Number(spots) });
   const fund = () => action.run(async (owner) => {
     if ((!queue.length && !valid) || !data?.configured || error) throw new Error("Enter valid terms and wait for the live coverage connection.");
@@ -131,13 +133,27 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
       {account && <small>Wallet balance: {balance === null ? "…" : amount(balance)} nUSDC</small>}
       <fieldset disabled={action.busy} className="cw-fields">
         <label className="mw-field"><span>Coverage capital (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={capital} onChange={(event) => changeTerms({ capital: event.target.value })} /></label>
-        <label className="mw-field"><span>Maximum payout per position (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={cap} onChange={(event) => changeTerms({ cap: event.target.value })} /></label>
-        <label className="mw-field"><span>Simultaneous spots · maximum {max}</span><Input type="number" min="1" max={max} step="1" value={spots} onChange={(event) => changeTerms({ spots: event.target.value })} /><small>{capital || "0"} backing ÷ {cap || "0"} cap = {max} spots (contract limit 100). Each purchase occupies one spot until settlement; an unpaid checkout reserves it for 15 minutes.</small></label>
+        {terms && <>
+          <label><input type="checkbox" checked={!!values.autoRate} onChange={(event) => changeTerms({ autoRate: event.target.checked, quoteIssue: undefined,
+            ...(!event.target.checked ? { cap: cap || "10", spots: Number(spots) > 0 ? spots : "10", rate: rate || "8" } : {}) })} /> Calculate terms automatically</label>
+          {values.autoRate && !values.quoteIssue && <div className="cw-terms" aria-live="polite">
+            <strong>Suggested bid terms</strong>
+              <span>Maximum payout: {cap} nUSDC per position · {spots} simultaneous spots</span>
+              <span>Premium: {rate}% of the payout cap · {days} days</span>
+              <span>Maximum simultaneous claims: {(Number(cap) * Number(spots)).toFixed(4)} nUSDC</span>
+          </div>}
+        </>}
+        <details open={!values.autoRate}><summary>Advanced settings · duration and manual terms</summary>
+        <label className="mw-field"><span>Maximum payout per position (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" disabled={!!values.autoRate} value={cap} onChange={(event) => changeTerms({ cap: event.target.value })} /></label>
+        <label className="mw-field"><span>Simultaneous spots · maximum {max}</span><Input type="number" min="1" max={max} step="1" disabled={!!values.autoRate} value={spots} onChange={(event) => changeTerms({ spots: event.target.value })} /><small>{capital || "0"} backing ÷ {cap || "0"} cap = {max} spots (contract limit 100). Each purchase occupies one spot until settlement; an unpaid checkout reserves it for 15 minutes.</small></label>
         <label className="mw-field"><span>Coverage duration</span><select value={days} onChange={(event) => changeTerms({ days: Number(event.target.value) })}>{durationOptions.map((value) => <option key={value} value={value}>{value} days</option>)}</select></label>
-        <label className="mw-field"><span>Premium · % of each protected fee cap</span><Input type="number" min="0.01" max="100" step="0.01" value={rate} onChange={(event) => changeTerms({ rate: event.target.value, autoRate: false })} /></label>
+        <label className="mw-field"><span>Premium · % of each protected fee cap</span><Input type="number" min="0.01" max="100" step="0.01" disabled={!!values.autoRate} value={rate} onChange={(event) => changeTerms({ rate: event.target.value, autoRate: false })} /></label>
+        </details>
       </fieldset>
-      <div className="cw-terms"><span>For a {cap} nUSDC cap over {days} days</span><strong>{Number.isFinite(bps) ? (Number(cap) * bps / 10000).toFixed(2) : "—"} nUSDC premium</strong></div>
-      {valid && <div className="mw-underwriter-sim"><div><span>Premium if all selected spots buy the maximum cap</span><strong>{(Number(spots) * Number(cap) * bps / 10000).toFixed(4)} nUSDC</strong></div><div><span>Net loss if those claims use every cap</span><strong>{(Number(spots) * Number(cap) * (1 - bps / 10000)).toFixed(4)} nUSDC</strong></div></div>}
+      {valid && <div className="cw-terms"><span>For a {cap} nUSDC cap over {days} days</span><strong>{premiumPerPosition.toLocaleString("en-US", { maximumFractionDigits: 6 })} nUSDC premium</strong></div>}
+      {valid && <div className="mw-underwriter-sim"><div><span>Premium if all selected spots buy the maximum cap</span><strong>{(Number(spots) * premiumPerPosition).toFixed(4)} nUSDC</strong></div><div><span>Net loss if those claims use every cap</span><strong>{(Number(spots) * (Number(cap) - premiumPerPosition)).toFixed(4)} nUSDC</strong></div></div>}
+      {!values.autoRate && Number(rate) >= 100 && <p className="mw-premium-warning" role="status">100% premium means the LP pays the entire maximum payout upfront. This is poor value for the LP, not a safety rating for you.</p>}
+      <p className="mw-risk-note">Fully collateralized does not mean risk-free. You can lose the capital backing claims. Spots can be reused after settlement, so their payout total is a simultaneous limit, not a lifetime loss limit. Estimates exclude gas and smart-contract risk.</p>
       <p className="mw-risk-note">Premiums are earned when an LP buys coverage. Claims can consume the full cap. Unused capital can be withdrawn; active collateral stays reserved until settlement.</p>
       <section className="cw-bid-batch" aria-label="Bid batch">
         <div className="cw-batch-heading"><strong>Your bid batch</strong><span>{queue.length} / 4 bids</span></div>
@@ -257,9 +273,10 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled, 
     await action.confirm(await injectedClient().writeContract({ account: owner, address: COVERAGE_VAULT,
       abi: coverageVaultAbi, functionName, args: [BigInt(request.id)] }));
   });
-  return <div className="cw-policy"><div className="cw-row"><strong>Position #{request.tokenId} · {request.duration / 86400} days</strong><span>{statuses[request.status]}</span></div>
+  return <div className="cw-policy" id={`coverage-policy-${request.id}`}><div className="cw-row"><strong>Position #{request.tokenId} · {request.duration / 86400} days</strong><span>{statuses[request.status]}</span></div>
     <p>{rangeText(request.tickLower, request.tickUpper)} · {(request.tickUpper - request.tickLower) / 10} bins</p>
     <div className="cw-row"><span>Protected fee cap <strong>{amount(request.payoutCap)} nUSDC</strong></span><span>Premium paid <strong>{amount(request.premium)} nUSDC</strong></span></div>
+    {request.status === 3 && (request.settlement ? <div className="cw-row"><span>Shortfall paid <strong>{amount(request.settlement.payout)} nUSDC</strong></span><a href={basescanTx(request.settlement.transactionHash)} target="_blank" rel="noreferrer">Settlement receipt <ExternalLink size={13} /></a></div> : <p role="status">Settlement confirmed; payout receipt is unavailable. Refresh to retry.</p>)}
     {request.status === 2 && <small>Coverage ends {new Date(request.endAt * 1000).toLocaleString()}. Settle at expiry; eligible fees are measured when settlement executes.</small>}
     {role === "underwriter" && request.status === 1 && request.quoteDeadline > now && <>
       <p>Awaiting a funded offer and the LP’s premium payment. This request is not covered yet.</p>
@@ -360,8 +377,9 @@ export function CoverageStats({ account }: { account: string | null }) {
     ["AVAILABLE CAPITAL", sum(offers.map((offer) => offer.available))],
     ["RESERVED FOR COVER", sum(policies.filter((policy) => policy.status === 2).map((policy) => policy.payoutCap))],
     ["PREMIUMS RECEIVED", sum(policies.filter((policy) => policy.status >= 2 && policy.status <= 3).map((policy) => policy.premium))],
+    ["SHORTFALL PAID", data && account ? shortfallTotal(data, account, "underwriter") : null],
   ] as const;
-  return <div className="mw-stats">{values.map(([label, value]) => <Card className="kd-card" key={label}><div className="mw-stat"><span>{label}</span><strong>{!account || !data || error ? "—" : amount(value)}</strong><small>nUSDC · Base Sepolia</small></div></Card>)}</div>;
+  return <div className="mw-stats">{values.map(([label, value]) => <Card className="kd-card" key={label}><div className="mw-stat"><span>{label}</span><strong>{!account || !data || error || value === null ? "—" : amount(value)}</strong><small>nUSDC · Base Sepolia</small></div></Card>)}</div>;
 }
 
 // Recovery is separate from active pool statistics and loaded only when opened.

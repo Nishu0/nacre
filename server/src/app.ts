@@ -1,3 +1,5 @@
+import { atomicPurchase } from "../../frontend/src/lib/atomic-checkout";
+import { COVERAGE_VAULT } from "../../frontend/src/lib/coverage-contracts";
 import { poolActivity } from "./pool-activity";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
@@ -288,12 +290,15 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       try {
         const receipt = await chainClient.getTransactionReceipt({ hash: txHash as Hex });
         if (receipt.status !== "success") throw new Error("Mint transaction did not succeed.");
+        const checkout = atomicPurchase(receipt.logs, account);
+        const mintRecipient = checkout?.account ?? account;
         const mint = receipt.logs.find((log) => {
           if (log.address.toLowerCase() !== POSITION_MANAGER.toLowerCase()) return false;
           try {
             const event = decodeEventLog({ abi: positionEvents, data: log.data, topics: log.topics });
             return event.args.from === "0x0000000000000000000000000000000000000000"
-              && event.args.to.toLowerCase() === account.toLowerCase();
+              && event.args.to.toLowerCase() === mintRecipient.toLowerCase()
+              && (!checkout || event.args.tokenId === checkout.tokenId);
           } catch { return false; }
         });
         if (!mint) throw new Error("No PositionManager NFT mint to this wallet was found.");
@@ -304,7 +309,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
           chainClient.readContract({ address: POSITION_MANAGER, abi: positionReads,
             functionName: "getPoolAndPositionInfo", args: [tokenId], blockNumber }),
         ]));
-        if (owner.toLowerCase() !== account.toLowerCase()
+        if (owner.toLowerCase() !== (checkout ? COVERAGE_VAULT : account).toLowerCase()
           || key.currency0.toLowerCase() !== (registeredPool(db, presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toLowerCase()
           || key.currency1.toLowerCase() !== TEST_USDC.toLowerCase()
           || key.hooks.toLowerCase() !== HOOK.toLowerCase()
@@ -315,7 +320,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
           if (log.address.toLowerCase() !== token.toLowerCase()) return total;
           try {
             const event = decodeEventLog({ abi: tokenEvents, data: log.data, topics: log.topics });
-            if (event.args.from.toLowerCase() === account.toLowerCase()
+            if (event.args.from.toLowerCase() === mintRecipient.toLowerCase()
               && event.args.to.toLowerCase() === POOL_MANAGER.toLowerCase()) return total + event.args.value;
           } catch { /* Another event from the token contract. */ }
           return total;

@@ -1,0 +1,14 @@
+{
+  "kind": "illustrative-not-historical",
+  "days": 30,
+  "outsideDays": [
+    12,
+    13,
+    14
+  ],
+  "feeTargetUnits": "10000000",
+  "premiumUnits": "1800000",
+  "simulatedFeeUnits": "8600000",
+  "payoutUnits": "1400000",
+  "note": "Chosen synthetic scenario. Fees are not actual LP earnings. Settlement transfers test tokens only; existing policies are not settled."
+}

@@ -18,6 +18,7 @@ import { WorkspacePortfolio, type WorkspaceRole } from "@/components/market-work
 import { PoolCreateFlow } from "@/components/pool-create-flow";
 import { BidWorkspace } from "@/components/bid-workspace";
 import { WorkspaceBalances } from "@/components/workspace-balances";
+import { DemoSettlement } from "@/components/demo-settlement";
 import { TestUsdcFaucet } from "@/components/test-usdc-faucet";
 import { TokenPairIcon } from "@/components/token-pair-icon";
 
@@ -37,13 +38,14 @@ type EthereumProvider = {
 };
 declare global { interface Window { ethereum?: EthereumProvider } }
 
-export type DashboardView = "overview" | "pools" | "pool-create" | "pool-detail" | "portfolio" | "faucet" | "backtest" | "references" | "launch" | "pricing";
+export type DashboardView = "overview" | "pools" | "pool-create" | "pool-detail" | "portfolio" | "faucet" | "backtest" | "references" | "launch" | "pricing" | "simulation";
 const navigation = [
   { href: "/dashboard", view: "overview", label: "Overview", icon: LayoutGrid, group: "workspace" },
   { href: "/dashboard/pools", view: "pools", label: "Pools", icon: Droplets, group: "workspace" },
   { href: "/dashboard/portfolio", view: "portfolio", label: "Portfolio", icon: PiggyBank, group: "workspace" },
   { href: "/dashboard/faucet", view: "faucet", label: "Test token faucet", icon: DollarSign, group: "workspace" },
   { href: "/dashboard/backtest", view: "backtest", label: "Fee backtest", icon: Activity, group: "research" },
+  { href: "/dashboard/simulation", view: "simulation", label: "Simulation", icon: RefreshCw, group: "research" },
   { href: "/dashboard/references", view: "references", label: "Reference data", icon: Database, group: "research" },
   { href: "/dashboard/launch", view: "launch", label: "Launch steps", icon: Layers3, group: "research" },
   { href: "/dashboard/pricing", view: "pricing", label: "Premium model", icon: ShieldCheck, group: "research" },
@@ -64,6 +66,7 @@ const pageCopy: Record<DashboardView, { title: string; description: string }> = 
   references: { title: "Reference data", description: "Six months of high-volume Uniswap v3 pool history for future v4 market research." },
   launch: { title: "Launch steps", description: "A new market opens when its liquidity and protection are both funded." },
   pricing: { title: "Premium model", description: "Explore indicative fee floors, payout caps, and premiums before an underwriter makes a real quote." },
+  simulation: { title: "Simulation", description: "Replay the 30 day scenario. Switch between LP and Underwriter to see each side's results." },
 };
 const launchSteps = [
   { number: "01", title: "Create a v4 pool", detail: "Deploy a new Uniswap v4 pool with the Nacre fee hook. The v3 series on this page are pricing references." },
@@ -243,8 +246,9 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
     </aside>
 
     <main className="kd-main"><header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} /><span>{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "Workspace" : "Research"}</span><span className="kd-breadcrumb-slash">/</span><strong>{view === "pool-detail" ? "Pools / Detail" : view === "pool-create" ? "Pools / Create" : roleNavLabel(view, role)}</strong></div><div className="kd-topbar-actions"><Badge variant="outline" className="kd-research-badge">{researchView ? "HISTORICAL DATA" : "NACRE WORKSPACE"}</Badge><DropdownMenu.Root><DropdownMenu.Trigger asChild><button type="button" className="kd-notification-button" aria-label="Notifications"><Bell size={17} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu kd-notification-menu" side="bottom" align="end" sideOffset={8}><p>NOTIFICATIONS</p><span>No pool or policy updates yet.</span></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></div></header>
-      <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><div className="flex flex-wrap items-center gap-3"><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge>{["overview", "pools"].includes(view) && role === "underwriter" && <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={16} /> Create pool</Link></Button>}</div></div>
-        {view === "overview" && <WorkspaceBalances account={walletAccount} onConnect={connectWallet} />}
+      <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><div className="flex flex-wrap items-center gap-3"><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : view === "simulation" ? "LOCAL SIMULATION" : "HISTORICAL RESEARCH"}</Badge>{["overview", "pools"].includes(view) && role === "underwriter" && <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={16} /> Create pool</Link></Button>}</div></div>
+        {view === "overview" && <WorkspaceBalances account={walletAccount} onConnect={connectWallet} role={role} />}
+        {view === "simulation" && <DemoSettlement role={role} />}
         {view === "pool-create" && <PoolCreateFlow account={walletAccount} onConnect={connectWallet} />}
         {["pools", "pool-detail"].includes(view) && <BidWorkspace marketId={marketId} key={`${role}:${walletAccount}:${marketId ?? "directory"}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "portfolio" && <WorkspacePortfolio role={role} walletAccount={walletAccount} onConnect={connectWallet} />}

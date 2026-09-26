@@ -29,6 +29,10 @@ services:
     restart: unless-stopped
     environment:
       NACRE_API_URL: http://api:3001
+      NACRE_DEMO: ${NACRE_DEMO:-0}
+      NACRE_DEMO_DIR: /demo
+    volumes:
+      - ./deploy/demo:/demo:ro
     depends_on:
       api:
         condition: service_healthy

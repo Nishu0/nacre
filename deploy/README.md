@@ -81,3 +81,16 @@ docker compose logs --tail=100 api frontend caddy
 Pull the reviewed commit and run the build/up commands again. Keep the prior
 image tags and database backup available for rollback. A restart uses the same
 persistent SQLite and certificate volumes.
+
+## Recording demo
+
+The recording release uses the existing deployed Base Sepolia checkout contracts.
+Set `NACRE_DEMO=1` in `deploy/production.env` to permit a clearly labeled demo
+panel, and provide `deploy/demo/` (read-only inside the frontend at `/demo`).
+The panel stays hidden while `dashboard.json` contains `{"enabled":false}`.
+
+From the workstation, `NACRE_DEMO=1 NACRE_DEMO_PUBLISH=1 bun
+server/scripts/simulate-thirty-days.ts` runs an isolated local simulation and
+publishes its verified receipts using the existing SSH key. This does not
+settle a real Base Sepolia policy. See `docs/recording-walkthrough.md` for the
+wallet sequence, bid parameters and how to hide the demo before recording.

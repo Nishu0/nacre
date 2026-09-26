@@ -48,12 +48,14 @@ export type CoverageOffer = {
   address: `0x${string}`; owner: string; tickLower: number; tickUpper: number;
   duration: number; premiumBps: number; deposited: string; withdrawn: string;
   available: string; closed: boolean;
-  supportsSubranges?: boolean;
+  supportsSubranges?: boolean; checkoutIndex?: number;
   maxSpots?: number; availableSpots?: number; capPerPosition?: string; unreservedCapital?: string; reservations?: Record<string, number>; lockedPremiums?: Record<string, string>;
 };
 export type CoverageRequest = {
+  settlement?: { payout: string; eligibleFees: string; transactionHash: `0x${string}`; blockNumber: string };
+  settlementError?: string;
   poolId: string;
-  id: string; lp: string; underwriter: string; tokenId: string; feeFloor: string;
+  id: string; checkoutAccount?: string; lp: string; underwriter: string; tokenId: string; feeFloor: string;
   payoutCap: string; premium: string; quoteDeadline: number; startAt: number;
   endAt: number; duration: number; status: number; tickLower: number; tickUpper: number;
 };

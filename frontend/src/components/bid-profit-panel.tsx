@@ -32,12 +32,13 @@ export function BidProfitPanel({ terms, validRange, inRange, feeTier }: { terms:
     return () => controller.abort();
   }, []);
   const result = validRange && /^\d+(\.\d{1,6})?$/.test(terms.capital) && /^\d+(\.\d{1,6})?$/.test(cap)
-    ? bidProfitScenarios(history, { capital: Number(terms.capital), days: terms.days, premiumPct: Number(terms.rate), principal: Number(principal), cap: Number(cap), spots: terms.spots === undefined ? 100 : Number(terms.spots) }) : null;
+    ? bidProfitScenarios(history, { capital: Number(terms.capital), days: terms.days, premiumPct: Number(terms.rate), principal: Number(principal), cap: Number(cap), spots: terms.spots === undefined ? 100 : Number(terms.spots), feeScale: terms.feeScale ?? 1 }) : null;
   const rows = result ? [
     { kind: "best" as const, title: "Best case", note: "LP fees meet every target. You keep all premiums.", value: result.best },
     { kind: "median" as const, title: "Median case", note: "Median payout across historical fee windows, assuming the range stays active.", value: result.median },
     { kind: "worst" as const, title: "Worst case", note: "Every covered LP earns zero fees. You pay every cap in full.", value: result.worst },
   ] : [];
+  if (terms.quoteIssue) return <Card className="kd-card bps-panel"><div className="kd-card-heading"><h2>Your profit scenarios</h2></div><div className="bps-body"><p>Scenarios will appear when a supported quote is available, or when you enter manual terms.</p></div></Card>;
   return <Card className="kd-card bps-panel">
     <div className="kd-card-heading"><h2><ChartNoAxesCombined size={16} /> Your profit scenarios</h2><button type="button" className="bps-replay" onClick={() => setReplay((n) => n + 1)} aria-label="Replay scenario animations"><RotateCcw size={14} /> Replay</button></div>
     <div className="bps-body">
@@ -67,7 +68,7 @@ export function BidProfitPanel({ terms, validRange, inRange, feeTier }: { terms:
           </div><div className="bps-visual">{row.value ? <ScenarioMotion kind={row.kind} claimShare={result.reserved ? row.value.claims / result.reserved : 0} /> : <span>{historyError || (history.length ? "Not enough consecutive observations for this duration." : "Loading historical median…")}</span>}<small>{row.kind === "best" ? "Premiums retained" : row.kind === "median" ? "Green: retained · rust: claims" : "Full-cap payouts"}</small></div>
         </section>)}</div>
         <p className="bps-note">Assumes all {result.count} example positions buy once, with {amount(result.idle)} nUSDC left idle. Results cover one {terms.days}-day term, before gas; no purchases means zero premiums.</p>
-        <details className="bps-method"><summary>How these estimates are calculated</summary><p className="bps-source">Median uses {result.windows} rolling {terms.days}-day windows from Ethereum Uniswap v3 WETH/USDC 0.05% base yield{result.latestDate ? `, through ${result.latestDate}` : ""}. It is a reference estimate for your {feeTier} test pool, not measured fees for these bins. Range width and the new trading fee are not used to scale historical yield.</p></details>
+        <details className="bps-method"><summary>How these estimates are calculated</summary><p className="bps-source">Median uses {result.windows} rolling {terms.days}-day windows from Ethereum Uniswap v3 WETH/USDC 0.05% base yield{result.latestDate ? `, through ${result.latestDate}` : ""}. It is a reference estimate for your {feeTier} test pool, not measured fees for these bins. Historical fees are multiplied by {amount(terms.feeScale ?? 1)} to reflect the earnings adjustment used in pricing. Range width and the new trading fee are not used to scale historical yield.</p></details>
       </>}
     </div>
   </Card>;

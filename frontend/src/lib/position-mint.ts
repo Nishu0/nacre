@@ -30,6 +30,9 @@ export async function preparePositionMint(account: Address, unlockData: Hex) {
 
 export function positionMintError(reason: unknown): string {
   const message = reason instanceof Error ? reason.message : String(reason);
+  if (/Premium increased/.test(message)) return "The bid premium increased. Close this review and refresh the quote before trying again. Nothing was supplied or paid.";
+  if (/Fee target exceeds position limit/.test(message)) return "This range supports a lower fee cap. Reduce the fee cap in Coverage settings, then review again. Nothing was supplied or paid.";
+  if (/No spots remaining|Capacity exhausted|Offer closed/.test(message)) return "This bid no longer has available coverage. Refresh and choose another bid. Nothing was supplied or paid.";
   if (/exceeds (max|maximum).*gas limit/i.test(message)) {
     return "The wallet submitted a gas limit above the RPC limit. Retry with the app’s estimated gas limit and remove any custom wallet gas limit.";
   }

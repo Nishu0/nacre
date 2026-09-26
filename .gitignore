@@ -6,5 +6,6 @@
 .deploy/
 deploy/production.env
 deploy/*.sqlite*
+deploy/demo/
 *.pem
 *.key

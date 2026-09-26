@@ -2,12 +2,12 @@
 // Archives app records only. Never sends transactions or changes wallet balances.
 import { openDb, DATABASE_PATH } from "./db";
 import { coverageSnapshot } from "./coverage";
-import { TEST_POOLS } from "../../frontend/src/lib/test-pools";
+import { allPoolConfigs } from "./pool-registry";
 
 const db = openDb();
 const tokenIds = (db.query("SELECT token_id FROM market_chain_positions").all() as { token_id: string }[]).map((row) => row.token_id);
 // Abort without archiving anything if any chain snapshot cannot be read.
-const snapshots = await Promise.all(TEST_POOLS.map((pool) => coverageSnapshot(tokenIds, true, pool.poolId)));
+const snapshots = await Promise.all(allPoolConfigs(db).map((pool) => coverageSnapshot(tokenIds, true, pool.poolId, pool)));
 const now = new Date().toISOString();
 const backup = DATABASE_PATH.replace(/\.sqlite$/, `-before-bids-${Date.now()}.sqlite`);
 db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);

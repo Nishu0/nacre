@@ -1,0 +1,15 @@
+{
+  "chainId": 84532,
+  "checkout": "0xdc31e3523eb4adee3301dd678ca06f451650949e",
+  "router": "0x6d069d313d4368a31a7897d5f1699084f4eaab31",
+  "market": "0x3c956270cfbd79c63dfa3ac6edb329569e194a66",
+  "asset": "0x3333C20E21Eeaed85766232B20641d56fd3788c4",
+  "sourceCommit": "feb16411738331f7d05ae71d4a664154068018fc",
+  "routerTx": "0xcfb71a7a96a6c4871c5cd6db1c6088405287e54a234bde4e77f85dfe4baccbb2",
+  "marketTx": "0x6f2a59ac75c66acf00c8b3625b0bbb51f984c029b0826b85239cf8d6072b7843",
+  "checkoutTx": "0xe19b0a40ede670642777b3bfebb53dc156955b01da929d74a8aa6127fbe7ec5e",
+  "fundingTx": "0xcf70518cc74f11009611e40e1a551f1363af318bb4312cec08af7417c8a44fc3",
+  "fundedAssetUnits": "1000000000000000000",
+  "quoteUsdcPerAsset": "2689500000",
+  "quoteExpiresAt": 1790547976
+}

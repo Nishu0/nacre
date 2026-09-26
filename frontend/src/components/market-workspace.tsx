@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { shortfallTotal } from "@/lib/shortfall";
 import { Activity, ArrowRight, CircleHelp, Droplets, ExternalLink, PiggyBank, Plus, Rocket, ShieldCheck } from "lucide-react";
 import { formatUnits, parseUnits, type Address, type Hex } from "viem";
 import { Badge } from "@/components/ui/badge";
@@ -13,15 +14,20 @@ import { TokenPairIcon } from "@/components/token-pair-icon";
 import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
 import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
-import { preparePositionMint, positionMintError } from "@/lib/position-mint";
+import { savePendingCheckout, readPendingCheckout, clearPendingCheckout } from "@/lib/pending-checkout";
+import { SWAPVM_CHECKOUT, swapVMAbi } from "@/lib/swapvm";
+import { useSingleTokenQuote } from "@/lib/use-single-token-quote";
+import { ATOMIC_CHECKOUT, atomicCheckoutAbi, atomicPurchase } from "@/lib/atomic-checkout";
+import { positionMintError } from "@/lib/position-mint";
 import { testPool, NACRE_TEST_WETH, type TestPoolConfig } from "@/lib/test-pools";
 import { tickPrice, type CoverageOffer, type CoverageSnapshot } from "@/lib/coverage-contracts";
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
+import { SupplyCostBreakdown } from "@/components/supply-cost-breakdown";
 import { SupplyConfirmation, type SupplyReview, type SupplyPhase } from "@/components/supply-confirmation";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
 import { baseClient, priceToRawTick, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
-  NACRE_TEST_USDC, BASE_WETH as CANONICAL_WETH, UNISWAP_PERMIT2,
-  UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi,
+  NACRE_TEST_USDC, BASE_WETH as CANONICAL_WETH,
+  UNISWAP_STATE_VIEW,
   stateViewAbi, wethAbi, sqrtPriceX96ToWethUsd } from "@/lib/nacre-chain";
 
 import { availableBid, bidCanProtectPosition, bidMatchesPosition } from "@/lib/funded-bids";
@@ -54,7 +60,6 @@ type FeePreview = {
 };
 type ChainPosition = { wethSymbol: string; poolId: string; tokenId: string; marketId: string; txHash: string; wethRaw: string; usdcRaw: string; mintedAt: string };
 const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
-const unixSeconds = () => Math.floor(Date.now() / 1000);
 
 async function api<T>(path: string, method = "GET", body?: object): Promise<T> {
   const response = await fetch(`/api/workspace/${path}`, {
@@ -108,6 +113,8 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const [mintConfirmed, setMintConfirmed] = useState(false);
   const [mintSaved, setMintSaved] = useState(false);
   const [supplyOpen, setSupplyOpen] = useState(false);
+  const checkoutAbi = [...atomicCheckoutAbi, ...swapVMAbi] as const;
+  const [singleToken, setSingleToken] = useState(false);
   const [supplyReview, setSupplyReview] = useState<SupplyReview | null>(null);
   const [supplyPhase, setSupplyPhase] = useState<SupplyPhase>("review");
   const supplyLock = useRef(false);
@@ -136,6 +143,8 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const capacity = activeBid ? Math.min(Number(formatUnits(BigInt(activeBid.unreservedCapital ?? activeBid.available), 6)), activeBid.capPerPosition ? Number(formatUnits(BigInt(activeBid.capPerPosition), 6)) : Infinity) : 0;
   const feeTarget = feePreview ? (bid && !feeTargetInput.trim() ? Math.min(feePreview.feeTargetUsd, capacity) : feePreview.feeTargetUsd) : undefined;
   const feeCap = feeTarget && Number.isFinite(feeTarget) && feeTarget > 0 ? parseUnits(feeTarget.toFixed(6), 6) : 0n;
+  const protectionPremium = activeBid && !coverageError && feeCap > 0n && Number.isInteger(activeBid.premiumBps) && activeBid.premiumBps > 0
+    ? (feeCap * BigInt(activeBid.premiumBps) + 9999n) / 10000n : null;
   const positionRange = { poolId: bid?.poolId ?? deployedPoolId ?? "", tickLower: lower > 0 ? priceToRawTick(lower) : 0, tickUpper: upper > 0 ? priceToRawTick(upper) : 0 };
   const rangeMatchesBid = !!activeBid && bidMatchesPosition(activeBid, positionRange);
   const positionInRange = !!coverage && coverage.currentTick >= positionRange.tickLower && coverage.currentTick < positionRange.tickUpper;
@@ -155,15 +164,32 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
     : !bidReady ? "This bid does not have enough available protection for your fee cap. Lower the fee target or choose another bid." : "");
   const requiredWeth = quote ? parseUnits(quote.split.ethAmount.toFixed(8), 18) : 0n;
   const requiredUsdc = quote ? parseUnits(quote.split.usdcAmount.toFixed(6), 6) : 0n;
-  const supplyBlocker = !selected?.deployment ? "This pool has not been initialized."
+  const singleQuote = useSingleTokenQuote(singleToken, BASE_WETH, requiredWeth, tokenRefresh);
+  const swapQuote = singleQuote.quote;
+  const singleTotal = requiredUsdc + (protectionPremium ?? 0n) + BigInt(swapQuote?.maxInput ?? "0");
+  const supplyBlocker = !BigInt(ATOMIC_CHECKOUT) ? "Atomic supply and protection is not configured yet."
+    : activeBid?.checkoutIndex === undefined ? "Choose a bid that supports atomic supply and protection."
+    : !selected?.deployment ? "This pool has not been initialized."
     : !Number.isFinite(Number(deposit)) || Number(deposit) < 100 || Number(deposit) > 1_000_000 ? "Enter a position amount between $100 and $1,000,000."
     : !quote ? quoteError || "Calculating the tokens needed for this range…"
     : rangeWarning ? rangeWarning
     : balanceError ? balanceError
     : wethBalance === null || usdcBalance === null ? "Loading your wallet’s token balances…"
-    : wethBalance < requiredWeth ? `You need ${formatUnits(requiredWeth - wethBalance, 18)} more ${wethSymbol}. Get test tokens or lower your position amount.`
-    : usdcBalance < requiredUsdc ? `You need ${formatUnits(requiredUsdc - usdcBalance, 6)} more nUSDC. Get test tokens or lower your position amount.`
+    : singleToken && (singleQuote.error || !swapQuote) ? singleQuote.error || "Getting a fresh swap quote…"
+    : singleToken && usdcBalance < singleTotal ? `You need ${formatUnits(singleTotal - usdcBalance, 6)} more nUSDC for the swap, deposit and premium.`
+    : !singleToken && wethBalance < requiredWeth ? `You need ${formatUnits(requiredWeth - wethBalance, 18)} more ${wethSymbol}. Get test tokens or lower your position amount.`
+    : usdcBalance < requiredUsdc + (protectionPremium ?? 0n) ? `You need ${formatUnits(requiredUsdc + (protectionPremium ?? 0n) - usdcBalance, 6)} more nUSDC for supply and protection. Get test tokens or lower your position amount.`
     : "";
+  useEffect(() => {
+    if (!walletAccount || !deployedPoolId) return;
+    const pending = readPendingCheckout(walletAccount, deployedPoolId);
+    if (!pending) return;
+    queueMicrotask(() => {
+      setSupplyReview(pending.review); setMintHash(pending.hash); setMintConfirmed(false);
+      setMintSaved(false); setSupplyPhase("supply"); setSupplyOpen(true);
+      setMintStep("A previous checkout is pending. Check its status before submitting again.");
+    });
+  }, [walletAccount, deployedPoolId]);
   async function requireAvailableBid(review: SupplyReview) {
     if (!bid || !review.feeCap || BigInt(review.feeCap) <= 0n) throw new Error("Choose a funded bid and a positive fee target first.");
     const fresh = await api<CoverageSnapshot>(`coverage?fresh=1&poolId=${bid.poolId}`);
@@ -307,61 +333,53 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
     finally { setMintBusy(false); }
   }
 
-  async function approveForPosition(token: Address, amount: bigint, account: Address) {
-    if (amount <= BigInt(0)) return;
+  async function approveForCheckout(token: Address, amount: bigint, account: Address, spender: Address = ATOMIC_CHECKOUT) {
     const wallet = injectedClient();
     const tokenLabel = token.toLowerCase() === BASE_WETH.toLowerCase() ? wethSymbol : "nUSDC";
-    const tokenAllowance = await baseClient.readContract({ address: token, abi: erc20Abi,
-      functionName: "allowance", args: [account, UNISWAP_PERMIT2] });
-    if (tokenAllowance < amount) {
-      setMintStep(`Approve ${tokenLabel} for Permit2…`);
-      const tx = await wallet.writeContract({ chain: wallet.chain, account, address: token,
-        abi: erc20Abi, functionName: "approve", args: [UNISWAP_PERMIT2, amount] });
-      const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
-      if (receipt.status !== "success") throw new Error(`${tokenLabel} approval reverted.`);
-    }
-    const [permitted, expiration] = await baseClient.readContract({ address: UNISWAP_PERMIT2,
-      abi: permit2Abi, functionName: "allowance", args: [account, token, UNISWAP_POSITION_MANAGER] });
-    if (permitted < amount || expiration <= BigInt(unixSeconds() + 120)) {
-      setMintStep(`Approve PositionManager for ${tokenLabel}…`);
-      const tx = await wallet.writeContract({ chain: wallet.chain, account, address: UNISWAP_PERMIT2,
-        abi: permit2Abi, functionName: "approve",
-        args: [token, UNISWAP_POSITION_MANAGER, amount, unixSeconds() + 3600] });
-      const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
-      if (receipt.status !== "success") throw new Error(`${tokenLabel} PositionManager approval reverted.`);
-    }
+    const allowance = await baseClient.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [account, spender] });
+    if (allowance >= amount) return;
+    const [connected] = await wallet.getAddresses();
+    if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Wallet changed. Switch back before approving.");
+    setMintStep(`Approve ${tokenLabel} for supply and protection…`);
+    const tx = await wallet.writeContract({ chain: wallet.chain, account, address: token,
+      abi: erc20Abi, functionName: "approve", args: [spender, amount] });
+    const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
+    if (receipt.status !== "success") throw new Error(`${tokenLabel} approval reverted.`);
   }
 
   function reviewSupply() {
     if (mintHash || mintConfirmed) { setSupplyOpen(true); return; }
     if (!selected?.deployment || !quote || !walletAccount || supplyBlocker) return;
-    setSupplyReview({ account: walletAccount, marketId: selected.id, poolId: selected.deployment.poolId,
+    setSupplyReview({ singleToken: singleToken && swapQuote ? { ...swapQuote } : undefined, account: walletAccount, marketId: selected.id, poolId: selected.deployment.poolId,
       token: BASE_WETH, symbol: wethSymbol, fee: selected.feeBps ?? 500, lower, upper,
-      wethAmount: quote.split.ethAmount, usdcAmount: quote.split.usdcAmount, total: quote.depositUsd, feeCap: String(feeCap) });
+      wethAmount: quote.split.ethAmount, usdcAmount: quote.split.usdcAmount, total: quote.depositUsd, feeCap: String(feeCap), premiumUnits: protectionPremium?.toString() ?? null, premiumBps: activeBid?.premiumBps, offer: activeBid?.address, offerIndex: activeBid?.checkoutIndex, durationDays: coverageDays });
     setSupplyPhase("review"); setMintError(""); setMintStep("");
     setSupplyOpen(true);
   }
 
   async function finishSupply(tx: Hex, review: SupplyReview) {
-    setSupplyPhase("supply"); setMintStep("Waiting for the supply transaction to confirm…");
+    setSupplyPhase("supply"); setMintStep("Waiting for supply and protection to confirm…");
     let replaced = false;
     const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000,
       onReplaced: ({ reason }) => { if (reason !== "repriced") replaced = true; },
     });
     if (replaced) {
-      setMintHash(null); setSupplyPhase("review");
+      clearPendingCheckout(review); setMintHash(null); setSupplyPhase("review");
       throw new Error("The supply transaction was cancelled or replaced. Review your wallet before trying again.");
     }
     if (receipt.status !== "success") {
-      setMintHash(null); setSupplyPhase("review");
-      throw new Error("Supply reverted. No liquidity was supplied. You can try again.");
+      clearPendingCheckout(review); setMintHash(null); setSupplyPhase("review");
+      throw new Error("Supply reverted. No liquidity was supplied and no premium was paid. You can try again.");
     }
+    const purchase = atomicPurchase(receipt.logs, review.account);
+    if (!purchase || purchase.offer.toLowerCase() !== review.offer?.toLowerCase()) throw new Error("The receipt does not confirm atomic protection. Check the transaction before continuing.");
     setMintHash(receipt.transactionHash);
     setMintConfirmed(true); setSupplyPhase("done");
-    setMintStep("Supply confirmed. Updating your portfolio…");
+    void refreshCoverage();
+    setMintStep("Supply and protection confirmed. Updating your portfolio…");
     setTokenRefresh((value) => value + 1);
     const recorded = await api<{ tokenId: string }>(`markets/${review.marketId}/chain-positions`, "POST", { txHash: receipt.transactionHash, account: review.account });
-    setMintTokenId(recorded.tokenId); setMintSaved(true);
+    setMintTokenId(recorded.tokenId); setMintSaved(true); clearPendingCheckout(review);
     setTokenRefresh((value) => value + 1);
     setMintStep(`Position #${recorded.tokenId} added to your portfolio.`);
   }
@@ -382,27 +400,48 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
       if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Switch back to the wallet used to review this supply.");
       const wethAmount = parseUnits(review.wethAmount.toFixed(8), 18);
       const usdcAmount = parseUnits(review.usdcAmount.toFixed(6), 6);
+      if (!review.offer || review.offerIndex === undefined || !review.premiumUnits || !review.feeCap) throw new Error("Review a funded bid and premium first.");
+      const premiumAmount = BigInt(review.premiumUnits);
+      const single = review.singleToken;
+      if (single && (single.expiresAt <= Date.now() / 1000 || BigInt(single.amountOut) !== wethAmount)) throw new Error("Swap quote expired. Close this review and refresh before confirming.");
+      const totalUsdc = usdcAmount + premiumAmount + BigInt(single?.maxInput ?? "0");
       const [weth, usdc, slot] = await Promise.all([
         baseClient.readContract({ address: review.token, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
         baseClient.readContract({ address: NACRE_TEST_USDC, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
         baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi, functionName: "getSlot0", args: [review.poolId as Hex] }),
       ]);
-      if (weth < wethAmount) throw new Error(`Insufficient ${review.symbol}. Get test tokens from the faucet first.`);
-      if (usdc < usdcAmount) throw new Error("Insufficient nUSDC. Get test tokens from the faucet first.");
+      if (!single && weth < wethAmount) throw new Error(`Insufficient ${review.symbol}. Get test tokens from the faucet first.`);
+      if (usdc < totalUsdc) throw new Error("Insufficient nUSDC for deposit plus premium. Get test tokens from the faucet first.");
       if (slot[0] === 0n) throw new Error("The Uniswap pool has not been initialized.");
       const params = mintParameters({ fee: review.fee, sqrtPriceX96: slot[0], lowerPriceUsd: review.lower,
         upperPriceUsd: review.upper, wethAmount, usdcAmount, recipient: account, wethToken: review.token });
-      await approveForPosition(review.token, wethAmount, account);
-      await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);
+      if (!single) await approveForCheckout(review.token, wethAmount, account);
+      await approveForCheckout(NACRE_TEST_USDC, totalUsdc, account, single ? SWAPVM_CHECKOUT : ATOMIC_CHECKOUT);
+      if (single && single.expiresAt <= Date.now() / 1000) throw new Error("Swap quote expired during approval. Close this review and refresh. No supply was submitted.");
       await requireAvailableBid(review);
       setSupplyPhase("supply"); setMintStep("Checking the transaction and estimating gas…");
-      const request = await preparePositionMint(account, params.unlockData);
-      setMintStep("Confirm supply in your wallet…");
+      const checkoutTerms = { key: { currency0: review.token, currency1: NACRE_TEST_USDC,
+        fee: review.fee, tickSpacing: 10, hooks: "0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00" as Address },
+        offer: review.offer as Address, offerIndex: BigInt(review.offerIndex), tickLower: params.lowerTick, tickUpper: params.upperTick,
+        liquidity: params.liquidity, amount0Max: params.amount0Max, amount1Max: params.amount1Max,
+        feeCap: BigInt(review.feeCap), maxPremium: premiumAmount, deadline: BigInt(single ? single.expiresAt : Math.floor(Date.now() / 1000) + 600) };
+      const call = single
+        ? { account, address: SWAPVM_CHECKOUT, abi: checkoutAbi, functionName: "supplyWithUSDC" as const, args: [checkoutTerms, BigInt(single.maxInput), single.orderHash] as const }
+        : { account, address: ATOMIC_CHECKOUT, abi: checkoutAbi, functionName: "supplyAndProtect" as const, args: [checkoutTerms] as const };
+      const estimate = call.functionName === "supplyWithUSDC"
+        ? await baseClient.estimateContractGas(call) : await baseClient.estimateContractGas(call);
+      const gas = estimate * 130n / 100n + 25000n;
+      if (gas > 6_000_000n) throw new Error("Checkout gas exceeds the app limit. Refresh your quote and try again.");
+      if (call.functionName === "supplyWithUSDC") await baseClient.simulateContract({ ...call, gas });
+      else await baseClient.simulateContract({ ...call, gas });
+      setMintStep("Confirm supply and protection in your wallet…");
       const wallet = injectedClient();
       const [currentAccount] = await wallet.getAddresses();
       if (currentAccount?.toLowerCase() !== account.toLowerCase()) throw new Error("Wallet changed. Switch back before supplying.");
-      const tx = await wallet.writeContract({ ...request, chain: wallet.chain });
-      setMintHash(tx);
+      const tx = call.functionName === "supplyWithUSDC"
+        ? await wallet.writeContract({ ...call, gas, chain: wallet.chain })
+        : await wallet.writeContract({ ...call, gas, chain: wallet.chain });
+      setMintHash(tx); savePendingCheckout(tx, review);
       await finishSupply(tx, review);
     } catch (reason) { setMintError(positionMintError(reason).replace(/minting/gi, "supplying").replace(/mint/gi, "supply")); }
     finally { supplyLock.current = false; setMintBusy(false); }
@@ -416,7 +455,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
       setMintStep("Updating your portfolio…");
       const recorded = await api<{ tokenId: string }>(`markets/${supplyReview.marketId}/chain-positions`, "POST",
         { txHash: mintHash, account: supplyReview.account });
-      setMintTokenId(recorded.tokenId); setMintSaved(true);
+      setMintTokenId(recorded.tokenId); setMintSaved(true); clearPendingCheckout(supplyReview);
       setTokenRefresh((value) => value + 1);
       setMintStep(`Position #${recorded.tokenId} added to your portfolio.`);
     }
@@ -468,9 +507,9 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
       <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
         {role === "lp" && <Card className="kd-card mw-supply-card">
-          <div className="kd-card-heading"><h2><PiggyBank size={16} /> Supply liquidity</h2><span>BASE SEPOLIA</span></div>
+          <div className="kd-card-heading"><h2><PiggyBank size={16} /> Supply & protect</h2><span>BASE SEPOLIA</span></div>
           <div className="mw-supply-inner">
-            <p>Create an LP position with {wethSymbol} and nUSDC. Choose your range before supplying.</p>
+            <p>{singleToken ? "Supply nUSDC. We swap the portion your range needs into " + wethSymbol + ", then supply and activate fee protection together." : <>Choose your range, then supply {wethSymbol} and nUSDC with fee protection in one transaction.</>}</p>
             {rangeChoices && <fieldset className="supply-range-picker" disabled={mintBusy || supplyOpen || (!!mintHash && !mintConfirmed)}>{rangeChoices}</fieldset>}
             {bid && <fieldset className="supply-range-picker" disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>
               <div className="supply-range-summary"><span>Funded boundaries</span><strong>{usd(tickPrice(bid.tickLower))} – {usd(tickPrice(bid.tickUpper))}</strong></div>
@@ -489,25 +528,40 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
                 }} />
               {!exactBid && <button type="button" className="supply-secondary" disabled={!activeBid || !coverage || !!coverageError || !availableBid(activeBid, coverage.currentTick, walletAccount)} onClick={() => setSelectedRange({ marketId: selectedId, lower: tickPrice(bid.tickLower), upper: tickPrice(bid.tickUpper) })}>Use full bid range</button>}
             </fieldset>}
-            {!mintConfirmed && <p className={rangeWarning ? "supply-error" : "supply-range-eligible"} role="status">{rangeWarning || "This range is eligible for the selected bid. Protection starts after you purchase coverage."}</p>}
+            {!mintConfirmed && <p className={rangeWarning ? "supply-error" : "supply-range-eligible"} role="status">{rangeWarning || "This range is eligible. Supply and fee protection activate together in one transaction."}</p>}
             <fieldset disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>
+              <label htmlFor="supply-payment">Pay with</label>
+              <select id="supply-payment" className="supply-secondary" value={singleToken ? "usdc" : "pair"} onChange={(event) => setSingleToken(event.target.value === "usdc")}>
+                <option value="pair">{wethSymbol} + nUSDC</option>
+                <option value="usdc">nUSDC only · swap included</option>
+              </select>
               <AmountField label="Position amount (USD equivalent)" value={deposit} onChange={(value) => { setDeposit(value); setFeeTargetInput(""); }} min={100} />
             </fieldset>
+            {singleToken && singleQuote.error && <p className="supply-error" role="status">{singleQuote.error}</p>}
+            {singleToken && <div className="supply-review" aria-live="polite">
+              <div><span>Swap nUSDC into {wethSymbol}</span><strong>{swapQuote ? formatUnits(BigInt(swapQuote.amountIn), 6) + " nUSDC" : singleQuote.error ? "Unavailable" : "Getting quote…"}</strong></div>
+              <div><span>nUSDC for the LP position</span><strong>{formatUnits(requiredUsdc, 6)}</strong></div>
+              <div><span>Protection premium</span><strong>{protectionPremium === null ? "Unavailable" : formatUnits(protectionPremium, 6) + " nUSDC"}</strong></div>
+              <div><span>Maximum nUSDC payment · before gas</span><strong>{swapQuote ? formatUnits(singleTotal, 6) : "Unavailable"}</strong></div>
+              <small>The position amount is your LP target. The maximum payment includes the premium and a 0.5% swap buffer. Unspent tokens return to your wallet. Gas is paid in ETH.</small>
+            </div>}
             <div className="supply-token-grid">
               <div><span>{wethSymbol}</span><strong>{quote ? quote.split.ethAmount.toLocaleString("en-US", { maximumFractionDigits: 8 }) : "—"}</strong><small>Balance: {wethBalance === null ? "—" : Number(formatUnits(wethBalance, 18)).toLocaleString("en-US", { maximumFractionDigits: 8 })}</small></div>
               <div><span>nUSDC</span><strong>{quote ? quote.split.usdcAmount.toLocaleString("en-US", { maximumFractionDigits: 6 }) : "—"}</strong><small>Balance: {usdcBalance === null ? "—" : Number(formatUnits(usdcBalance, 6)).toLocaleString("en-US", { maximumFractionDigits: 6 })}</small></div>
             </div>
+            {!singleToken && bid && quote && <SupplyCostBreakdown positionValue={quote.depositUsd} usdcAmount={quote.split.usdcAmount}
+              premiumUnits={protectionPremium?.toString() ?? null} feeCapUnits={feeCap > 0n ? String(feeCap) : undefined} balance={mintConfirmed ? null : usdcBalance} />}
             <div className="supply-range-summary"><span>Price range</span><strong>{usd(lower)} – {usd(upper)}</strong></div>
             {mintConfirmed && mintHash ? <>
-              <a className="supply-primary" href={basescanTx(mintHash)} target="_blank" rel="noreferrer">Supplied · {mintHash.slice(0, 8)}…{mintHash.slice(-6)} <ExternalLink size={16} /></a>
-              <small>{mintTokenId ? `Position #${mintTokenId} is in your portfolio.` : "Supply confirmed on-chain."}</small>
+              <a className="supply-primary" href={basescanTx(mintHash)} target="_blank" rel="noreferrer">Supplied & protected · {mintHash.slice(0, 8)}…{mintHash.slice(-6)} <ExternalLink size={16} /></a>
+              <small>{mintTokenId ? `Position #${mintTokenId} is in your portfolio.` : "Supply and protection confirmed on-chain."}</small>
               {!mintSaved && <button className="supply-secondary" onClick={() => setSupplyOpen(true)}>View portfolio update</button>}
             </> : !walletAccount ? <button className="supply-primary" onClick={() => void onConnect()}>Connect wallet</button> : <>
               {!mintHash && supplyBlocker && <p id="supply-blocker" className="supply-error" role="status">{supplyBlocker}</p>}
-              <button className="supply-primary" disabled={mintBusy || (!mintHash && !!supplyBlocker)} aria-describedby={!mintHash && supplyBlocker ? "supply-blocker" : undefined} onClick={reviewSupply}>{mintBusy ? "Supply in progress…" : mintHash ? "Check supply status" : "Supply"} <ArrowRight size={16} /></button>
+              <button className="supply-primary" disabled={mintBusy || (!mintHash && !!supplyBlocker)} aria-describedby={!mintHash && supplyBlocker ? "supply-blocker" : undefined} onClick={reviewSupply}>{mintBusy ? "Supply & protect in progress…" : mintHash ? "Check transaction status" : "Supply & protect"} <ArrowRight size={16} /></button>
               {!mintHash && supplyBlocker && <button type="button" className="supply-secondary" disabled={mintBusy} onClick={() => { setTokenRefresh((value) => value + 1); void refreshCoverage(); }}>Retry supply checks</button>}
-              {quote && ((wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18)) || (usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6))) && <Link className="supply-secondary" href="/dashboard/faucet">Get test tokens <ArrowRight size={16} /></Link>}
-              {!isTestWeth && quote && wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && <button className="supply-secondary" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap test ETH to WETH</button>}
+              {quote && ((wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18)) || (usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6) + (protectionPremium ?? 0n))) && <Link className="supply-secondary" href="/dashboard/faucet">Get test tokens <ArrowRight size={16} /></Link>}
+              {!singleToken && !isTestWeth && quote && wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && <button className="supply-secondary" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap test ETH to WETH</button>}
               {mintError && !supplyOpen && <p role="alert" className="supply-error">{mintError}</p>}
             </>}
           </div>
@@ -545,15 +599,17 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
         {role === "lp" ? <Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><ShieldCheck size={16} /> Fee protection</h2></div>
           <div className="mw-trade-inner">
-            <p>After supplying, choose a position and buy coverage from a funded bid.</p>
+            <p>Your selected fee cap and premium are included in Supply & protect. Existing unprotected positions can still buy coverage below.</p>
             <details className="supply-coverage-settings"><summary>Coverage settings</summary>
               <label className="mw-field"><span>Duration</span><select disabled={!!bid} value={coverageDays} onChange={(event) => { setCoverageDays(Number(event.target.value)); setFeeTargetInput(""); }}>{[7, 14, 30, 60, 90].map((days) => <option key={days} value={days}>{days} days</option>)}</select></label>
               <AmountField label="Fee cap (nUSDC)" value={feeTargetInput} onChange={setFeeTargetInput} min={0.01} />
               <small>{feeTarget ? `Current target: ${feeTarget.toFixed(2)} nUSDC` : "Calculating suggested target…"}. Leave blank to use the suggested target.</small>
             </details>
             {feeError && <p role="alert">{feeError}</p>}
+            <details className="supply-coverage-settings"><summary>Protect an existing position</summary>
             <CoverageRequestForm bidAddress={bid?.address} poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
               feeTarget={feeTarget} maximumTarget={feePreview ? Math.min(feePreview.maximumFeeTargetUsd, bid ? capacity : Infinity) : undefined} refreshKey={tokenRefresh} />
+            </details>
           </div>
         </Card> : <><CoverageFunding poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} onConnect={onConnect} lower={lower} upper={upper} /><details className="cw-calculator"><summary>Historical risk calculator</summary><Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><ShieldCheck size={16} /> Backtest estimates</h2><span>RESEARCH</span></div>
@@ -589,6 +645,8 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
   const [positions, setPositions] = useState<ChainPosition[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const { data: portfolioCoverage, error: portfolioCoverageError, now: coverageNow } = useCoverage();
+  const paidShortfall = walletAccount && portfolioCoverage && !portfolioCoverageError ? shortfallTotal(portfolioCoverage, walletAccount, "lp") : null;
 
   useEffect(() => {
     if (!walletAccount || role !== "lp") {
@@ -619,17 +677,29 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
     {!walletAccount ? <Card className="kd-card mw-panel"><div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>Connect your wallet</h2><p>Your nWETH/nUSDC positions will appear here after they are minted and verified.</p><Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={14} /></Button></div></Card> : <>
       <div className="mw-stats">
         <Card className="kd-card"><div className="mw-stat"><span>LIQUIDITY POSITIONS</span><strong>{positions.length}</strong><small>Verified Base Sepolia mints</small></div></Card>
+        <Card className="kd-card"><div className="mw-stat"><span>SHORTFALL RECEIVED</span><strong>{paidShortfall === null ? "—" : formatUnits(paidShortfall, 6)}</strong><small>nUSDC · confirmed policy payouts</small></div></Card>
         <Card className="kd-card"><div className="mw-stat"><span>nWETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(nwethProvided, 18)).toFixed(5) : "—"}</strong><small>Faucet token · at mint</small></div></Card>
         <Card className="kd-card"><div className="mw-stat"><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(usdcProvided, 6)).toFixed(2)}</strong><small>At mint</small></div></Card>
       </div>
       {error && <div className="mw-message is-error" role="alert">{error}</div>}
       <Card className="kd-card mw-panel"><div className="kd-card-heading"><h2><PiggyBank size={16} /> Your LP positions</h2><span>{positions.length} ON-CHAIN</span></div>
-        <div className="mw-position-list">{loading ? <div className="mw-portfolio-empty"><p>Loading your positions…</p></div> : positions.length ? positions.map((position) => <div className="mw-position" key={position.tokenId}>
+        <div className="mw-position-list">{loading ? <div className="mw-portfolio-empty"><p>Loading your positions…</p></div> : positions.length ? positions.map((position) => {
+          const requests = portfolioCoverage?.requests.filter((request) => request.tokenId === position.tokenId
+            && request.lp.toLowerCase() === walletAccount.toLowerCase()) ?? [];
+          const policy = requests.find((request) => request.status === 2);
+          const pending = requests.find((request) => request.status === 1);
+          const existing = policy ?? pending;
+          const protectionLabel = policy ? (policy.endAt > coverageNow ? "Protected · View policy" : "Coverage ended · View policy")
+            : "Coverage requested · View request";
+          return <div className="mw-position" key={position.tokenId}>
           <TokenPairIcon pair={`${position.wethSymbol} / nUSDC`} size="small" />
           <div><strong>Uniswap position #{position.tokenId}</strong><small>{Number(formatUnits(BigInt(position.wethRaw), 18)).toFixed(5)} {position.wethSymbol} + {Number(formatUnits(BigInt(position.usdcRaw), 6)).toFixed(2)} nUSDC · {new Date(position.mintedAt).toLocaleDateString()}</small></div>
-          {position.wethSymbol === "nWETH" && <Button asChild variant="outline" size="sm"><Link href={`/dashboard/pools/${position.marketId}#protect-lp-fees`}>Protect fees <ShieldCheck size={13} /></Link></Button>}
+          {position.wethSymbol === "nWETH" && (portfolioCoverageError || !portfolioCoverage
+            ? <Button variant="outline" size="sm" disabled>{portfolioCoverageError ? "Coverage unavailable" : "Checking coverage…"}</Button>
+            : existing ? <Button asChild variant="outline" size="sm"><a href={`#coverage-policy-${existing.id}`}>{protectionLabel} <ShieldCheck size={13} /></a></Button>
+            : <Button asChild variant="outline" size="sm"><Link href={`/dashboard/pools/${position.marketId}#protect-lp-fees`}>Protect fees <ShieldCheck size={13} /></Link></Button>)}
           <Button asChild variant="outline" size="sm"><a href={basescanTx(position.txHash)} target="_blank" rel="noreferrer">BaseScan <ExternalLink size={13} /></a></Button>
-        </div>) : <div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>No on-chain positions yet</h2><p>Mint an nWETH/nUSDC position in the deployed pool to see it here.</p><Button asChild variant="outline"><Link href="/dashboard/pools">View pools <ArrowRight size={14} /></Link></Button></div>}</div>
+        </div>; }) : <div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>No on-chain positions yet</h2><p>Mint an nWETH/nUSDC position in the deployed pool to see it here.</p><Button asChild variant="outline"><Link href="/dashboard/pools">View pools <ArrowRight size={14} /></Link></Button></div>}</div>
       </Card>
       <CoverageBoard account={walletAccount} role="lp" portfolio />
     </>}
