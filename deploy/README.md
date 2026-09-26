@@ -19,6 +19,19 @@ Set DNS A records `@` and `api` to the instance public IPv4; use a `www` CNAME t
 `nacre.lol`. Remove parking records or stale AAAA records for these hostnames.
 DNS must resolve to this instance for public HTTPS certificate issuance.
 
+For the current instance (`3.108.133.250`), enter these records in Porkbun.
+Porkbun represents the root domain with an empty Host field:
+
+| Type | Host | Answer |
+| --- | --- | --- |
+| A | *(blank)* | `3.108.133.250` |
+| A | `api` | `3.108.133.250` |
+| CNAME | `www` | `nacre.lol` |
+
+Use the default TTL. The SSH user is `ubuntu`; the application is in
+`/opt/nacre`. Keep `nacre.pem` on your workstation, never in the repository or
+Docker images. Run Compose commands on this host with `sudo`.
+
 ## Build and start
 
 From the repository root:
