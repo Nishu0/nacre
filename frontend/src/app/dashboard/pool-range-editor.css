@@ -7,6 +7,11 @@
 .pre-heading button:hover { text-decoration: underline; }
 .pre-heading button:focus-visible { outline: 2px solid #568667; outline-offset: 3px; }
 .pre-chart { position: relative; height: 107px; margin-top: 29px; border-bottom: 2px solid #a9b8ac; }
+.pre-chart-with-handles { margin-bottom: 12px; }
+.pre-handle-hint { display: flex; align-items: center; gap: 6px; color: #385e47; font-size: 11px; line-height: 1.5; }
+.pre-editor .pre-range-handle { position: absolute; bottom: -16px; z-index: 3; display: grid; place-items: center; width: 26px; height: 32px; padding: 0; transform: translateX(-50%); border: 2px solid #fff; border-radius: 7px; background: #315f42; color: #fff; box-shadow: 0 0 0 1px #315f42; cursor: ew-resize; touch-action: none; }
+.pre-editor .pre-range-handle:focus-visible { z-index: 4; outline: 3px solid #3977b8; outline-offset: 3px; }
+.pre-editor .pre-range-handle:disabled { background: #526958; color: #fff; opacity: 1; cursor: not-allowed; }
 .pre-bars { position: absolute; inset: 8px 0 3px; display: flex; align-items: end; justify-content: space-between; gap: 2px; overflow: hidden; }
 .pre-bars span { flex: 1; min-width: 2px; border-radius: 2px 2px 0 0; background: #dbe8de; }
 .pre-bars span.is-selected { background: linear-gradient(#70aa79, #3e7951); }

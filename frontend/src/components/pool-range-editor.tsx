@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type PointerEvent } from "react";
+import { GripVertical, LockKeyhole } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { priceToRawTick } from "@/lib/nacre-liquidity";
 import { rangeSliderDomain, moveRangeBound, rangeTickPrice } from "@/lib/range-slider";
@@ -47,6 +48,11 @@ export function PoolRangeEditor({ minimum, maximum, current, currentLabel, onCha
     const next = moveRangeBound(side, tick, side === "lower" ? upperTick : lowerTick, minTick, maxTick);
     (side === "lower" ? onLower : onUpper)(rangeTickPrice(next));
   };
+  const dragHandle = (side: "lower" | "upper", event: PointerEvent<HTMLButtonElement>) => {
+    if (readOnly || !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const bounds = event.currentTarget.parentElement!.getBoundingClientRect();
+    change(side, domain.start + (event.clientX - bounds.left) / bounds.width * (domain.end - domain.start));
+  };
   const center = () => {
     if (readOnly) return;
     setDragDomain(null); setZoom(1);
@@ -66,11 +72,28 @@ export function PoolRangeEditor({ minimum, maximum, current, currentLabel, onCha
   return <div className="pre-editor">
     <div className="pre-heading"><strong>Position price range</strong><div>{!readOnly && <button type="button" disabled={current <= rangeTickPrice(minTick) || current >= rangeTickPrice(maxTick)} onClick={center}>Center on price</button>}<span>{within ? "IN RANGE" : "OUT OF RANGE"}</span></div></div>
     {fundedRange && <div className="pre-legend"><span><i className="pre-key-funded" />Funded bid</span><span><i className="pre-key-selected" />Your selection</span><span><i className="pre-key-unfunded" />Outside this bid</span></div>}
-    <div className="pre-chart" role="img" aria-label={`Position range ${format(shownLower)} to ${format(shownUpper)}; ${currentLabel.toLowerCase()} ${format(current)}${fundedRange ? `; funded boundaries ${format(rangeTickPrice(minTick))} to ${format(rangeTickPrice(maxTick))}` : ""}`}>
+    {fundedRange && <div className="pre-handle-hint">{fundedRange.exact ? <><LockKeyhole size={13} /> Fixed bid · slider locked to its funded range</> : locked ? "Slider paused · bid unavailable" : <><GripVertical size={13} /> Drag the two handles to choose your range</>}</div>}
+    <div className={`pre-chart${fundedRange ? " pre-chart-with-handles" : ""}`} role={fundedRange ? "group" : "img"} aria-label={`Position range ${format(shownLower)} to ${format(shownUpper)}; ${currentLabel.toLowerCase()} ${format(current)}${fundedRange ? `; funded boundaries ${format(rangeTickPrice(minTick))} to ${format(rangeTickPrice(maxTick))}` : ""}`}>
       {fundedRange && <div className="pre-funded-band" style={{ left: `${fundedLeft}%`, width: `${fundedRight - fundedLeft}%` }} />}
       <div className="pre-spot" style={{ left: `${spot}%` }}><span style={spot < 12 ? { transform: "none", left: 0 } : spot > 88 ? { transform: "translateX(-100%)", left: 0 } : undefined}>{currentLabel}<br /><strong>{format(current)}</strong></span><i /></div>
       <div className="pre-bars">{bars}</div>
       <div className="pre-selected" style={{ left: `${left}%`, width: `${Math.max(0, right - left)}%` }} />
+      {fundedRange && (["lower", "upper"] as const).map((side) => <button key={side} type="button" role="slider" className="pre-range-handle" style={{ left: `${side === "lower" ? left : right}%` }}
+        disabled={readOnly} aria-label={`${side === "lower" ? "Minimum" : "Maximum"} range handle`} aria-orientation="horizontal"
+        aria-valuemin={side === "lower" ? minTick : lowerTick + 10} aria-valuemax={side === "lower" ? upperTick - 10 : maxTick}
+        aria-valuenow={side === "lower" ? lowerTick : upperTick} aria-valuetext={format(side === "lower" ? shownLower : shownUpper)}
+        title={fundedRange.exact ? "This bid protects its exact range only" : `${side === "lower" ? "Minimum" : "Maximum"} price`}
+        onPointerDown={(event) => { event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); setDragDomain({ start: limits.start, end: limits.end }); }}
+        onPointerMove={(event) => dragHandle(side, event)} onPointerUp={() => setDragDomain(null)} onPointerCancel={() => setDragDomain(null)} onLostPointerCapture={() => setDragDomain(null)}
+        onKeyDown={(event) => {
+          const tick = side === "lower" ? lowerTick : upperTick;
+          const next = event.key === "Home" ? minTick : event.key === "End" ? maxTick
+            : ["ArrowRight", "ArrowUp"].includes(event.key) ? tick + 10
+            : ["ArrowLeft", "ArrowDown"].includes(event.key) ? tick - 10 : null;
+          if (next !== null) { event.preventDefault(); change(side, next); }
+        }}>
+        {readOnly ? <LockKeyhole size={14} aria-hidden="true" /> : <GripVertical size={18} aria-hidden="true" />}
+      </button>)}
     </div>
     <div className="pre-axis"><span>{format(rangeTickPrice(domain.start))}</span><span>{format(rangeTickPrice(domain.end))}</span></div>
     {fundedRange && <div className="pre-funded-caption"><strong>Funded: {format(rangeTickPrice(minTick))} – {format(rangeTickPrice(maxTick))}</strong><span>{fundedRange.exact ? "Exact range · locked to this bid’s boundaries" : locked ? "Range selection paused · bid unavailable" : "Select within the blue boundaries. Controls stop at the funded limits."}</span></div>}
