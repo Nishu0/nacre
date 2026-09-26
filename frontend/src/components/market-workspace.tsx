@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Activity, ArrowRight, CircleHelp, Droplets, PiggyBank, Plus, RefreshCw, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,13 +68,11 @@ function AmountField({ label, value, onChange, min = 0 }: {
 }
 
 export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: string; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void }) {
-  const router = useRouter();
   const participant = useParticipant();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [oraclePoints, setOraclePoints] = useState<OraclePoint[]>([]);
   const [livePrices, setLivePrices] = useState<LivePrices | null>(null);
   const [liveError, setLiveError] = useState(false);
-  const initializedCreatePrice = useRef(false);
   const [selectedId, setSelectedId] = useState(marketId ?? "");
   const [quoteState, setQuoteState] = useState<{ marketId: string; data: Quote } | null>(null);
   const [riskState, setRiskState] = useState<{ marketId: string; depositUsd: number; data: RiskReport } | null>(null);
@@ -84,12 +81,7 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-  const [creating, setCreating] = useState(false);
-  const [price, setPrice] = useState("2000");
-  const [lower, setLower] = useState("1800");
-  const [upper, setUpper] = useState("2200");
-  const [target, setTarget] = useState("1000");
-  const [budget, setBudget] = useState("100");
+  const [hasPoolDraft, setHasPoolDraft] = useState(false);
   const [deposit, setDeposit] = useState("1000");
   const [pledge, setPledge] = useState("100");
   const [simulatedPrice, setSimulatedPrice] = useState("");
@@ -100,18 +92,16 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
     ? riskState.data : null;
 
   useEffect(() => {
+    if (!marketId) queueMicrotask(() => setHasPoolDraft(Boolean(localStorage.getItem("nacre-pool-create-draft-v1"))));
+  }, [marketId]);
+
+  useEffect(() => {
     let active = true;
     const refresh = () => {
       void api<LivePrices>("live-prices").then((value) => {
         if (!active) return;
         setLivePrices(value);
         setLiveError(false);
-        if (!initializedCreatePrice.current) {
-          initializedCreatePrice.current = true;
-          setPrice(value.wethUsdc.toFixed(2));
-          setLower((value.wethUsdc * .9).toFixed(2));
-          setUpper((value.wethUsdc * 1.1).toFixed(2));
-        }
       }).catch(() => { if (active) { setLivePrices(null); setLiveError(true); } });
     };
     refresh();
@@ -167,16 +157,6 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
     finally { setBusy(false); }
   }
 
-  async function createMarket() {
-    if (!participant) return;
-    const result = await change(() => api<{ market: Market }>("markets", "POST", {
-      creator: participant, priceUsd: Number(price), lowerPriceUsd: Number(lower),
-      upperPriceUsd: Number(upper), liquidityTargetUsd: Number(target),
-      collateralBudgetUsd: Number(budget),
-    }), "Pool draft created. Invite LPs and underwriters to fund it.");
-    if (result) { setCreating(false); router.push(`/dashboard/pools/${result.market.id}`); }
-  }
-
   async function pledgeCapacity() {
     if (!selected || !participant) return;
     await change(() => api(`markets/${selected.id}/pledges`, "POST", {
@@ -206,10 +186,9 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
 
   return <div className="mw-page">
     <div className="mw-banner"><CircleHelp size={16} /><p><strong>Interactive sandbox</strong> · Pool funding, deposits, price moves, and coverage are saved locally by the Bun server. No tokens move and no policy is active on-chain.</p></div>
-    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review funding, range, and available protection before joining." : "Explore funded markets, then open a pool to provide liquidity or underwrite."}</p></div>{!marketId && <Button className="kd-apply-button" onClick={() => setCreating(!creating)}><Plus size={15} /> Create pool</Button>}</div>
-    {creating && !marketId && <Card className="kd-card mw-form-card"><div className="kd-card-heading"><h2><Droplets size={16} /> New pool draft</h2><Badge variant="outline">WETH / USDC · 0.05%</Badge></div><div className="mw-form-inner"><div className="mw-fields"><AmountField label="Current ETH price (USD)" value={price} onChange={setPrice} min={1} /><AmountField label="Lower range price" value={lower} onChange={setLower} min={1} /><AmountField label="Upper range price" value={upper} onChange={setUpper} min={1} /><AmountField label="LP funding target (USD)" value={target} onChange={setTarget} min={100} /><AmountField label="Protection capacity target (USD)" value={budget} onChange={setBudget} min={1} /></div><p>{livePrices ? `Starting price follows the latest ${livePrices.source} WETH/USDC reference. ` : "Live oracle quote unavailable; enter a starting price. "}Prices and ticks remain editable sandbox inputs.</p><Button className="kd-apply-button" disabled={busy || !participant} onClick={createMarket}>Create draft <ArrowRight size={15} /></Button></div></Card>}
+    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review funding, range, and available protection before joining." : "Explore funded markets, then open a pool to provide liquidity or underwrite."}</p></div>{!marketId && <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
     {error && <div className="mw-message is-error" role="alert">{error}</div>}{notice && <div className="mw-message" role="status">{notice}</div>}
-    {!marketId && !markets.length && !creating && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre pool drafts yet</h2><p>Create a sandbox market to test liquidity funding, underwriting interest, tick movement, and limited cover.</p><Button className="kd-apply-button" onClick={() => setCreating(true)}><Plus size={15} /> Create first pool</Button></div></Card>}
+    {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre pool drafts yet</h2><p>Create a sandbox market to test liquidity funding, underwriting interest, tick movement, and limited cover.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
     {!marketId && !!markets.length && <><div className="mw-directory-summary"><span>MARKETS <strong>{markets.length}</strong></span><span>LP CAPITAL <strong>{usd(markets.reduce((sum, market) => sum + market.investedUsd, 0))}</strong></span><span>AVAILABLE COVER <strong>{usd(markets.reduce((sum, market) => sum + market.coverRemainingUsd, 0))}</strong></span></div><div className="mw-directory-header"><h3>Available markets</h3><span>LOCAL SANDBOX · WETH / USDC</span></div><div className="mw-directory-grid">{markets.map((market) => <Link key={market.id} href={`/dashboard/pools/${market.id}`} className="mw-directory-card"><div className="mw-directory-top"><TokenPairIcon pair={market.pair} size="large" /><Badge variant="outline">{market.status.replaceAll("_", " ")}</Badge></div><div><h3>{market.pair}</h3><p>{market.feeTier} fee · {usd(market.priceUsd)} / ETH</p></div><div className="mw-directory-metrics"><div><span>LP funded</span><strong>{usd(market.investedUsd)}</strong><small>of {usd(market.liquidityTargetUsd)}</small></div><div><span>Cover left</span><strong>{usd(market.coverRemainingUsd)}</strong><small>{usd(market.pledgedUsd)} pledged</small></div></div><div className="mw-directory-progress"><span>Liquidity funding</span><progress max={market.liquidityTargetUsd} value={market.investedUsd} /></div><div className="mw-directory-open">View pool <ArrowRight size={15} /></div></Link>)}</div></>}
     {marketId && !selected && !!markets.length && <Card className="kd-card mw-missing"><h3>Pool not found</h3><p>This market may have been removed from the local sandbox.</p><Link href="/dashboard/pools">Back to pool directory <ArrowRight size={15} /></Link></Card>}
     {marketId && selected && <div className="mw-pool-detail">
