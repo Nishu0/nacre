@@ -22,3 +22,5 @@ install_locked v4-periphery https://github.com/Uniswap/v4-periphery.git 9969eec4
 install_locked aqua https://github.com/1inch/aqua.git ef24220ed9647555727b06867bf509cd6959d84b
 install_locked solidity-utils https://github.com/1inch/solidity-utils.git 4df02bddf562c2e1cb5de5dc98f3cf077926b79f
 install_locked openzeppelin-contracts https://github.com/OpenZeppelin/openzeppelin-contracts.git 4858ab13a5ad897f59753028f6315f9d487c4322
+
+install_locked swap-vm https://github.com/1inch/swap-vm.git feb16411738331f7d05ae71d4a664154068018fc

@@ -4,6 +4,8 @@ out = "out"
 libs = ["lib"]
 solc_version = "0.8.30"
 optimizer = true
+# Required by the official SwapVM implementation.
+via_ir = true
 optimizer_runs = 200
 evm_version = "cancun"
 auto_detect_remappings = false
