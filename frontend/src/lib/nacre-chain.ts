@@ -6,7 +6,7 @@ export const NACRE_TEST_USDC = "0xfa35D165b03B8eB193934D338Db8de536e84AAC8" as A
 export const NACRE_REPEAT_FAUCET = "0x2EB148c4E526524E930a22788faa7e7c00eC425B" as Address;
 export const NACRE_LAUNCHER = "0x49FcA731F70DaF38d828E34204F2437E75a605a6" as Address;
 export const NACRE_HOOK = "0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00" as Address;
-export const NACRE_VAULT = "0x5Dc6026219bbB88998A8BA61a4490001EC998FdA" as Address;
+export const NACRE_VAULT = "0x879ead283e76afc12865ca43a0a3f10c3626cce0" as Address;
 export const BASE_WETH = "0x4200000000000000000000000000000000000006" as Address;
 export const UNISWAP_POSITION_MANAGER = "0x4b2c77d209d3405f41a037ec6c77f7f5b8e2ca80" as Address;
 export const UNISWAP_STATE_VIEW = "0x571291b572ed32ce6751a2cb2486ebee8defb9b4" as Address;
@@ -94,7 +94,7 @@ export function priceToRawTick(priceUsd: number): number {
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) throw new Error("Invalid position bound.");
   const wethFirst = BigInt(BASE_WETH.toLowerCase()) < BigInt(NACRE_TEST_USDC.toLowerCase());
   const rawPrice = wethFirst ? priceUsd * 1e-12 : 1e12 / priceUsd;
-  return Math.floor(Math.log(rawPrice) / Math.log(1.0001) / 10) * 10;
+  return Math.floor(Math.log(rawPrice) / Math.log(1.0001) / 10 + 1e-9) * 10;
 }
 
 function approximateSqrtAtTick(tick: number): bigint {

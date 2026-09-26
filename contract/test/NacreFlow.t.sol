@@ -49,6 +49,9 @@ contract MockPositionManager is ERC721 {
     mapping(uint256 => PoolKey) private keys;
     mapping(uint256 => uint256) public pending0;
     mapping(uint256 => uint256) public pending1;
+    uint128 public testLiquidity = 1e23;
+    function getPositionLiquidity(uint256) external view returns (uint128) { return testLiquidity; }
+    function setTestLiquidity(uint128 value) external { testLiquidity = value; }
 
     constructor(MockPoolManager manager_, NacreFeeHook hook_) ERC721("Mock v4 position", "M-V4") {
         manager = manager_;

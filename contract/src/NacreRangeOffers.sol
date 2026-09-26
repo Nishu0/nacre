@@ -6,9 +6,15 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IAqua} from "@1inch/aqua/src/interfaces/IAqua.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
+import {SqrtPriceMath} from "@uniswap/v4-core/src/libraries/SqrtPriceMath.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PositionInfo, PositionInfoLibrary} from "@uniswap/v4-periphery/src/libraries/PositionInfoLibrary.sol";
 import {NacrePolicyVault} from "./NacrePolicyVault.sol";
 import {NacreAquaUnderwriter} from "./NacreAquaUnderwriter.sol";
+
+interface IPositionLiquidity { function getPositionLiquidity(uint256 tokenId) external view returns (uint128); }
 
 /// @notice A maker-owned, funded offer for exact pool ticks and coverage duration.
 /// @dev Filled caps move to the existing policy vault via Aqua. Premiums and
@@ -28,6 +34,7 @@ contract NacreRangeOffer is ReentrancyGuard {
     uint16 public immutable premiumBps;
     uint256 public immutable deposited;
     uint256 public withdrawn;
+    uint256 public constant MAX_FEE_APR_BPS = 2000;
     bool public closed;
     mapping(uint256 => bool) public published;
 
@@ -50,6 +57,24 @@ contract NacreRangeOffer is ReentrancyGuard {
         deposited = amount_;
     }
 
+    /// @notice Conservative fee ceiling independent of manipulable DEX spot.
+    /// Value the two endpoint inventories with the configured fee oracle and
+    /// use the lower value, then cap fees at 20% annualized for this duration.
+    function maximumCap(uint256 tokenId) public view returns (uint256) {
+        (PoolKey memory key, uint256 packed) = vault.positionManager().getPoolAndPositionInfo(tokenId);
+        PositionInfo info = PositionInfo.wrap(packed);
+        uint128 liquidity = IPositionLiquidity(address(vault.positionManager())).getPositionLiquidity(tokenId);
+        uint160 lower = TickMath.getSqrtPriceAtTick(info.tickLower());
+        uint160 upper = TickMath.getSqrtPriceAtTick(info.tickUpper());
+        uint256 amount0 = SqrtPriceMath.getAmount0Delta(lower, upper, liquidity, false);
+        uint256 amount1 = SqrtPriceMath.getAmount1Delta(lower, upper, liquidity, false);
+        if (amount0 == 0 || amount1 == 0) return 0;
+        uint256 value0 = vault.feeValueOracle().quote(Currency.unwrap(key.currency0), amount0);
+        uint256 value1 = vault.feeValueOracle().quote(Currency.unwrap(key.currency1), amount1);
+        uint256 principal = value0 < value1 ? value0 : value1;
+        return principal * MAX_FEE_APR_BPS * duration / (10000 * 365 days);
+    }
+
     function quoteFor(uint256 requestId) public view returns (NacreAquaUnderwriter.Quote memory q) {
         require(!closed, "Offer closed");
         (bool ok, bytes memory data) = address(vault).staticcall(
@@ -63,6 +88,7 @@ contract NacreRangeOffer is ReentrancyGuard {
         PositionInfo info = PositionInfo.wrap(packed);
         require(info.tickLower() == tickLower && info.tickUpper() == tickUpper, "Different bins");
         require(vault.isInRange(requestId), "Position out of range");
+        require(r.feeFloor == r.payoutCap && r.payoutCap <= maximumCap(r.tokenId), "Fee target exceeds position limit");
         require(token.balanceOf(address(this)) >= r.payoutCap, "Capacity exhausted");
         q = NacreAquaUnderwriter.Quote({maker: address(this), requestId: requestId,
             premium: (r.payoutCap * premiumBps + 9999) / 10000, payoutCap: r.payoutCap,

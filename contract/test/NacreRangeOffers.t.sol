@@ -11,6 +11,12 @@ contract NacreRangeOffersTest is NacreFlowTest {
         super.setUp();
         factory = new NacreRangeOfferFactory(app, PoolId.unwrap(PoolIdLibrary.toId(key)));
     }
+    function _rangeRequest() internal returns (uint256 id) {
+        vm.startPrank(lp);
+        positions.approve(address(vault), 1);
+        id = vault.createRequest(key, 1, 500e6, 500e6, 30 days, uint64(block.timestamp + 1 days));
+        vm.stopPrank();
+    }
     function _offer(uint256 amount) internal returns (NacreRangeOffer offer) {
         vm.startPrank(maker);
         usdc.approve(address(factory), amount);
@@ -20,7 +26,7 @@ contract NacreRangeOffersTest is NacreFlowTest {
     function testFundBeforeRequestBuySettleAndWithdraw() public {
         NacreRangeOffer offer = _offer(700e6);
         assertEq(usdc.balanceOf(address(offer)), 700e6);
-        uint256 id = _request();
+        uint256 id = _rangeRequest();
         vm.startPrank(lp);
         offer.publish(id);
         NacreAquaUnderwriter.Quote memory q = offer.quoteFor(id);
@@ -34,7 +40,7 @@ contract NacreRangeOffersTest is NacreFlowTest {
         offer.closeAndWithdraw();
         assertEq(usdc.balanceOf(maker), 540e6);
         assertEq(vault.reservedCollateral(), 500e6);
-        positions.addFees(1, 800e6, 0);
+        positions.addFees(1, 300e6, 0);
         vm.warp(block.timestamp + 30 days);
         vault.settle(id);
         assertEq(usdc.balanceOf(address(offer)), 300e6);
@@ -45,11 +51,11 @@ contract NacreRangeOffersTest is NacreFlowTest {
     }
     function testCapacityCannotBackTwoPoliciesAtOnce() public {
         NacreRangeOffer offer = _offer(500e6);
-        uint256 first = _request();
+        uint256 first = _rangeRequest();
         positions.mint(lp, 2, key);
         vm.startPrank(lp);
         positions.approve(address(vault), 2);
-        uint256 second = vault.createRequest(key, 2, 1000e6, 500e6, 30 days, uint64(block.timestamp + 1 days));
+        uint256 second = vault.createRequest(key, 2, 500e6, 500e6, 30 days, uint64(block.timestamp + 1 days));
         offer.publish(first);
         offer.publish(second);
         NacreAquaUnderwriter.Quote memory q1 = offer.quoteFor(first);
@@ -64,7 +70,7 @@ contract NacreRangeOffersTest is NacreFlowTest {
     }
     function testCloseRevokesPreparedQuotesAndOwnerOnlyWithdrawal() public {
         NacreRangeOffer offer = _offer(500e6);
-        uint256 id = _request();
+        uint256 id = _rangeRequest();
         offer.publish(id);
         NacreAquaUnderwriter.Quote memory q = offer.quoteFor(id);
         vm.prank(attacker);
@@ -75,8 +81,17 @@ contract NacreRangeOffersTest is NacreFlowTest {
         assertFalse(app.canFill(q));
         assertEq(usdc.allowance(address(offer), address(aqua)), 0);
     }
+    function testTinyPositionCannotDrainRangeCapacity() public {
+        NacreRangeOffer offer = _offer(500e6);
+        uint256 id = _rangeRequest();
+        positions.setTestLiquidity(1);
+        assertEq(offer.maximumCap(1), 0);
+        vm.expectRevert("Fee target exceeds position limit");
+        offer.publish(id);
+        assertEq(usdc.balanceOf(address(offer)), 500e6);
+    }
     function testRejectMismatchedBinsDaysAndInvalidDeposits() public {
-        uint256 id = _request();
+        uint256 id = _rangeRequest();
         vm.startPrank(maker);
         usdc.approve(address(factory), 1000e6);
         vm.expectRevert("Invalid amount");

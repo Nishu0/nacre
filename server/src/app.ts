@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { backtest, feeRequestPreview, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
+import { coverageSnapshot } from "./coverage";
 import { getHyperliquidHistory, type PriceHistory } from "./hyperliquid";
 import { getLivePrices, type LivePrices } from "./live-prices";
 import { buildRiskAnalysis } from "./risk-analysis";
@@ -81,6 +82,16 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       yieldSource: `https://defillama.com/yields/pool/${pool.llamaId}`,
       capturedAt: seeded.find((row) => row.id === pool.id)?.captured_at ?? null,
     }));
+  });
+
+  app.get<{ Querystring: { fresh?: string } }>("/api/coverage", async (request, reply) => {
+    try {
+      const rows = db.query("SELECT token_id FROM market_chain_positions").all() as { token_id: string }[];
+      return await coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1");
+    } catch (error) {
+      app.log.error(error, "Coverage chain read failed");
+      return reply.code(503).send({ error: "Could not read coverage from Base Sepolia. Please retry." });
+    }
   });
 
   app.get("/api/live-prices", async (_request, reply) => {

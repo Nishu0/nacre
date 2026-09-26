@@ -28,3 +28,15 @@ contract DeployNacreRangeOffers is Script {
         vm.stopBroadcast();
     }
 }
+
+contract DeployNacreRangeFactory is Script {
+    function run() external returns (NacreRangeOfferFactory factory) {
+        require(block.chainid == 84532, "Base Sepolia only");
+        uint256 key = vm.envUint("PRIVATE_KEY");
+        require(vm.addr(key) == vm.envAddress("DEPLOYER"), "Deployer mismatch");
+        vm.startBroadcast(key);
+        factory = new NacreRangeOfferFactory(NacreAquaUnderwriter(0x0D2ED632E5A10aB713d183369687720d4e3817Cd),
+            0xbd5de3746823c61672498c78534510c625648ad7db69af5a3777de02c9e5ba56);
+        vm.stopBroadcast();
+    }
+}

@@ -1,6 +1,7 @@
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function allowed(path: string[], method: string): boolean {
+  if (path.length === 1 && path[0] === "coverage") return method === "GET";
   if (path.length === 1 && path[0] === "markets") return method === "GET" || method === "POST";
   if (path.length === 1 && path[0] === "chain-positions") return method === "GET";
   if (path.length === 1 && path[0] === "live-prices") return method === "GET";
@@ -22,7 +23,7 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   }
   const incoming = new URL(request.url);
   const upstream = new URL(`/api/${path.join("/")}`, process.env.NACRE_API_URL ?? "http://127.0.0.1:3001");
-  for (const key of ["depositUsd", "participant", "account", "marketId", "lowerPriceUsd", "upperPriceUsd", "days", "feeTargetUsd"]) {
+  for (const key of ["fresh", "depositUsd", "participant", "account", "marketId", "lowerPriceUsd", "upperPriceUsd", "days", "feeTargetUsd"]) {
     const value = incoming.searchParams.get(key);
     if (value !== null) upstream.searchParams.set(key, value);
   }
@@ -32,7 +33,7 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
       headers: request.method === "GET" ? undefined : { "content-type": "application/json" },
       body: request.method === "GET" ? undefined : await request.text(),
       cache: "no-store",
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(path[0] === "coverage" ? 20000 : 8000),
     });
     return new Response(await response.text(), {
       status: response.status,

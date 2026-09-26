@@ -86,3 +86,47 @@ The launcher has immutable admin `0xeC5660E8912DC26FC0e5eC700bf05b9f326D6288`. I
 - **Expiry accounting is not production-complete:** if nobody settles promptly, fees earned after `endAt` enter the collection. A reliable expiry snapshot or time-bounded keeper process is required before real value is used.
 - The backtest models pool-level yield, while the contract settles the actual covered position's fees. Suggested premiums are research estimates, not binding quotes.
 - The contracts have not undergone a security audit or mainnet fork test.
+
+### Funded range coverage (September 26 update)
+
+The dashboard now uses a corrected policy vault and funded range-offer factory:
+
+| Contract | Base Sepolia address |
+| --- | --- |
+| Corrected policy vault | [0x879e…cce0](https://sepolia.basescan.org/address/0x879ead283e76afc12865ca43a0a3f10c3626cce0#code) |
+| Coverage Aqua app | [0x0d2e…17cd](https://sepolia.basescan.org/address/0x0d2ed632e5a10ab713d183369687720d4e3817cd#code) |
+| Range-offer factory | [0x6b98…6751](https://sepolia.basescan.org/address/0x6b9803efd7f39163af2ceb330ee58afbadd06751#code) |
+
+The existing WETH/nUSDC pool, tokens, hook, oracle and Aqua registry are unchanged.
+The previous vault used action `0x0f` (TAKE_ALL), which the actual PositionManager
+rejected. Fee collection now uses `0x11` (TAKE_PAIR). The new vault relies on NFT
+custody for this existing pool because its hook's controller was already bound
+to the previous vault. The LP cannot transfer, remove liquidity or collect while
+the new vault owns its NFT. For newly bound hooks, the vault also checks hook
+fee accounting. No existing policy or NFT was migrated.
+
+An underwriter funds a separate `NacreRangeOffer` with exact lower/upper ticks,
+a fixed duration, and a premium in basis points of each payout cap. LP requests
+must match the ticks and duration exactly; the owner's own LP requests are
+excluded. The payout cap must equal the fee floor and cannot exceed 20% annualized
+of the position's conservative oracle-valued endpoint inventory, scaled to the
+selected duration. Zero/dust positions cannot advertise a large claim against
+funded capacity. An LP publishes the matching Aqua strategy and buys through the app.
+The full cap moves into the policy vault atomically with premium payment. Shared
+unfilled virtual quotes cannot create multiple claims on already reserved funds.
+
+`closeAndWithdraw` revokes Aqua allowance and returns the offer's available
+balance. Active caps stay in the policy vault. When policies settle, unused caps
+return to the original offer and its owner can withdraw again. All premium and
+portfolio totals are read from on-chain requests and offer balances.
+
+Run `forge test --match-contract 'Nacre(RangeOffers|Flow)'` with
+`BASE_SEPOLIA_RPC_URL` set to include the real deployed pool fork test. It mints
+through the actual PositionManager, creates and buys seven-day cover, settles a
+zero-fee claim after a local time warp, and returns the NFT. Tests also cover
+positive fees, competing fills, insufficient capacity, wrong ticks/duration,
+revocation, and owner-only withdrawals. The fork makes no testnet transactions.
+
+The expiry-accounting limitation above still applies: settlement collects fees
+at execution, so delayed settlement can include post-expiry fees. This remains
+a test-token prototype, not an audited mainnet insurance deployment.
