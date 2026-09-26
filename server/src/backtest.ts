@@ -88,6 +88,7 @@ export function backtest(observations: Observation[], principalUsd: number) {
   return {
     principalUsd,
     sampleDays: observations.length,
+    yieldHistory: observations.map(({ date, apyBasePct }) => ({ date, apyBasePct })),
     windowDays: 30,
     windowCount: windows.length,
     displayedDays: daily.length,

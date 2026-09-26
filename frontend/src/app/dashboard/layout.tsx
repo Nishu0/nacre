@@ -6,6 +6,7 @@ import "./pool-detail.css";
 import "./pool-risk-analysis.css";
 import "./pool-create-flow.css";
 import "./faucet.css";
+import "./underwriting-simulator.css";
 import "./pool-range-editor.css";
 
 export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
