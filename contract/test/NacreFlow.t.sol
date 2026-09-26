@@ -190,6 +190,103 @@ contract NacreFlowTest is Test {
         assertEq(vault.reservedCollateral(), 0);
     }
 
+    function testShippedQuoteHashAndWalletBacking() public {
+        uint256 id = _request();
+        NacreAquaUnderwriter.Quote memory quote = _quote(id);
+        bytes32 hash = app.strategyHash(quote);
+        (uint248 virtualBalance, uint8 tokenCount) =
+            aqua.rawBalances(maker, address(app), hash, address(usdc));
+        assertEq(virtualBalance, 500e6);
+        assertEq(tokenCount, 1);
+        assertTrue(app.canFill(quote));
+
+        // Shipping only creates virtual capacity; losing actual wallet backing
+        // makes the quote unfillable and cannot activate a policy.
+        vm.prank(maker);
+        usdc.transfer(attacker, 1_000e6);
+        assertFalse(app.canFill(quote));
+        vm.startPrank(lp);
+        usdc.approve(address(app), 24e6);
+        vm.expectRevert();
+        app.buyCoverage(quote);
+        vm.stopPrank();
+        assertEq(vault.reservedCollateral(), 0);
+    }
+
+    function testDockedQuoteCannotBeFilled() public {
+        uint256 id = _request();
+        NacreAquaUnderwriter.Quote memory quote = _quote(id);
+        assertTrue(app.canFill(quote));
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(usdc);
+        bytes32 hash = app.strategyHash(quote);
+        vm.prank(maker);
+        aqua.dock(address(app), hash, tokens);
+        assertFalse(app.canFill(quote));
+        vm.startPrank(lp);
+        usdc.approve(address(app), 24e6);
+        vm.expectRevert(NacreAquaUnderwriter.InsufficientAquaBalance.selector);
+        app.buyCoverage(quote);
+        vm.stopPrank();
+    }
+
+    function testExpiredQuoteCannotBeFilled() public {
+        uint256 id = _request();
+        NacreAquaUnderwriter.Quote memory quote = _quote(id);
+        vm.warp(block.timestamp + 1 days + 1);
+        assertFalse(app.canFill(quote));
+        vm.startPrank(lp);
+        usdc.approve(address(app), 24e6);
+        vm.expectRevert(NacreAquaUnderwriter.QuoteExpired.selector);
+        app.buyCoverage(quote);
+        vm.stopPrank();
+    }
+
+    function testPremiumFailureRollsBackAquaPull() public {
+        uint256 id = _request();
+        NacreAquaUnderwriter.Quote memory quote = _quote(id);
+        bytes32 hash = app.strategyHash(quote);
+        vm.prank(lp);
+        vm.expectRevert();
+        app.buyCoverage(quote);
+        (uint248 virtualBalance,) = aqua.rawBalances(maker, address(app), hash, address(usdc));
+        assertEq(virtualBalance, 500e6);
+        assertEq(usdc.balanceOf(address(vault)), 0);
+        assertEq(vault.reservedCollateral(), 0);
+    }
+
+    function testCompetingUnderwritersOnlyWinningQuoteActivates() public {
+        uint256 id = _request();
+        NacreAquaUnderwriter.Quote memory first = _quote(id);
+        address competitor = makeAddr("competitor");
+        usdc.mint(competitor, 500e6);
+        NacreAquaUnderwriter.Quote memory cheaper = NacreAquaUnderwriter.Quote({
+            maker: competitor, requestId: id, premium: 18e6, payoutCap: 500e6,
+            expiresAt: uint64(block.timestamp + 1 days), salt: bytes32(uint256(88))
+        });
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(usdc);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = 500e6;
+        vm.startPrank(competitor);
+        usdc.approve(address(aqua), 500e6);
+        aqua.ship(address(app), abi.encode(cheaper), tokens, amounts);
+        vm.stopPrank();
+
+        assertTrue(app.canFill(first));
+        assertTrue(app.canFill(cheaper));
+        vm.startPrank(lp);
+        usdc.approve(address(app), 18e6);
+        app.buyCoverage(cheaper);
+        vm.stopPrank();
+        assertFalse(app.canFill(first));
+        assertFalse(app.canFill(cheaper));
+        (address lpOwner, address winner,,,,,,,,,) = vault.requests(id);
+        assertEq(lpOwner, lp);
+        assertEq(winner, competitor);
+        assertEq(usdc.balanceOf(competitor), 18e6);
+    }
+
     function testCoveredPositionRejectsLiquidityRemoval() public {
         uint256 id = _request();
         NacreAquaUnderwriter.Quote memory quote = _quote(id);

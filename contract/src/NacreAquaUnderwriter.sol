@@ -44,6 +44,25 @@ contract NacreAquaUnderwriter is AquaApp, ReentrancyGuard {
         return keccak256(abi.encode(quote));
     }
 
+    /// @notice Current fillability for an all-or-nothing underwriting quote.
+    /// @dev Aqua balances are virtual. Both the maker's wallet balance and its
+    ///      allowance to Aqua may change after this view call; buyCoverage
+    ///      remains the authoritative atomic check.
+    function canFill(Quote calldata quote) external view returns (bool) {
+        (address lp, uint256 cap, uint64 deadline, NacrePolicyVault.Status status) =
+            vault.requestTerms(quote.requestId);
+        if (status != NacrePolicyVault.Status.Open || quote.maker == address(0)
+            || quote.maker == lp || quote.payoutCap != cap || quote.premium == 0
+            || block.timestamp > quote.expiresAt || quote.expiresAt > deadline) return false;
+
+        bytes32 hash = keccak256(abi.encode(quote));
+        (uint248 available, uint8 tokenCount) =
+            AQUA.rawBalances(quote.maker, address(this), hash, address(settlementToken));
+        return tokenCount != 0 && tokenCount != type(uint8).max && available >= cap
+            && settlementToken.balanceOf(quote.maker) >= cap
+            && settlementToken.allowance(quote.maker, address(AQUA)) >= cap;
+    }
+
     function buyCoverage(Quote calldata quote) external nonReentrant {
         (address lp, uint256 cap, uint64 deadline, NacrePolicyVault.Status status) =
             vault.requestTerms(quote.requestId);
