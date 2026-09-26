@@ -63,8 +63,8 @@
 .mw-onchain-lp > div:first-child span, .mw-onchain-lp > small { color: #829a88; font-size: 9px; line-height: 1.5; }
 .mw-onchain-lp > [data-slot=button] { width: 100%; min-height: 36px; font-size: 10px; }
 .mw-onchain-lp > .kd-apply-button { color: #fff; }
-.dashboard .mw-onchain-lp > button[data-variant=outline] { border: 1px solid #bed7c4; background: #fff; color: #315b3d; }
-.dashboard .mw-onchain-lp > button[data-variant=outline]:hover { border-color: #8ab696; background: #eef7f0; color: #244b30; }
+.dashboard .mw-onchain-lp > [data-slot=button][data-variant=outline] { border: 1px solid #bed7c4; background: #fff; color: #315b3d; }
+.dashboard .mw-onchain-lp > [data-slot=button][data-variant=outline]:hover { border-color: #8ab696; background: #eef7f0; color: #244b30; }
 .mw-onchain-lp > [data-slot=button]:disabled { opacity: .55; }
 .mw-onchain-lp > a { display: inline-flex; align-items: center; gap: 4px; color: #4a7b55; font-size: 10px; }
 .mw-onchain-lp > strong { color: #3e7650; font-size: 11px; }

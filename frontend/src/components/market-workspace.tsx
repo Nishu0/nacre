@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Activity, ArrowRight, CircleHelp, Droplets, ExternalLink, PiggyBank, Plus, Rocket, ShieldCheck } from "lucide-react";
 import { formatUnits, parseUnits, type Address, type Hex } from "viem";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { TokenPairIcon } from "@/components/token-pair-icon";
 import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
-import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
+import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats, ArchivedCoverageRecovery } from "@/components/coverage-workspace";
 import { preparePositionMint, positionMintError } from "@/lib/position-mint";
 import { testPool, TEST_WETH_POOL } from "@/lib/test-pools";
 import { tickPrice } from "@/lib/coverage-contracts";
@@ -25,6 +26,7 @@ import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mi
 export type WorkspaceRole = "lp" | "underwriter";
 
 type Market = {
+  archived: boolean;
   id: string; pair: string; feeTier: string; priceUsd: number; lowerPriceUsd: number;
   upperPriceUsd: number; currentTick: number; tickLower: number; tickUpper: number;
   liquidityTargetUsd: number; collateralBudgetUsd: number; investedUsd: number;
@@ -68,6 +70,7 @@ function AmountField({ label, value, onChange, min = 0 }: {
 }
 
 export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, onConnect }: { marketId?: string; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void; walletAccount: string | null; onConnect: () => Promise<void> }) {
+  const router = useRouter();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [chainPositions, setChainPositions] = useState<ChainPosition[]>([]);
   const [poolSlot, setPoolSlot] = useState<{ priceUsd: number; tick: number } | null>(null);
@@ -147,9 +150,16 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       if (controller.signal.aborted) return;
       setMarkets(rows);
       setSelectedId((current) => marketId || current || rows[0]?.id || "");
+      if (marketId && !rows.some((market) => market.id === marketId)) {
+        void api<{ market: Market }>(`markets/${marketId}`).then(({ market }) => {
+          if (!controller.signal.aborted && market.archived) {
+            router.replace(rows.length === 1 ? `/dashboard/pools/${rows[0].id}` : "/dashboard/pools");
+          }
+        }).catch(() => { /* An unknown pool keeps the existing not-found state. */ });
+      }
     }).catch((reason) => { if (!controller.signal.aborted) setError(String(reason)); });
     return () => controller.abort();
-  }, [marketId]);
+  }, [marketId, router]);
 
   useEffect(() => {
     let active = true;
@@ -321,7 +331,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     {error && <div className="mw-message is-error" role="alert">{error}</div>}
     {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre markets yet</h2><p>Create a market proposal to define a pair, range, and launch targets.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
     {!marketId && !!markets.length && <>
-      <div className="mw-directory-summary"><span>MARKETS <strong>{markets.length}</strong></span><span>DEPLOYED <strong>{markets.filter((market) => market.deployment).length}</strong></span><span>LIQUIDITY POSITIONS <strong>{chainPositions.length}</strong></span></div>
+      <div className="mw-directory-summary"><span>MARKETS <strong>{markets.length}</strong></span><span>DEPLOYED <strong>{markets.filter((market) => market.deployment).length}</strong></span><span>LIQUIDITY POSITIONS <strong>{chainPositions.filter((position) => markets.some((market) => market.id === position.marketId)).length}</strong></span></div>
       <div className="mw-directory-header"><h3>Available markets</h3><span>BASE SEPOLIA · TEST POOLS</span></div>
       <div className="mw-directory-grid">{markets.map((market) => {
         const minted = chainPositions.filter((position) => position.marketId === market.id);
@@ -471,22 +481,21 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
   }, [walletAccount, role]);
 
   const nwethProvided = positions.filter((position) => position.wethSymbol === "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
-  const wethProvided = positions.filter((position) => position.wethSymbol !== "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const usdcProvided = positions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
 
   if (role === "underwriter") {
     return <div className="mw-page"><CoverageStats account={walletAccount} />
       {!walletAccount && <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet</Button>}
-      <CoverageBoard account={walletAccount} role="underwriter" portfolio /></div>;
+      <CoverageBoard account={walletAccount} role="underwriter" portfolio />
+      <ArchivedCoverageRecovery account={walletAccount} /></div>;
   }
 
   return <div className="mw-page">
     <div className="mw-banner"><CircleHelp size={16} /><p><strong>LP portfolio</strong> · This page shows your verified Base Sepolia liquidity positions. Modeled deposits and cover requests are excluded.</p></div>
-    {!walletAccount ? <Card className="kd-card mw-panel"><div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>Connect your wallet</h2><p>Your WETH/nUSDC positions will appear here after they are minted and verified.</p><Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={14} /></Button></div></Card> : <>
+    {!walletAccount ? <Card className="kd-card mw-panel"><div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>Connect your wallet</h2><p>Your nWETH/nUSDC positions will appear here after they are minted and verified.</p><Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={14} /></Button></div></Card> : <>
       <div className="mw-stats">
         <Card className="kd-card"><div className="mw-stat"><span>LIQUIDITY POSITIONS</span><strong>{positions.length}</strong><small>Verified Base Sepolia mints</small></div></Card>
         <Card className="kd-card"><div className="mw-stat"><span>nWETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(nwethProvided, 18)).toFixed(5) : "—"}</strong><small>Faucet token · at mint</small></div></Card>
-      <Card className="kd-card"><div className="mw-stat"><span>WETH PROVIDED</span><strong>{Number(formatUnits(wethProvided, 18)).toFixed(5)}</strong><small>At mint</small></div></Card>
         <Card className="kd-card"><div className="mw-stat"><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(usdcProvided, 6)).toFixed(2)}</strong><small>At mint</small></div></Card>
       </div>
       {error && <div className="mw-message is-error" role="alert">{error}</div>}
@@ -494,8 +503,9 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
         <div className="mw-position-list">{loading ? <div className="mw-portfolio-empty"><p>Loading your positions…</p></div> : positions.length ? positions.map((position) => <div className="mw-position" key={position.tokenId}>
           <TokenPairIcon pair={`${position.wethSymbol} / nUSDC`} size="small" />
           <div><strong>Uniswap position #{position.tokenId}</strong><small>{Number(formatUnits(BigInt(position.wethRaw), 18)).toFixed(5)} {position.wethSymbol} + {Number(formatUnits(BigInt(position.usdcRaw), 6)).toFixed(2)} nUSDC · {new Date(position.mintedAt).toLocaleDateString()}</small></div>
+          {position.wethSymbol === "nWETH" && <Button asChild variant="outline" size="sm"><Link href={`/dashboard/pools/${position.marketId}#protect-lp-fees`}>Protect fees <ShieldCheck size={13} /></Link></Button>}
           <Button asChild variant="outline" size="sm"><a href={basescanTx(position.txHash)} target="_blank" rel="noreferrer">BaseScan <ExternalLink size={13} /></a></Button>
-        </div>) : <div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>No on-chain positions yet</h2><p>Mint a WETH/nUSDC position in the deployed pool to see it here.</p><Button asChild variant="outline"><Link href="/dashboard/pools">View pools <ArrowRight size={14} /></Link></Button></div>}</div>
+        </div>) : <div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>No on-chain positions yet</h2><p>Mint an nWETH/nUSDC position in the deployed pool to see it here.</p><Button asChild variant="outline"><Link href="/dashboard/pools">View pools <ArrowRight size={14} /></Link></Button></div>}</div>
       </Card>
       <CoverageBoard account={walletAccount} role="lp" portfolio />
     </>}
@@ -524,7 +534,6 @@ export function WorkspaceOverview({ role, walletAccount, onConnect }: {
   }, [walletAccount, role]);
 
   const nwethProvided = positions.filter((position) => position.wethSymbol === "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
-  const wethProvided = positions.filter((position) => position.wethSymbol !== "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const usdcProvided = positions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
 
   return <div className="mw-role-overview">
@@ -533,9 +542,8 @@ export function WorkspaceOverview({ role, walletAccount, onConnect }: {
     <div className="mw-stats mw-role-stats">{role === "lp" ? <>
       <Card className="kd-card"><div className="mw-stat"><span>LIQUIDITY POSITIONS</span><strong>{walletAccount ? positions.length : "—"}</strong><small>Verified Base Sepolia mints</small></div></Card>
       <Card className="kd-card"><div className="mw-stat"><span>nWETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(nwethProvided, 18)).toFixed(5) : "—"}</strong><small>Faucet token · at mint</small></div></Card>
-      <Card className="kd-card"><div className="mw-stat"><span>WETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(wethProvided, 18)).toFixed(5) : "—"}</strong><small>At mint</small></div></Card>
       <Card className="kd-card"><div className="mw-stat"><span>nUSDC PROVIDED</span><strong>{walletAccount ? Number(formatUnits(usdcProvided, 6)).toFixed(2) : "—"}</strong><small>At mint</small></div></Card>
     </> : <CoverageStats account={walletAccount} />}</div>
-    <Card className="kd-card mw-role-next"><div className="kd-card-heading"><h2>{role === "lp" ? <><PiggyBank size={16} /> Your next step</> : <><ShieldCheck size={16} /> Underwriting workflow</>}</h2><span>BASE SEPOLIA</span></div><div className="mw-role-next-inner"><h3>{role === "lp" ? walletAccount ? positions.length ? "Review your positions" : "Mint your first position" : "Connect to see your positions" : "Fund a coverage range"}</h3><p>{role === "lp" ? "Choose a deployed pool and price range, then mint a WETH/nUSDC position with your wallet. Then request a fee target and duration, and buy matching funded coverage." : "Choose bins, fund a coverage offer, and set its duration and premium. Track reserved capital and premiums in your backing portfolio."}</p>{role === "lp" && !walletAccount ? <Button variant="outline" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={15} /></Button> : <Link href={role === "lp" ? positions.length ? "/dashboard/portfolio" : "/dashboard/pools" : "/dashboard/backtest"}>{role === "lp" ? positions.length ? "View portfolio" : "Browse pools" : "Study backtest"} <ArrowRight size={15} /></Link>}</div></Card>
+    <Card className="kd-card mw-role-next"><div className="kd-card-heading"><h2>{role === "lp" ? <><PiggyBank size={16} /> Your next step</> : <><ShieldCheck size={16} /> Underwriting workflow</>}</h2><span>BASE SEPOLIA</span></div><div className="mw-role-next-inner"><h3>{role === "lp" ? walletAccount ? positions.length ? "Review your positions" : "Mint your first position" : "Connect to see your positions" : "Fund a coverage range"}</h3><p>{role === "lp" ? "Choose a deployed pool and price range, then mint an nWETH/nUSDC position with your wallet. Then request a fee target and duration, and buy matching funded coverage." : "Choose bins, fund a coverage offer, and set its duration and premium. Track reserved capital and premiums in your backing portfolio."}</p>{role === "lp" && !walletAccount ? <Button variant="outline" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={15} /></Button> : <Link href={role === "lp" ? positions.length ? "/dashboard/portfolio" : "/dashboard/pools" : "/dashboard/backtest"}>{role === "lp" ? positions.length ? "View portfolio" : "Browse pools" : "Study backtest"} <ArrowRight size={15} /></Link>}</div></Card>
   </div>;
 }

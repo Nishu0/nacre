@@ -4,7 +4,7 @@ import { COVERAGE_VAULT, COVERAGE_TOKEN, COVERAGE_POSITIONS,
   coverageVaultAbi, rangeFactoryAbi, rangeOfferAbi, coverageNftAbi, unpackTicks,
   type CoverageSnapshot, type CoverageOffer, type CoverageRequest } from "../../frontend/src/lib/coverage-contracts";
 
-import { TEST_POOLS, testPool } from "../../frontend/src/lib/test-pools";
+import { TEST_WETH_POOL, testPool } from "../../frontend/src/lib/test-pools";
 
 const client = createPublicClient({ chain: baseSepolia,
   transport: http(process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org", { timeout: 10_000 }) });
@@ -14,13 +14,8 @@ const pending = new Map<string, Promise<CoverageSnapshot>>();
 const cached = new Map<string, { at: number; value: CoverageSnapshot }>();
 
 export async function coverageSnapshot(tokenIds: string[], fresh = false, requestedPool?: string): Promise<CoverageSnapshot> {
-  if (!requestedPool) {
-    const snapshots = await Promise.all(TEST_POOLS.map((pool) => coverageSnapshot(tokenIds, fresh, pool.poolId)));
-    return { ...snapshots[0], offers: snapshots.flatMap((row) => row.offers),
-      positions: snapshots.flatMap((row) => row.positions), requests: snapshots.flatMap((row) => row.requests),
-      poolTicks: Object.assign({}, ...snapshots.map((row) => row.poolTicks)),
-      reserved: snapshots.reduce((total, row) => total + BigInt(row.reserved), 0n).toString() };
-  }
+  // Archived pools remain available only through an explicit recovery lookup.
+  if (!requestedPool) return coverageSnapshot(tokenIds, fresh, TEST_WETH_POOL);
   const config = testPool(requestedPool);
   if (!config) throw new Error("Unknown coverage pool");
   const poolId = config.poolId;

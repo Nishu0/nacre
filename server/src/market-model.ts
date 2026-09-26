@@ -59,6 +59,7 @@ export function presentMarket(db: Database, row: MarketRow) {
   const funded = totals.investedUsd >= row.liquidity_target_usd
     && totals.pledgedUsd >= row.collateral_budget_usd;
   return {
+    archived: Boolean(db.query("SELECT 1 FROM market_archives WHERE market_id = ?").get(row.id)),
     id: row.id, creator: row.creator, referencePoolId: row.reference_pool_id,
     pair: `${testPool(deployment?.pool_id)?.symbol ?? "WETH"} / nUSDC`, feeTier: "0.05%", priceUsd: row.price_usd,
     lowerPriceUsd: row.lower_price_usd, upperPriceUsd: row.upper_price_usd,
@@ -122,7 +123,7 @@ export function getMarket(db: Database, id: string): MarketRow | null {
 }
 
 export function listMarkets(db: Database) {
-  const rows = db.query("SELECT * FROM market_drafts ORDER BY created_at DESC").all() as MarketRow[];
+  const rows = db.query("SELECT * FROM market_drafts WHERE id NOT IN (SELECT market_id FROM market_archives) ORDER BY created_at DESC").all() as MarketRow[];
   return rows.map((row) => presentMarket(db, row));
 }
 

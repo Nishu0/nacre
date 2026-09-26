@@ -42,6 +42,10 @@ export function openDb(path = DATABASE_PATH): Database {
       collateral_budget_usd REAL NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS market_archives (
+      market_id TEXT PRIMARY KEY REFERENCES market_drafts(id),
+      archived_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS market_pledges (
       id TEXT PRIMARY KEY,
       market_id TEXT NOT NULL REFERENCES market_drafts(id),

@@ -288,6 +288,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     const rows = db.query(`SELECT p.token_id, p.market_id, p.tx_hash, p.weth_raw, p.usdc_raw, p.minted_at, d.pool_id
       FROM market_chain_positions p LEFT JOIN market_deployments d ON d.market_id = p.market_id
       WHERE (? IS NULL OR p.owner = ?) AND (? IS NULL OR p.market_id = ?)
+      AND NOT EXISTS (SELECT 1 FROM market_archives a WHERE a.market_id = p.market_id)
       ORDER BY p.minted_at DESC`).all(account?.toLowerCase() ?? null, account?.toLowerCase() ?? null,
       marketId ?? null, marketId ?? null) as {
       token_id: string; market_id: string; tx_hash: string; pool_id: string;
