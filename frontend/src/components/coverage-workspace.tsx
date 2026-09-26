@@ -10,7 +10,8 @@ import { baseClient, injectedClient, ensureBaseSepolia, erc20Abi, priceToRawTick
 import { LEGACY_WETH_POOL, testPool } from "@/lib/test-pools";
 import { COVERAGE_APP, COVERAGE_TOKEN, COVERAGE_VAULT, COVERAGE_POSITIONS,
   coverageVaultAbi, coverageNftAbi, coverageAppAbi, rangeFactoryAbi, rangeOfferAbi,
-  tickPrice, type CoverageOffer, type CoverageRequest } from "@/lib/coverage-contracts";
+  tickPrice, type CoverageOffer, type CoverageRequest, type CoverageSnapshot } from "@/lib/coverage-contracts";
+import { availableBid, bidMatchesPosition } from "@/lib/funded-bids";
 import { useCoverage, refreshCoverage } from "@/lib/use-coverage";
 
 const amount = (raw: string | bigint) => Number(formatUnits(BigInt(raw), 6)).toLocaleString("en-US", { maximumFractionDigits: 4 });
@@ -101,7 +102,7 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
     await action.confirm(await injectedClient().writeContract({ account: owner, address: RANGE_FACTORY,
       abi: rangeFactoryAbi, functionName: "createOffer", args: [value, tickLower, tickUpper, days * 86400, bps] }));
   });
-  return <Card className="kd-card mw-trade-card"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Provide coverage</h2><span>FUNDED ON-CHAIN</span></div>
+  return <Card className="kd-card mw-trade-card"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Post a funded bid</h2><span>FUNDED ON-CHAIN</span></div>
     <div className="mw-trade-inner">
       <p>Fund the selected bins. Each matching LP purchases cover for the duration and premium you set.</p>
       <div className="cw-terms"><strong>{rangeText(tickLower, tickUpper)}</strong><span>Ticks {tickLower} to {tickUpper} · {(tickUpper - tickLower) / 10} bins</span></div>
@@ -116,34 +117,45 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
       <p className="mw-risk-note">Premiums are earned when an LP buys coverage. Claims can consume the full cap. Unused capital can be withdrawn; active collateral stays reserved until settlement.</p>
       {error && <p role="alert" className="mw-premium-warning">{error}</p>}
       {!account ? <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet to fund</Button>
-        : <Button className="kd-apply-button" disabled={action.busy || !valid || !data?.configured || !!error} onClick={() => void fund()}>{action.busy ? action.step : "Fund selected bins"}</Button>}
+        : <Button className="kd-apply-button" disabled={action.busy || !valid || !data?.configured || !!error} onClick={() => void fund()}>{action.busy ? action.step : "Fund bid for these bins"}</Button>}
       {action.feedback}
       <Button asChild variant="outline" className="mw-faucet-link"><Link href="/dashboard/faucet">Get test nUSDC</Link></Button>
     </div></Card>;
 }
 
-export function CoverageRequestForm({ poolId, account, days, feeTarget, maximumTarget, refreshKey }: {
-  poolId?: string; account: string | null; days: number; feeTarget?: number; maximumTarget?: number; refreshKey: number;
+export function CoverageRequestForm({ poolId, bidAddress, account, days, feeTarget, maximumTarget, refreshKey }: {
+  poolId?: string; bidAddress?: string; account: string | null; days: number; feeTarget?: number; maximumTarget?: number; refreshKey: number;
 }) {
   const { data, error } = useCoverage(poolId);
   const action = useCoverageAction(account);
   const [chosen, setChosen] = useState("");
-  const owned = data?.positions.filter((position) => same(position.owner, account)) ?? [];
+  const selectedBid = data?.offers.find((offer) => same(offer.address, bidAddress));
+  const owned = data?.positions.filter((position) => same(position.owner, account) && (!bidAddress || (!!selectedBid && bidMatchesPosition(selectedBid, position)))) ?? [];
   const selected = owned.find((position) => position.tokenId === chosen) ?? owned.at(-1);
   const inRange = !!selected && !!data && data.currentTick >= selected.tickLower && data.currentTick < selected.tickUpper;
-  const availableOffers = selected && feeTarget ? data?.offers.filter((offer) => offer.poolId === selected.poolId && !offer.closed
+  const availableOffers = selected && feeTarget ? data?.offers.filter((offer) => offer.poolId === selected.poolId && !offer.closed && (!bidAddress || same(offer.address, bidAddress))
     && !same(offer.owner, account) && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper
     && offer.duration === days * 86400 && BigInt(offer.available) >= parseUnits(feeTarget.toFixed(6), 6)) ?? [] : [];
   const ownRangeOffer = !!selected && !!data?.offers.some((offer) => offer.poolId === selected.poolId
     && same(offer.owner, account) && !offer.closed && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper);
   const valid = !!account && !!data?.configured && !!feeTarget && Number.isFinite(feeTarget)
-    && !!maximumTarget && feeTarget > 0 && feeTarget <= maximumTarget && inRange && durationOptions.includes(days);
+    && !!maximumTarget && feeTarget > 0 && feeTarget <= maximumTarget && inRange && durationOptions.includes(days) && availableOffers.length > 0;
   // refreshKey changes after the parent registers a newly confirmed mint.
   useEffect(() => { refreshCoverage(); }, [refreshKey]);
   const request = () => action.run(async (owner) => {
     if (!selected || !valid || !feeTarget || error) throw new Error("Choose an owned position and a valid fee target.");
     const id = BigInt(selected.tokenId);
-    // An open request can be posted before any underwriter funds matching terms.
+    const checkBid = async () => {
+      const response = await fetch(`/api/workspace/coverage?fresh=1&poolId=${poolId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Could not verify funded bids. Try again.");
+      const fresh = await response.json() as CoverageSnapshot;
+      if (!fresh.offers.some((offer) => (!bidAddress || same(offer.address, bidAddress))
+        && bidMatchesPosition(offer, selected) && offer.duration === days * 86400
+        && availableBid(offer, fresh.currentTick, owner, parseUnits(feeTarget.toFixed(6), 6)))) {
+        throw new Error("No funded bid is available for this position and fee cap. Choose another bid.");
+      }
+    };
+    await checkBid();
     if (availableOffers.length) {
       const limits = await Promise.all(availableOffers.map((offer) => baseClient.readContract({
         address: offer.address, abi: rangeOfferAbi, functionName: "maximumCap", args: [id],
@@ -162,6 +174,7 @@ export function CoverageRequestForm({ poolId, account, days, feeTarget, maximumT
       await action.confirm(await injectedClient().writeContract({ account: owner, address: COVERAGE_POSITIONS,
         abi: coverageNftAbi, functionName: "approve", args: [COVERAGE_VAULT, id] }));
     }
+    await checkBid();
     action.setStep("Create your coverage request…");
     const cap = parseUnits(feeTarget.toFixed(6), 6);
     await action.confirm(await injectedClient().writeContract({ account: owner, address: COVERAGE_VAULT,
@@ -172,7 +185,7 @@ export function CoverageRequestForm({ poolId, account, days, feeTarget, maximumT
     {!owned.length ? <p>Mint a position above first. Its actual bins are used for coverage.</p> : <>
       <label className="mw-field"><span>Position to protect</span><select disabled={action.busy} value={selected?.tokenId ?? ""} onChange={(event) => setChosen(event.target.value)}>{owned.map((position) => <option key={position.tokenId} value={position.tokenId}>Position #{position.tokenId}</option>)}</select></label>
       {selected && <div className="cw-terms"><span>{rangeText(selected.tickLower, selected.tickUpper)}</span><strong>{feeTarget?.toFixed(4) ?? "—"} nUSDC fee target · {days} days</strong><span>{(selected.tickUpper - selected.tickLower) / 10} bins · ticks {selected.tickLower} to {selected.tickUpper}</span></div>}
-      {inRange && !availableOffers.length && <p className="mw-premium-warning">{ownRangeOffer ? "Your wallet funded this range. The contract requires a different wallet to underwrite your position." : "No matching offer yet. You can submit this request for underwriters to review. Coverage starts only after you buy a funded offer."}</p>}
+      {inRange && !availableOffers.length && <p className="mw-premium-warning">{ownRangeOffer ? "Your wallet funded this range. The contract requires a different wallet to underwrite your position." : "No funded bid is available for these terms. Choose a bid with enough available cover."}</p>}
       {!inRange && <p className="mw-premium-warning">New coverage is unavailable while this position is out of range.</p>}
       {feeTarget !== undefined && maximumTarget !== undefined && feeTarget > maximumTarget && <p className="mw-premium-warning">Lower the fee target to {maximumTarget.toFixed(4)} nUSDC or less.</p>}
       <p>Submitting transfers your LP position to the policy vault immediately. If you do not buy coverage, you can reclaim it after one hour. A request alone does not protect your fees.</p>
@@ -231,7 +244,7 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled, 
   </div>;
 }
 
-function OfferRow({ offer, account, disabled, onChoose, canManage }: { offer: CoverageOffer; account: string | null; disabled: boolean; canManage: boolean; onChoose?: (offer: CoverageOffer) => void }) {
+export function OfferRow({ offer, account, disabled, onChoose, canManage }: { offer: CoverageOffer; account: string | null; disabled: boolean; canManage: boolean; onChoose?: (offer: CoverageOffer) => void }) {
   const action = useCoverageAction(account);
   return <div className="cw-policy"><div className="cw-row"><strong>{offer.duration / 86400} days · {offer.premiumBps / 100}% premium</strong><span>{offer.closed ? "Closed to new coverage" : "Funded offer"}</span></div>
     <p>{testPool(offer.poolId)?.symbol ?? "WETH"} / nUSDC · {rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>

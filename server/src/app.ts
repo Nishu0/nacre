@@ -5,6 +5,7 @@ import { backtest, feeRequestPreview, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
 import { coverageSnapshot } from "./coverage";
+import { activeCoverage } from "./workspace-state";
 import { TEST_POOLS, TEST_WETH_POOL, testPool } from "../../frontend/src/lib/test-pools";
 import { readAtMintBlock } from "./position-registration";
 import { getHyperliquidHistory, type PriceHistory } from "./hyperliquid";
@@ -90,11 +91,20 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     if (request.query.poolId && !testPool(request.query.poolId)) return reply.code(400).send({ error: "Unknown coverage pool" });
     try {
       const rows = db.query("SELECT token_id FROM market_chain_positions").all() as { token_id: string }[];
-      return await coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1", request.query.poolId);
+      return activeCoverage(db, await coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1", request.query.poolId));
     } catch (error) {
       app.log.error(error, "Coverage chain read failed");
       return reply.code(503).send({ error: "Could not read coverage from Base Sepolia. Please retry." });
     }
+  });
+
+  // Technical pool configuration remains available after clearing the workspace.
+  // Only newly funded bids are listed in the investor marketplace.
+  app.get("/api/bid-market", async (_request, reply) => {
+    const deployment = db.query("SELECT market_id FROM market_deployments WHERE pool_id = ? ORDER BY deployed_at DESC LIMIT 1").get(TEST_WETH_POOL) as { market_id: string } | null;
+    const market = deployment && getMarket(db, deployment.market_id);
+    if (!market) return reply.code(404).send({ error: "The nWETH market is not configured." });
+    return { market: presentMarket(db, market) };
   });
 
   app.get("/api/live-prices", async (_request, reply) => {
@@ -288,7 +298,8 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     const rows = db.query(`SELECT p.token_id, p.market_id, p.tx_hash, p.weth_raw, p.usdc_raw, p.minted_at, d.pool_id
       FROM market_chain_positions p LEFT JOIN market_deployments d ON d.market_id = p.market_id
       WHERE (? IS NULL OR p.owner = ?) AND (? IS NULL OR p.market_id = ?)
-      AND NOT EXISTS (SELECT 1 FROM market_archives a WHERE a.market_id = p.market_id)
+      AND NOT EXISTS (SELECT 1 FROM workspace_archives a WHERE a.kind = 'position' AND a.item_id = p.token_id)
+      AND d.pool_id = '${TEST_WETH_POOL}'
       ORDER BY p.minted_at DESC`).all(account?.toLowerCase() ?? null, account?.toLowerCase() ?? null,
       marketId ?? null, marketId ?? null) as {
       token_id: string; market_id: string; tx_hash: string; pool_id: string;
@@ -508,7 +519,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       return reply.code(400).send({ error: "A sandbox participant ID is required." });
     }
     const rows = db.query(`SELECT id, market_id, capacity_usd, premium_usd, example_deposit_usd, created_at FROM market_pledges
-      WHERE participant = ? ORDER BY created_at DESC`).all(request.query.participant) as {
+      WHERE participant = ? AND market_id NOT IN (SELECT market_id FROM market_archives) ORDER BY created_at DESC`).all(request.query.participant) as {
       id: string; market_id: string; capacity_usd: number; premium_usd: number | null;
       example_deposit_usd: number | null; created_at: string;
     }[];

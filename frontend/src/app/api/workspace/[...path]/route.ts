@@ -1,6 +1,7 @@
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function allowed(path: string[], method: string): boolean {
+  if (path.length === 1 && path[0] === "bid-market") return method === "GET";
   if (path.length === 1 && path[0] === "coverage") return method === "GET";
   if (path.length === 1 && path[0] === "markets") return method === "GET" || method === "POST";
   if (path.length === 1 && path[0] === "chain-positions") return method === "GET";

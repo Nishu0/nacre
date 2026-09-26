@@ -131,3 +131,7 @@
 @media(max-width:650px){.mw-heading{align-items:flex-start;flex-direction:column}.mw-directory-grid{grid-template-columns:1fr}.mw-directory-header span{display:none}.mw-stats{grid-template-columns:1fr 1fr}.mw-fields{grid-template-columns:1fr 1fr}.mw-side-actions{grid-template-columns:1fr}.mw-range{gap:6px;font-size:8px}.mw-position{flex-wrap:wrap}.mw-position [data-slot=button]{margin-left:41px}}
 @media(max-width:650px){.mw-role-intro{align-items:flex-start;flex-direction:column;padding:17px}.mw-role-intro [data-slot=button]{width:100%;justify-content:center}.dashboard.is-collapsed .kd-role-switch{grid-template-columns:1fr 1fr}.dashboard.is-collapsed .kd-role-switch span{display:inline}}
 @media(max-width:420px){.mw-stats,.mw-fields,.mw-split,.mw-progress-grid,.mw-quote{grid-template-columns:1fr}}
+
+.bw-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.bw-form-grid .mw-trade-inner { display: grid; gap: 18px; }
+@media (max-width: 900px) { .bw-form-grid { grid-template-columns: 1fr; } }

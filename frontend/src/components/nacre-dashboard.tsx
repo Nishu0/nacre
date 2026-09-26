@@ -14,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { WorkspacePools, WorkspacePortfolio, WorkspaceOverview, type WorkspaceRole } from "@/components/market-workspace";
-import { PoolCreateFlow } from "@/components/pool-create-flow";
+import { WorkspacePortfolio, type WorkspaceRole } from "@/components/market-workspace";
+import { BidWorkspace } from "@/components/bid-workspace";
+import { WorkspaceBalances } from "@/components/workspace-balances";
 import { TestUsdcFaucet } from "@/components/test-usdc-faucet";
 import { TokenPairIcon } from "@/components/token-pair-icon";
 
@@ -38,7 +39,7 @@ declare global { interface Window { ethereum?: EthereumProvider } }
 export type DashboardView = "overview" | "pools" | "pool-create" | "pool-detail" | "portfolio" | "faucet" | "backtest" | "references" | "launch" | "pricing";
 const navigation = [
   { href: "/dashboard", view: "overview", label: "Overview", icon: LayoutGrid, group: "workspace" },
-  { href: "/dashboard/pools", view: "pools", label: "Pools", icon: Droplets, group: "workspace" },
+  { href: "/dashboard/pools", view: "pools", label: "Coverage bids", icon: Droplets, group: "workspace" },
   { href: "/dashboard/portfolio", view: "portfolio", label: "Portfolio", icon: PiggyBank, group: "workspace" },
   { href: "/dashboard/faucet", view: "faucet", label: "Test token faucet", icon: DollarSign, group: "workspace" },
   { href: "/dashboard/backtest", view: "backtest", label: "Fee backtest", icon: Activity, group: "research" },
@@ -53,9 +54,9 @@ const roleNavLabel = (view: DashboardView, role: WorkspaceRole) => {
 };
 const pageCopy: Record<DashboardView, { title: string; description: string }> = {
   overview: { title: "Build a fee floor market", description: "Explore historical fee yield, then follow the steps to launch a funded v4 protection pool." },
-  pools: { title: "Pools", description: "Explore deployed testnet pools and verified liquidity positions." },
-  "pool-detail": { title: "Pool", description: "Review the live price, choose a range, and inspect verified positions." },
-  "pool-create": { title: "Create pool", description: "Set the range and funding goals, then review the market proposal before saving it." },
+  pools: { title: "Coverage bids", description: "Underwriters fund ranges. Investors choose from available funded bids." },
+  "pool-detail": { title: "Coverage bids", description: "Choose a funded range to get started." },
+  "pool-create": { title: "Coverage bids", description: "Underwriters set the available ranges and terms." },
   portfolio: { title: "Portfolio", description: "Review verified Base Sepolia liquidity positions." },
   faucet: { title: "Test token faucet", description: "Claim nUSDC and nWETH for your Base Sepolia positions." },
   backtest: { title: "Fee backtest", description: "Compare historical Uniswap fee windows at your chosen capital size." },
@@ -113,7 +114,16 @@ function LaunchPath({ expanded = false }: { expanded?: boolean }) {
   return <Card className={`kd-card kd-launch-panel${expanded ? " kd-launch-expanded" : ""}`}><div className="kd-card-heading"><h2><Layers3 size={17} /> Launch path</h2><span>4 STEPS</span></div><div className="kd-launch-inner"><div className="kd-launch-heading"><Badge variant="outline">TESTNET POOL DEPLOYED</Badge><p>The WETH/nUSDC pool is initialized on Base Sepolia. Liquidity positions and protection must still be funded on-chain.</p></div><ol>{launchSteps.map((step) => <li key={step.number}><span>{step.number}</span><div><strong>{step.title}</strong><p>{step.detail}</p></div></li>)}</ol><Link href="/dashboard/references" className="kd-text-link">Compare reference pairs <ArrowRight size={15} /></Link></div></Card>;
 }
 
-export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-005", marketId }: { view?: DashboardView; initialPoolId?: string; marketId?: string }) {
+export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-005" }: { view?: DashboardView; initialPoolId?: string; marketId?: string }) {
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("nacre-bid-workspace-v1")) {
+        localStorage.removeItem("nacre-pool-create-draft-v1");
+        localStorage.removeItem("nacre-sandbox-participant");
+        localStorage.setItem("nacre-bid-workspace-v1", "1");
+      }
+    } catch { /* Storage is optional; balances always come from the chain. */ }
+  }, []);
   const [pools, setPools] = useState<Pool[]>([]);
   const [backtests, setBacktests] = useState<Record<string, Backtest>>({});
   const [quoteState, setQuoteState] = useState<{ key: string; data: QuoteResearch } | null>(null);
@@ -142,7 +152,7 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
   }
 
   useEffect(() => {
-    if (!["backtest", "references", "pricing"].includes(view) && !(view === "overview" && role === "underwriter")) return;
+    if (!["backtest", "references", "pricing"].includes(view)) return;
     const controller = new AbortController();
     async function load() {
       setLoading(true); setError("");
@@ -161,7 +171,7 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
   }, [principalUsd, refreshIndex, view, role]);
 
   useEffect(() => {
-    if (!((view === "overview" && role === "underwriter") || view === "pricing") || !backtests[selectedPoolId]) return;
+    if (!(view === "pricing") || !backtests[selectedPoolId]) return;
     const controller = new AbortController();
     const key = `${selectedPoolId}:${principalUsd}`;
     getJson<QuoteResearch>(`/api/research/pools/${selectedPoolId}/quotes?principalUsd=${principalUsd}`, controller.signal)
@@ -195,7 +205,7 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
   const quoteResearch = quoteState?.key === `${selectedPoolId}:${principalUsd}` ? quoteState.data : null;
   const selectedPool = pools.find((pool) => pool.id === selectedPoolId);
   const recentValues = current?.windows.slice(-12).map((row) => row.feesUsd) ?? [];
-  const researchView = ["backtest", "references", "pricing"].includes(view) || (view === "overview" && role === "underwriter");
+  const researchView = ["backtest", "references", "pricing"].includes(view);
   const visibleNav = useMemo(() => navigation.filter((item) => roleNavLabel(item.view, role).toLowerCase().includes(navSearch.toLowerCase())), [navSearch, role]);
   function applyPrincipal() {
     const value = Number(principalInput);
@@ -232,11 +242,9 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
     </aside>
 
     <main className="kd-main"><header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} /><span>{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "Workspace" : "Research"}</span><span className="kd-breadcrumb-slash">/</span><strong>{view === "pool-detail" ? "Pools / Detail" : view === "pool-create" ? "Pools / Create" : roleNavLabel(view, role)}</strong></div><div className="kd-topbar-actions"><Badge variant="outline" className="kd-research-badge">{researchView ? "HISTORICAL DATA" : "NACRE WORKSPACE"}</Badge><DropdownMenu.Root><DropdownMenu.Trigger asChild><button type="button" className="kd-notification-button" aria-label="Notifications"><Bell size={17} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu kd-notification-menu" side="bottom" align="end" sideOffset={8}><p>NOTIFICATIONS</p><span>No pool or policy updates yet.</span></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></div></header>
-      <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? role === "lp" ? "Your verified liquidity positions and deployed pools in one place." : "Live pool activity and historical risk evidence in one place." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge></div>
-        {view === "overview" && <WorkspaceOverview role={role} walletAccount={walletAccount} onConnect={connectWallet} />}
-        {view === "pools" && <WorkspacePools role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
-        {view === "pool-create" && <PoolCreateFlow />}
-        {view === "pool-detail" && <WorkspacePools marketId={marketId} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
+      <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge></div>
+        {view === "overview" && <WorkspaceBalances account={walletAccount} onConnect={connectWallet} />}
+        {["pools", "pool-detail", "pool-create"].includes(view) && <BidWorkspace key={`${role}:${walletAccount}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "portfolio" && <WorkspacePortfolio role={role} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "faucet" && <TestUsdcFaucet account={walletAccount} onConnect={connectWallet} />}
         {view === "launch" && <div className="kd-launch-page"><LaunchPath expanded /><Card className="kd-card kd-launch-aside"><div className="kd-card-heading"><h2><ShieldCheck size={17} /> Funding gate</h2><span>MARKET STATUS</span></div><div className="kd-launch-aside-inner"><span className="kd-launch-status">NOT FUNDED</span><h2>Both sides commit before a market opens.</h2><p>LP capital establishes the pool. Underwriter collateral backs the selected fee floor. Once both are committed, coverage can begin.</p><Link href="/dashboard/pools" className="kd-text-link">View pool directory <ArrowRight size={15} /></Link></div></Card></div>}

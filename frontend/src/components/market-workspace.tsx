@@ -12,10 +12,10 @@ import { Input } from "@/components/ui/input";
 import { TokenPairIcon } from "@/components/token-pair-icon";
 import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
-import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats, ArchivedCoverageRecovery } from "@/components/coverage-workspace";
+import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
 import { preparePositionMint, positionMintError } from "@/lib/position-mint";
 import { testPool, TEST_WETH_POOL } from "@/lib/test-pools";
-import { tickPrice } from "@/lib/coverage-contracts";
+import { tickPrice, type CoverageOffer, type CoverageSnapshot } from "@/lib/coverage-contracts";
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
 import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
@@ -23,9 +23,12 @@ import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mi
   UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi,
   stateViewAbi, wethAbi, sqrtPriceX96ToWethUsd } from "@/lib/nacre-chain";
 
+import { availableBid } from "@/lib/funded-bids";
+import { useCoverage } from "@/lib/use-coverage";
+
 export type WorkspaceRole = "lp" | "underwriter";
 
-type Market = {
+export type Market = {
   archived: boolean;
   id: string; pair: string; feeTier: string; priceUsd: number; lowerPriceUsd: number;
   upperPriceUsd: number; currentTick: number; tickLower: number; tickUpper: number;
@@ -69,8 +72,10 @@ function AmountField({ label, value, onChange, min = 0 }: {
   return <label className="mw-field"><span>{label}</span><Input type="number" inputMode="decimal" min={min} step="any" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
-export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, onConnect }: { marketId?: string; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void; walletAccount: string | null; onConnect: () => Promise<void> }) {
+export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccount, onConnect }: { marketId?: string; bid?: CoverageOffer; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void; walletAccount: string | null; onConnect: () => Promise<void> }) {
   const router = useRouter();
+  const { data: coverage, error: coverageError } = useCoverage(bid?.poolId);
+  const activeBid = coverage?.offers.find((offer) => offer.address.toLowerCase() === bid?.address.toLowerCase());
   const [markets, setMarkets] = useState<Market[]>([]);
   const [chainPositions, setChainPositions] = useState<ChainPosition[]>([]);
   const [poolSlot, setPoolSlot] = useState<{ priceUsd: number; tick: number } | null>(null);
@@ -84,7 +89,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const [error, setError] = useState("");
   const [hasPoolDraft, setHasPoolDraft] = useState(false);
   const [deposit, setDeposit] = useState("1000");
-  const [coverageDays, setCoverageDays] = useState(30);
+  const [coverageDays, setCoverageDays] = useState(bid ? bid.duration / 86400 : 30);
   const [feeTargetInput, setFeeTargetInput] = useState("");
   const [pledge, setPledge] = useState("100");
   const [selectedRange, setSelectedRange] = useState<{ marketId: string; lower: number; upper: number } | null>(null);
@@ -109,8 +114,8 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
   const selectedWeth = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const selectedUsdc = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
-  const lower = selectedRange?.marketId === selectedId ? selectedRange.lower : selected?.lowerPriceUsd ?? 0;
-  const upper = selectedRange?.marketId === selectedId ? selectedRange.upper : selected?.upperPriceUsd ?? 0;
+  const lower = bid ? tickPrice(bid.tickLower) : selectedRange?.marketId === selectedId ? selectedRange.lower : selected?.lowerPriceUsd ?? 0;
+  const upper = bid ? tickPrice(bid.tickUpper) : selectedRange?.marketId === selectedId ? selectedRange.upper : selected?.upperPriceUsd ?? 0;
   const referencePrice = livePrices?.wethUsdc ?? poolSlot?.priceUsd ?? selected?.priceUsd ?? 0;
   const referenceSource = livePrices ? liveError ? "LAST ETH PRICE" : "LIVE ETH PRICE"
     : poolSlot ? "ON-CHAIN POOL PRICE" : "PROPOSED PRICE";
@@ -121,6 +126,16 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     && feePreviewState.data.principalUsd === Number(deposit)
     && feePreviewState.data.windowDays === coverageDays
     && feePreviewState.targetInput === feeTargetInput ? feePreviewState.data : null;
+  const capacity = activeBid ? Number(formatUnits(BigInt(activeBid.available), 6)) : 0;
+  const feeTarget = feePreview ? (bid && !feeTargetInput.trim() ? Math.min(feePreview.feeTargetUsd, capacity) : feePreview.feeTargetUsd) : undefined;
+  const feeCap = feeTarget && Number.isFinite(feeTarget) && feeTarget > 0 ? parseUnits(feeTarget.toFixed(6), 6) : 0n;
+  const bidReady = !!activeBid && !!coverage && !coverageError && availableBid(activeBid, coverage.currentTick, walletAccount, feeCap);
+  async function requireAvailableBid() {
+    if (!bid || !feeCap) throw new Error("Choose a funded bid and a positive fee target first.");
+    const fresh = await api<CoverageSnapshot>(`coverage?fresh=1&poolId=${bid.poolId}`);
+    const offer = fresh.offers.find((row) => row.address.toLowerCase() === bid.address.toLowerCase());
+    if (!offer || !availableBid(offer, fresh.currentTick, walletAccount, feeCap)) throw new Error("This bid no longer has enough available cover for these terms. Return to funded bids.");
+  }
   const risk = riskState?.marketId === selectedId && riskState.depositUsd === Number(deposit)
     && riskState.lower === lower && riskState.upper === upper
     ? riskState.data : null;
@@ -146,7 +161,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
 
   useEffect(() => {
     const controller = new AbortController();
-    void api<{ markets: Market[] }>("markets").then(({ markets: rows }) => {
+    void (bid ? api<{ market: Market }>("bid-market").then(({ market }) => ({ markets: [market] })) : api<{ markets: Market[] }>("markets")).then(({ markets: rows }) => {
       if (controller.signal.aborted) return;
       setMarkets(rows);
       setSelectedId((current) => marketId || current || rows[0]?.id || "");
@@ -159,7 +174,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       }
     }).catch((reason) => { if (!controller.signal.aborted) setError(String(reason)); });
     return () => controller.abort();
-  }, [marketId, router]);
+  }, [marketId, router, bid]);
 
   useEffect(() => {
     let active = true;
@@ -278,7 +293,10 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     setMintBusy(true); setMintError(""); setMintStep("Checking on-chain pool price…");
     try {
       await ensureBaseSepolia();
+      if (bid) await requireAvailableBid();
       const account = walletAccount as Address;
+      const [connected] = await injectedClient().getAddresses();
+      if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Wallet changed. Reconnect before minting.");
       const wethAmount = parseUnits(quote.split.ethAmount.toFixed(8), 18);
       const usdcAmount = parseUnits(quote.split.usdcAmount.toFixed(6), 6);
       const [weth, usdc, slot] = await Promise.all([
@@ -294,6 +312,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
         upperPriceUsd: upper, wethAmount, usdcAmount, recipient: account, wethToken: BASE_WETH });
       await approveForPosition(BASE_WETH, wethAmount, account);
       await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);
+      if (bid) await requireAvailableBid();
       setMintStep("Estimating gas and checking your position…");
       const request = await preparePositionMint(account, params.unlockData);
       setMintStep("Confirm the position mint in your wallet…");
@@ -327,7 +346,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   }
 
   return <div className="mw-page">
-    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review the live pool and choose a range before minting a position." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
+    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review your funded bid before minting a matching position." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
     {error && <div className="mw-message is-error" role="alert">{error}</div>}
     {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre markets yet</h2><p>Create a market proposal to define a pair, range, and launch targets.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
     {!marketId && !!markets.length && <>
@@ -357,9 +376,9 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
             <div><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(selectedUsdc, 6)).toFixed(2)}</strong><small>At mint</small></div>
           </div>
           <div className="mw-overview-range">
-            <div><span>PROPOSED LP RANGE</span><strong>{usd(selected.lowerPriceUsd)} <em>to</em> {usd(selected.upperPriceUsd)}</strong><small>Choose exact bounds before minting</small></div>
-            <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (referencePrice - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div>
-            <Badge variant="outline" className={referencePrice >= selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? "is-in-range" : "is-out-of-range"}>{referencePrice >= selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? "IN RANGE" : "OUT OF RANGE"}</Badge>
+            <div><span>{bid ? "FUNDED BID RANGE" : "PROPOSED LP RANGE"}</span><strong>{usd(lower)} <em>to</em> {usd(upper)}</strong><small>{bid ? `${coverageDays} days · exact underwriter bins` : "Choose exact bounds before minting"}</small></div>
+            <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (referencePrice - lower) / (upper - lower) * 100))}%` }} /></div>
+            <Badge variant="outline" className={referencePrice >= lower && referencePrice < upper ? "is-in-range" : "is-out-of-range"}>{referencePrice >= lower && referencePrice < upper ? "LIVE IN RANGE" : "LIVE OUT OF RANGE"}</Badge>
           </div>
           <div className="mw-overview-oracle-foot">{livePrices ? <><span>ETH perpetual market reference</span><a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">{livePrices.source} feed <ArrowRight size={12} /></a></> : <span>{liveError ? "Live market prices are temporarily unavailable." : "Connecting to Hyperliquid…"}</span>}</div>
         </div>
@@ -367,7 +386,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
         <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={lower} upper={upper} current={poolSlot?.priceUsd ?? selected.priceUsd} stale={liveError} />
-        {selected.deployment && <CoverageBoard poolId={selected.deployment.poolId} account={walletAccount} role={role} onChoose={role === "lp" ? (offer) => {
+        {selected.deployment && <CoverageBoard poolId={selected.deployment.poolId} account={walletAccount} role={role} portfolio={!!bid} onChoose={!bid && role === "lp" ? (offer) => {
           setSelectedRange({ marketId: selectedId, lower: tickPrice(offer.tickLower), upper: tickPrice(offer.tickUpper) });
           setCoverageDays(offer.duration / 86400); setFeeTargetInput("");
         } : undefined} />}
@@ -384,7 +403,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
           <button type="button" aria-pressed={role === "lp"} className={role === "lp" ? "is-active" : ""} onClick={() => onRoleChange("lp")}>Provide liquidity</button>
           <button type="button" aria-pressed={role === "underwriter"} className={role === "underwriter" ? "is-active" : ""} onClick={() => onRoleChange("underwriter")}>Underwrite</button>
         </div>
-        <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
+        {bid ? <div className="mw-onchain-lp"><strong>Selected funded bid</strong><div className="cw-terms"><strong>{usd(lower)} – {usd(upper)}</strong><span>{(bid.tickUpper - bid.tickLower) / 10} bins · {coverageDays} days</span><span>Available cover: {capacity.toFixed(4)} nUSDC</span><span>Premium: {bid.premiumBps / 100}% of your protected fee cap</span></div><small>The underwriter sets these bins and days.</small>{!bidReady && <p role="status">{coverageError || "Waiting for an available bid and a fee target within its capacity."}</p>}</div> : <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
           current={referencePrice} currentLabel={referenceSource} onChainPrice={poolSlot?.priceUsd}
           lower={lower} upper={upper}
           onLower={(value) => setSelectedRange({ marketId: selectedId, lower: Math.max(selected.lowerPriceUsd, Math.min(value, upper - .01)), upper })}
@@ -394,21 +413,21 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
             setSelectedRange({ marketId: selectedId,
               lower: Number(Math.max(selected.lowerPriceUsd, referencePrice - halfWidth).toFixed(2)),
               upper: Number(Math.min(selected.upperPriceUsd, referencePrice + halfWidth).toFixed(2)) });
-          } : undefined} />
+          } : undefined} />}
         {role === "lp" ? <Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><PiggyBank size={16} /> Create LP position</h2><span>RANGE · {wethSymbol} + nUSDC</span></div>
           <div className="mw-trade-inner">
-            <p>Choose an amount and position range. The token split is modeled for this market; fee targets below use historical pool-level data.</p>
+            <p>Choose your position amount. The selected funded bid sets your bins and days; historical data suggests a fee target.</p>
             <AmountField label="nUSDC to model (USD equivalent)" value={deposit} onChange={(value) => { setDeposit(value); setFeeTargetInput(""); }} min={100} />
             {quote && <>
               <div className="mw-split"><div><small>{wethSymbol} required</small><strong>{usd(quote.split.swapUsd)}</strong><span>{quote.split.ethAmount} {wethSymbol}</span></div><div><small>nUSDC required</small><strong>{usd(quote.split.usdcAmount)}</strong><span>{(100 - quote.split.ethPercent).toFixed(1)}% of deposit</span></div></div>
             </>}
             <div className="mw-fee-request">
               <div className="mw-fee-request-head"><strong>Minimum fee target</strong><span>HISTORICAL PREVIEW</span></div>
-              <label className="mw-field"><span>Coverage duration</span><select value={coverageDays} onChange={(event) => { setCoverageDays(Number(event.target.value)); setFeeTargetInput(""); }} aria-label="Coverage duration">{[7, 14, 30, 60, 90].map((days) => <option key={days} value={days}>{days} days</option>)}</select></label>
+              <label className="mw-field"><span>Coverage duration</span><select disabled={!!bid} value={coverageDays} onChange={(event) => { setCoverageDays(Number(event.target.value)); setFeeTargetInput(""); }} aria-label="Coverage duration">{[7, 14, 30, 60, 90].map((days) => <option key={days} value={days}>{days} days</option>)}</select></label>
               <AmountField label={`Minimum fees to protect over ${coverageDays} days (USD)`} value={feeTargetInput} onChange={setFeeTargetInput} min={0.01} />
-              <small>Leave the target blank to use the suggested amount from the latest {coverageDays}-day window.</small>
-              {feePreview && <><div className="mw-fee-evidence"><div><span>Recent {coverageDays} days</span><strong>{usd(feePreview.recentFeesUsd)}</strong></div><div><span>Best {coverageDays} days</span><strong>{usd(feePreview.bestFeesUsd)}</strong></div><div><span>Maximum target · 90% of best</span><strong>{usd(feePreview.maximumFeeTargetUsd)}</strong></div><div><span>Your minimum target</span><strong>{usd(feePreview.feeTargetUsd)}</strong></div></div><p>Indicative premium for that target: <strong>{usd(feePreview.indicativePremiumUsd)}</strong>. Based on {feePreview.windowCount} historical windows across {feePreview.sampleDays} days; this is a pool-level proxy, not a quote for your exact ticks.</p></>}
+              <small>Leave blank for the historical suggestion, limited to this bid’s available capacity.</small>
+              {feePreview && <><div className="mw-fee-evidence"><div><span>Recent {coverageDays} days</span><strong>{usd(feePreview.recentFeesUsd)}</strong></div><div><span>Best {coverageDays} days</span><strong>{usd(feePreview.bestFeesUsd)}</strong></div><div><span>Maximum target · 90% of best</span><strong>{usd(feePreview.maximumFeeTargetUsd)}</strong></div><div><span>Your minimum target</span><strong>{usd(feeTarget ?? 0)}</strong></div></div><p>Bid premium: <strong>{usd(bid ? Number(formatUnits((feeCap * BigInt(bid.premiumBps) + 9999n) / 10000n, 6)) : feePreview.indicativePremiumUsd)}</strong>. Coverage starts after purchase. Available capital is checked again before each transaction.</p></>}
               {feeError && <p className="mw-premium-warning" role="alert">{feeError}</p>}
             </div>
             <div className="mw-availability"><ShieldCheck size={15} /><span>After minting, request coverage for your position’s bins and chosen duration. A funded offer activates only after you pay its premium.</span></div>
@@ -419,7 +438,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
               {selected.deployment && !walletAccount && <Button variant="outline" onClick={() => void onConnect()}>Connect wallet to mint</Button>}
               {selected.deployment && walletAccount && quote && <>
                 {wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && (isTestWeth ? <Button asChild variant="outline"><Link href="/dashboard/faucet">Claim 1 nWETH from the faucet <ArrowRight size={14} /></Link></Button> : <Button variant="outline" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap required test ETH to WETH</Button>)}
-                <Button className="kd-apply-button" disabled={mintBusy || mintConfirmed || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)} onClick={() => void mintOnChain()}>{mintBusy ? mintStep || "Confirming…" : mintConfirmed ? "Position minted" : "Mint position on Base Sepolia"} <ArrowRight size={14} /></Button>
+                <Button className="kd-apply-button" disabled={(!!bid && !bidReady) || mintBusy || mintConfirmed || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)} onClick={() => void mintOnChain()}>{mintBusy ? mintStep || "Confirming…" : mintConfirmed ? "Position minted" : "Mint position on Base Sepolia"} <ArrowRight size={14} /></Button>
               </>}
               {mintStep && !mintBusy && <small>{mintStep}</small>}{mintError && <p role="alert" className="mw-premium-warning">{mintError}</p>}
               {mintHash && <a href={basescanTx(mintHash)} target="_blank" rel="noreferrer">View mint transaction <ExternalLink size={13} /></a>}
@@ -428,8 +447,8 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
               <small>{isTestWeth ? "Claim both nWETH and nUSDC from the faucet, then approve and mint. Only network gas requires Base Sepolia ETH." : "This original pool uses ETH-backed WETH. For free test tokens, use the nWETH / nUSDC pool in the directory."}</small>
               {!isTestWeth && faucetMarket && <Button asChild variant="outline"><Link href={`/dashboard/pools/${faucetMarket.id}`}>Use the free nWETH pool <ArrowRight size={14} /></Link></Button>}
             </div>
-            <CoverageRequestForm poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
-              feeTarget={feePreview?.feeTargetUsd} maximumTarget={feePreview?.maximumFeeTargetUsd} refreshKey={tokenRefresh} />
+            <CoverageRequestForm bidAddress={bid?.address} poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
+              feeTarget={feeTarget} maximumTarget={feePreview?.maximumFeeTargetUsd} refreshKey={tokenRefresh} />
           </div>
         </Card> : <><CoverageFunding poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} onConnect={onConnect} lower={lower} upper={upper} /><details className="cw-calculator"><summary>Historical risk calculator</summary><Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><ShieldCheck size={16} /> Backtest estimates</h2><span>RESEARCH</span></div>
@@ -487,7 +506,7 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
     return <div className="mw-page"><CoverageStats account={walletAccount} />
       {!walletAccount && <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet</Button>}
       <CoverageBoard account={walletAccount} role="underwriter" portfolio />
-      <ArchivedCoverageRecovery account={walletAccount} /></div>;
+    </div>;
   }
 
   return <div className="mw-page">

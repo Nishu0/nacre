@@ -128,7 +128,7 @@ export function listMarkets(db: Database) {
 }
 
 export function listPositions(db: Database, participant: string) {
-  const rows = db.query("SELECT * FROM market_positions WHERE participant = ? ORDER BY created_at DESC")
+  const rows = db.query("SELECT * FROM market_positions WHERE participant = ? AND market_id NOT IN (SELECT market_id FROM market_archives) ORDER BY created_at DESC")
     .all(participant) as PositionRow[];
   return rows.map((row) => ({
     id: row.id, marketId: row.market_id, participant: row.participant,
