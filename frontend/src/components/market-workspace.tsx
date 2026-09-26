@@ -12,12 +12,13 @@ import { TokenPairIcon } from "@/components/token-pair-icon";
 import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
 import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
+import { preparePositionMint, positionMintError } from "@/lib/position-mint";
 import { tickPrice } from "@/lib/coverage-contracts";
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
 import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
   NACRE_TEST_USDC, BASE_WETH, UNISWAP_PERMIT2,
-  UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi, positionManagerAbi,
+  UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi,
   stateViewAbi, wethAbi, sqrtPriceX96ToWethUsd } from "@/lib/nacre-chain";
 
 export type WorkspaceRole = "lp" | "underwriter";
@@ -277,11 +278,11 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
         upperPriceUsd: upper, wethAmount, usdcAmount, recipient: account });
       await approveForPosition(BASE_WETH, wethAmount, account);
       await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);
-      setMintStep("Minting Uniswap v4 position…");
+      setMintStep("Estimating gas and checking your position…");
+      const request = await preparePositionMint(account, params.unlockData);
+      setMintStep("Confirm the position mint in your wallet…");
       const wallet = injectedClient();
-      const tx = await wallet.writeContract({ chain: wallet.chain, account, address: UNISWAP_POSITION_MANAGER,
-        abi: positionManagerAbi, functionName: "modifyLiquidities",
-        args: [params.unlockData, BigInt(unixSeconds() + 600)] });
+      const tx = await wallet.writeContract({ ...request, chain: wallet.chain });
       setMintHash(tx);
       const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
       if (receipt.status !== "success") throw new Error("Position mint reverted. Inspect the transaction on BaseScan.");
@@ -292,7 +293,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       setMintSaved(true);
       setTokenRefresh((value) => value + 1);
       setMintStep("Position minted on Base Sepolia.");
-    } catch (reason) { setMintError(reason instanceof Error ? reason.message : "Could not mint the position."); }
+    } catch (reason) { setMintError(positionMintError(reason)); }
     finally { setMintBusy(false); }
   }
 
