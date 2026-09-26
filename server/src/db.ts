@@ -74,6 +74,21 @@ export function openDb(path = DATABASE_PATH): Database {
       payout_cap_usd REAL NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS market_deployments (
+      market_id TEXT PRIMARY KEY REFERENCES market_drafts(id),
+      tx_hash TEXT NOT NULL UNIQUE,
+      pool_id TEXT NOT NULL,
+      deployed_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS market_chain_positions (
+      token_id TEXT PRIMARY KEY,
+      market_id TEXT NOT NULL REFERENCES market_drafts(id),
+      owner TEXT NOT NULL,
+      tx_hash TEXT NOT NULL UNIQUE,
+      weth_raw TEXT NOT NULL,
+      usdc_raw TEXT NOT NULL,
+      minted_at TEXT NOT NULL
+    );
   `);
   const columns = db.query("PRAGMA table_info(observations)").all() as { name: string }[];
   if (!columns.some((column) => column.name === "volume_usd")) {
@@ -81,6 +96,16 @@ export function openDb(path = DATABASE_PATH): Database {
   }
   if (!columns.some((column) => column.name === "gross_pool_fees_usd")) {
     db.exec("ALTER TABLE observations ADD COLUMN gross_pool_fees_usd REAL NOT NULL DEFAULT 0");
+  }
+  const positionColumns = db.query("PRAGMA table_info(market_positions)").all() as { name: string }[];
+  if (!positionColumns.some((column) => column.name === "lower_price_usd")) {
+    db.exec("ALTER TABLE market_positions ADD COLUMN lower_price_usd REAL");
+    db.exec("ALTER TABLE market_positions ADD COLUMN upper_price_usd REAL");
+  }
+  const pledgeColumns = db.query("PRAGMA table_info(market_pledges)").all() as { name: string }[];
+  if (!pledgeColumns.some((column) => column.name === "premium_usd")) {
+    db.exec("ALTER TABLE market_pledges ADD COLUMN premium_usd REAL");
+    db.exec("ALTER TABLE market_pledges ADD COLUMN example_deposit_usd REAL");
   }
   return db;
 }

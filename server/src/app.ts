@@ -7,14 +7,43 @@ import { POOLS, type PoolId, type Snapshot } from "./market-data";
 import { getLivePrices, type LivePrices } from "./live-prices";
 import { buildRiskAnalysis } from "./risk-analysis";
 import { getMarket, listMarkets, listPositions, presentMarket, priceToTick, quotePosition, VALID_REFERENCE } from "./market-model";
+import { createPublicClient, decodeEventLog, http, parseAbi, type Hex } from "viem";
+import { baseSepolia } from "viem/chains";
 
 type CreateMarket = { creator: string; priceUsd: number; lowerPriceUsd: number;
   upperPriceUsd: number; liquidityTargetUsd: number; collateralBudgetUsd: number };
-type FundRequest = { participant: string; amountUsd: number };
+type FundRequest = { participant: string; amountUsd: number;
+  premiumUsd?: number; exampleDepositUsd?: number; lowerPriceUsd?: number; upperPriceUsd?: number };
 const validParticipant = (value: unknown): value is string =>
   typeof value === "string" && /^[a-zA-Z0-9:_-]{8,100}$/.test(value);
 const inRange = (value: unknown, min: number, max: number): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
+function selectedRange(row: { lower_price_usd: number; upper_price_usd: number }, lower?: number, upper?: number) {
+  const bottom = lower ?? row.lower_price_usd;
+  const top = upper ?? row.upper_price_usd;
+  if (!inRange(bottom, row.lower_price_usd, row.upper_price_usd)
+    || !inRange(top, row.lower_price_usd, row.upper_price_usd)
+    || bottom >= top || priceToTick(bottom) >= priceToTick(top)) return null;
+  return { bottom, top };
+}
+const ADMIN = "0xeC5660E8912DC26FC0e5eC700bf05b9f326D6288";
+const LAUNCHER = "0x49FcA731F70DaF38d828E34204F2437E75a605a6";
+const POSITION_MANAGER = "0x4b2c77d209d3405f41a037ec6c77f7f5b8e2ca80";
+const POOL_MANAGER = "0x05E73354cFDd6745C338b50BcFDfA3Aa6fA03408";
+const WETH = "0x4200000000000000000000000000000000000006";
+const TEST_USDC = "0xfa35D165b03B8eB193934D338Db8de536e84AAC8";
+const HOOK = "0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00";
+const launchEvents = parseAbi([
+  "event PoolLaunched(bytes32 indexed poolId, uint160 sqrtPriceX96, int24 tick, address indexed admin)",
+]);
+const positionEvents = parseAbi(["event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)"]);
+const tokenEvents = parseAbi(["event Transfer(address indexed from,address indexed to,uint256 value)"]);
+const positionReads = parseAbi([
+  "function ownerOf(uint256 tokenId) view returns (address)",
+  "function getPoolAndPositionInfo(uint256 tokenId) view returns ((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,uint256 info)",
+]);
+const chainClient = createPublicClient({ chain: baseSepolia,
+  transport: http(process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org") });
 
 export function buildApp(databasePath?: string, priceProvider: () => Promise<LivePrices> = getLivePrices) {
   const app = Fastify({ logger: true });
@@ -106,8 +135,8 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     },
   );
 
-  // These routes persist an interactive sandbox. They never move tokens or
-  // report an on-chain pool, position, Aqua balance, or active insurance.
+  // Funding records are simulations. A separate endpoint verifies an actual
+  // Base Sepolia receipt before showing an on-chain pool deployment.
   app.get("/api/markets", async () => ({ mode: "sandbox", markets: listMarkets(db) }));
 
   app.post<{ Body: CreateMarket }>("/api/markets", async (request, reply) => {
@@ -145,6 +174,120 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     return row ? { market: presentMarket(db, row) } : reply.code(404).send({ error: "Unknown market" });
   });
 
+  app.post<{ Params: { marketId: string }; Body: { txHash?: string } }>(
+    "/api/markets/:marketId/deployment", async (request, reply) => {
+      const row = getMarket(db, request.params.marketId);
+      if (!row) return reply.code(404).send({ error: "Unknown market" });
+      const market = presentMarket(db, row);
+      if (market.deployment) return { market };
+      if (!market.funded || !market.inRange) {
+        return reply.code(409).send({ error: "Both funding targets and an in-range tick are required before launch." });
+      }
+      if (db.query("SELECT market_id FROM market_deployments LIMIT 1").get()) {
+        return reply.code(409).send({ error: "The fixed WETH / nUSDC hook pool has already been assigned to another market." });
+      }
+      const txHash = request.body?.txHash;
+      if (!txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+        return reply.code(400).send({ error: "A confirmed transaction hash is required." });
+      }
+      try {
+        const receipt = await chainClient.getTransactionReceipt({ hash: txHash as Hex });
+        // Smart wallets may batch or relay the call, so transaction.from/to need
+        // not be the admin or launcher. The launcher event is emitted only after
+        // its on-chain msg.sender == admin check succeeds.
+        if (receipt.status !== "success") {
+          throw new Error("This is not a successful pool launch transaction.");
+        }
+        const launched = receipt.logs.find((log) => {
+          if (log.address.toLowerCase() !== LAUNCHER.toLowerCase()) return false;
+          try {
+            const decoded = decodeEventLog({ abi: launchEvents, data: log.data, topics: log.topics });
+            return decoded.eventName === "PoolLaunched" && decoded.args.admin.toLowerCase() === ADMIN.toLowerCase();
+          } catch { return false; }
+        });
+        if (!launched) throw new Error("The transaction has no Nacre pool launch event.");
+        const decoded = decodeEventLog({ abi: launchEvents, data: launched.data, topics: launched.topics });
+        const poolId = decoded.args.poolId;
+        db.prepare("INSERT INTO market_deployments VALUES (?, ?, ?, ?)")
+          .run(row.id, txHash, poolId, new Date().toISOString());
+        return { market: presentMarket(db, row) };
+      } catch (reason) {
+        return reply.code(409).send({ error: reason instanceof Error ? reason.message : "Could not verify launch transaction." });
+      }
+    },
+  );
+
+  app.post<{ Params: { marketId: string }; Body: { txHash?: string; account?: string } }>(
+    "/api/markets/:marketId/chain-positions", async (request, reply) => {
+      const market = getMarket(db, request.params.marketId);
+      if (!market || !presentMarket(db, market).deployment) {
+        return reply.code(409).send({ error: "Deploy the pool before registering a live position." });
+      }
+      const { txHash, account } = request.body ?? {};
+      if (!txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)
+        || !account || !/^0x[0-9a-fA-F]{40}$/.test(account)) {
+        return reply.code(400).send({ error: "A transaction hash and wallet address are required." });
+      }
+      try {
+        const receipt = await chainClient.getTransactionReceipt({ hash: txHash as Hex });
+        if (receipt.status !== "success") throw new Error("Mint transaction did not succeed.");
+        const mint = receipt.logs.find((log) => {
+          if (log.address.toLowerCase() !== POSITION_MANAGER.toLowerCase()) return false;
+          try {
+            const event = decodeEventLog({ abi: positionEvents, data: log.data, topics: log.topics });
+            return event.args.from === "0x0000000000000000000000000000000000000000"
+              && event.args.to.toLowerCase() === account.toLowerCase();
+          } catch { return false; }
+        });
+        if (!mint) throw new Error("No PositionManager NFT mint to this wallet was found.");
+        const tokenId = decodeEventLog({ abi: positionEvents, data: mint.data, topics: mint.topics }).args.tokenId;
+        const [owner, [key]] = await Promise.all([
+          chainClient.readContract({ address: POSITION_MANAGER, abi: positionReads,
+            functionName: "ownerOf", args: [tokenId] }),
+          chainClient.readContract({ address: POSITION_MANAGER, abi: positionReads,
+            functionName: "getPoolAndPositionInfo", args: [tokenId] }),
+        ]);
+        if (owner.toLowerCase() !== account.toLowerCase()
+          || key.currency0.toLowerCase() !== WETH.toLowerCase()
+          || key.currency1.toLowerCase() !== TEST_USDC.toLowerCase()
+          || key.hooks.toLowerCase() !== HOOK.toLowerCase()
+          || key.fee !== 500 || key.tickSpacing !== 10) {
+          throw new Error("This position does not belong to the Nacre WETH/nUSDC pool.");
+        }
+        const transferred = (token: string) => receipt.logs.reduce((total, log) => {
+          if (log.address.toLowerCase() !== token.toLowerCase()) return total;
+          try {
+            const event = decodeEventLog({ abi: tokenEvents, data: log.data, topics: log.topics });
+            if (event.args.from.toLowerCase() === account.toLowerCase()
+              && event.args.to.toLowerCase() === POOL_MANAGER.toLowerCase()) return total + event.args.value;
+          } catch { /* Another event from the token contract. */ }
+          return total;
+        }, BigInt(0));
+        db.prepare(`INSERT OR IGNORE INTO market_chain_positions
+          (token_id, market_id, owner, tx_hash, weth_raw, usdc_raw, minted_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+          .run(tokenId.toString(), market.id, account.toLowerCase(), txHash,
+            transferred(WETH).toString(), transferred(TEST_USDC).toString(), new Date().toISOString());
+        return { tokenId: tokenId.toString(), txHash, marketId: market.id };
+      } catch (reason) {
+        return reply.code(409).send({ error: reason instanceof Error ? reason.message : "Could not verify position mint." });
+      }
+    },
+  );
+
+  app.get<{ Querystring: { account?: string } }>("/api/chain-positions", async (request, reply) => {
+    const account = request.query.account;
+    if (!account || !/^0x[0-9a-fA-F]{40}$/.test(account)) {
+      return reply.code(400).send({ error: "A wallet address is required." });
+    }
+    const rows = db.query(`SELECT token_id, market_id, tx_hash, weth_raw, usdc_raw, minted_at
+      FROM market_chain_positions WHERE owner = ? ORDER BY minted_at DESC`).all(account.toLowerCase()) as {
+      token_id: string; market_id: string; tx_hash: string;
+      weth_raw: string; usdc_raw: string; minted_at: string;
+    }[];
+    return { positions: rows.map((row) => ({ tokenId: row.token_id, marketId: row.market_id,
+      txHash: row.tx_hash, wethRaw: row.weth_raw, usdcRaw: row.usdc_raw, mintedAt: row.minted_at })) };
+  });
+
   app.get<{ Params: { marketId: string } }>("/api/markets/:marketId/price-history", async (request, reply) => {
     const row = getMarket(db, request.params.marketId);
     if (!row) return reply.code(404).send({ error: "Unknown market" });
@@ -160,7 +303,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     };
   });
 
-  app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string } }>(
+  app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string; lowerPriceUsd?: string; upperPriceUsd?: string } }>(
     "/api/markets/:marketId/quote", async (request, reply) => {
       const row = getMarket(db, request.params.marketId);
       if (!row) return reply.code(404).send({ error: "Unknown market" });
@@ -168,11 +311,14 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       if (!inRange(depositUsd, 100, 1_000_000)) {
         return reply.code(400).send({ error: "Deposit must be between $100 and $1,000,000." });
       }
-      return { market: presentMarket(db, row), quote: quotePosition(db, row, depositUsd) };
+      const range = selectedRange(row, request.query.lowerPriceUsd ? Number(request.query.lowerPriceUsd) : undefined,
+        request.query.upperPriceUsd ? Number(request.query.upperPriceUsd) : undefined);
+      if (!range) return reply.code(400).send({ error: "Choose a valid range inside the pool bounds." });
+      return { market: presentMarket(db, row), quote: quotePosition(db, row, depositUsd, range.bottom, range.top) };
     },
   );
 
-  app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string } }>(
+  app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string; lowerPriceUsd?: string; upperPriceUsd?: string } }>(
     "/api/markets/:marketId/risk", async (request, reply) => {
       const row = getMarket(db, request.params.marketId);
       if (!row) return reply.code(404).send({ error: "Unknown market" });
@@ -180,7 +326,10 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       if (!inRange(depositUsd, 100, 1_000_000)) {
         return reply.code(400).send({ error: "Deposit must be between $100 and $1,000,000." });
       }
-      const quote = quotePosition(db, row, depositUsd);
+      const range = selectedRange(row, request.query.lowerPriceUsd ? Number(request.query.lowerPriceUsd) : undefined,
+        request.query.upperPriceUsd ? Number(request.query.upperPriceUsd) : undefined);
+      if (!range) return reply.code(400).send({ error: "Choose a valid position range." });
+      const quote = quotePosition(db, row, depositUsd, range.bottom, range.top);
       const reference = POOLS.find((pool) => pool.id === row.reference_pool_id)!;
       return {
         mode: "research",
@@ -209,11 +358,15 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       const row = getMarket(db, request.params.marketId);
       if (!row) return reply.code(404).send({ error: "Unknown market" });
       const body = request.body;
-      if (!body || !validParticipant(body.participant) || !inRange(body.amountUsd, 1, 10_000_000)) {
+      if (!body || !validParticipant(body.participant) || !inRange(body.amountUsd, 1, 10_000_000)
+        || (body.premiumUsd !== undefined && !inRange(body.premiumUsd, 0.01, 1_000_000))
+        || (body.exampleDepositUsd !== undefined && !inRange(body.exampleDepositUsd, 100, 1_000_000))) {
         return reply.code(400).send({ error: "Enter a valid participant and capacity amount." });
       }
-      db.prepare("INSERT INTO market_pledges VALUES (?, ?, ?, ?, ?)")
-        .run(crypto.randomUUID(), row.id, body.participant, body.amountUsd, new Date().toISOString());
+      db.prepare(`INSERT INTO market_pledges
+        (id, market_id, participant, capacity_usd, created_at, premium_usd, example_deposit_usd)
+        VALUES (?, ?, ?, ?, ?, ?, ?)`).run(crypto.randomUUID(), row.id, body.participant,
+          body.amountUsd, new Date().toISOString(), body.premiumUsd ?? null, body.exampleDepositUsd ?? null);
       return reply.code(201).send({ market: presentMarket(db, row), notice: "Sandbox pledge only. No USDC is locked." });
     },
   );
@@ -226,12 +379,17 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       if (!body || !validParticipant(body.participant) || !inRange(body.amountUsd, 100, 1_000_000)) {
         return reply.code(400).send({ error: "Enter a valid participant and deposit amount." });
       }
+      const range = selectedRange(row, body.lowerPriceUsd, body.upperPriceUsd);
+      if (!range) return reply.code(400).send({ error: "Choose a valid position range inside the pool bounds." });
       const id = crypto.randomUUID();
       const result = db.transaction(() => {
-        db.prepare("INSERT INTO market_positions VALUES (?, ?, ?, ?, 0, 0, 0, 0, ?)")
-          .run(id, row.id, body.participant, body.amountUsd, new Date().toISOString());
+        db.prepare(`INSERT INTO market_positions
+          (id, market_id, participant, deposit_usd, insured, floor_usd, premium_usd,
+           payout_cap_usd, created_at, lower_price_usd, upper_price_usd)
+          VALUES (?, ?, ?, ?, 0, 0, 0, 0, ?, ?, ?)`).run(id, row.id, body.participant,
+            body.amountUsd, new Date().toISOString(), range.bottom, range.top);
         if (body.requestCover) {
-          const quote = quotePosition(db, row, body.amountUsd);
+          const quote = quotePosition(db, row, body.amountUsd, range.bottom, range.top);
           if (!quote.available) throw new Error(quote.reasons.join(" "));
           db.prepare(`UPDATE market_positions SET insured = 1, floor_usd = ?,
             premium_usd = ?, payout_cap_usd = ? WHERE id = ?`)
@@ -249,12 +407,14 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       const row = getMarket(db, request.params.marketId);
       if (!row) return reply.code(404).send({ error: "Unknown market" });
       const position = db.query("SELECT * FROM market_positions WHERE id = ? AND market_id = ?")
-        .get(request.params.positionId, row.id) as { participant: string; deposit_usd: number; insured: number } | null;
+        .get(request.params.positionId, row.id) as { participant: string; deposit_usd: number;
+          insured: number; lower_price_usd: number | null; upper_price_usd: number | null } | null;
       if (!position || position.participant !== request.body?.participant || position.insured) {
         return reply.code(404).send({ error: "Position is unavailable for coverage." });
       }
       const result = db.transaction(() => {
-        const quote = quotePosition(db, row, position.deposit_usd);
+        const quote = quotePosition(db, row, position.deposit_usd,
+          position.lower_price_usd ?? row.lower_price_usd, position.upper_price_usd ?? row.upper_price_usd);
         if (!quote.available) throw new Error(quote.reasons.join(" "));
         db.prepare(`UPDATE market_positions SET insured = 1, floor_usd = ?,
           premium_usd = ?, payout_cap_usd = ? WHERE id = ? AND insured = 0`)
@@ -317,12 +477,14 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     if (!validParticipant(request.query.participant)) {
       return reply.code(400).send({ error: "A sandbox participant ID is required." });
     }
-    const rows = db.query(`SELECT id, market_id, capacity_usd, created_at FROM market_pledges
+    const rows = db.query(`SELECT id, market_id, capacity_usd, premium_usd, example_deposit_usd, created_at FROM market_pledges
       WHERE participant = ? ORDER BY created_at DESC`).all(request.query.participant) as {
-      id: string; market_id: string; capacity_usd: number; created_at: string;
+      id: string; market_id: string; capacity_usd: number; premium_usd: number | null;
+      example_deposit_usd: number | null; created_at: string;
     }[];
     return { mode: "sandbox", pledges: rows.map((row) => ({
       id: row.id, marketId: row.market_id, capacityUsd: row.capacity_usd,
+      premiumUsd: row.premium_usd, exampleDepositUsd: row.example_deposit_usd,
       createdAt: row.created_at,
     })) };
   });

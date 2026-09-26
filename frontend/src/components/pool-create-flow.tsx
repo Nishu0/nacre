@@ -220,7 +220,7 @@ export function PoolCreateFlow() {
     <div className="pcf-success-mark"><CheckCircle2 size={32} /></div>
     <Badge variant="outline">SANDBOX POOL CREATED</Badge>
     <h2>Pool draft is ready.</h2>
-    <p>Your WETH / USDC market was saved on the local Bun server. It needs LP deposits and underwriter backing before the funding gate opens. No contract was deployed or tokens moved.</p>
+    <p>Your WETH / nUSDC market was saved on the local Bun server. It needs LP deposits and underwriter backing before the funding gate opens. No contract was deployed or tokens moved.</p>
     <div className="pcf-success-id"><span>POOL ID</span><code>{createdId}</code></div>
     <Button asChild className="pcf-primary"><Link href={`/dashboard/pools/${createdId}`}>Open pool now <ArrowRight size={16} /></Link></Button>
     <small>Opening the pool page automatically…</small>
@@ -241,7 +241,7 @@ export function PoolCreateFlow() {
     <div className="pcf-layout"><div className="pcf-main">
       <Card className="pcf-form-card"><div className="pcf-card-heading"><span>STEP 0{step + 1} / 03</span><h2>{steps[step].title}</h2><p>{step === 0 ? "Choose the price interval where the first LP position can earn fees." : step === 1 ? "Set the two amounts that must be funded before the market opens." : "Confirm the terms that will be saved to the sandbox."}</p></div>
         {step === 0 && <div className="pcf-card-body">
-          <div className="pcf-fixed-pair"><TokenPairIcon pair="WETH / USDC" size="large" /><div><strong>WETH / USDC</strong><span>Uniswap v4 concept · 0.05% fee</span></div><Badge variant="outline">FIXED PAIR</Badge></div>
+          <div className="pcf-fixed-pair"><TokenPairIcon pair="WETH / nUSDC" size="large" /><div><strong>WETH / nUSDC</strong><span>Base Sepolia test pair · 0.05% fee</span></div><Badge variant="outline">FIXED PAIR</Badge></div>
           <div className="pcf-field-grid"><NumberField label="Starting WETH price (USD)" value={values.priceUsd} onChange={(value) => update("priceUsd", value)} hint="Sets the initial sandbox tick." /></div>
           <div className="pcf-oracle-row"><div><Activity size={16} /><span>{live ? `${live.source} WETH / USDC · ${money(live.wethUsdc)}` : liveError ? "Live oracle unavailable; enter a price manually." : "Loading live WETH / USDC price…"}</span></div>{live && <Button type="button" variant="outline" onClick={() => {
             setValues((previous) => ({ ...previous, priceUsd: live.wethUsdc.toFixed(2), lowerPriceUsd: (live.wethUsdc * .9).toFixed(2), upperPriceUsd: (live.wethUsdc * 1.1).toFixed(2) }));
@@ -256,7 +256,7 @@ export function PoolCreateFlow() {
           <div className="pcf-funding-summary"><div><span>LP TARGET</span><strong>{money(values.liquidityTargetUsd)}</strong><small>0% funded at creation</small></div><div><span>PROTECTION TARGET</span><strong>{money(values.collateralBudgetUsd)}</strong><small>0% backed at creation</small></div></div>
         </div>}
         {step === 2 && <div className="pcf-card-body">
-          <div className="pcf-review-pair"><TokenPairIcon pair="WETH / USDC" size="large" /><div><strong>WETH / USDC</strong><span>0.05% fee · sandbox market draft</span></div></div>
+          <div className="pcf-review-pair"><TokenPairIcon pair="WETH / nUSDC" size="large" /><div><strong>WETH / nUSDC</strong><span>0.05% fee · sandbox market draft</span></div></div>
           <dl className="pcf-review-list"><div><dt>Starting price</dt><dd>{money(values.priceUsd)}</dd></div><div><dt>Selected LP range</dt><dd>{money(values.lowerPriceUsd)}–{money(values.upperPriceUsd)}</dd></div><div><dt>LP funding target</dt><dd>{money(values.liquidityTargetUsd)}</dd></div><div><dt>Protection target</dt><dd>{money(values.collateralBudgetUsd)}</dd></div></dl>
           <div className="pcf-review-note"><CircleHelp size={17} /><p><strong>What happens next?</strong> The server creates an unfunded pool record. The pool opens only after both funding targets are met. New coverage can still fail if the tick leaves the range, backing is exhausted, or the quoted net floor fails the model checks. This action does not deploy a contract.</p></div>
         </div>}
@@ -267,7 +267,7 @@ export function PoolCreateFlow() {
       </div>
     </div><aside className="pcf-aside">
       <Card className="pcf-side-card"><div className="pcf-side-heading"><CircleHelp size={18} /><h3>Launch checks</h3></div><ul>{checks.map((check) => <li key={check.label} className={check.ok ? "is-passing" : "is-pending"}>{check.ok ? <CheckCircle2 size={15} /> : <CircleAlert size={15} />}{check.label}</li>)}</ul><p>{step === 0 ? "The selected interval determines when liquidity can earn trading fees." : "The draft can exist before funding; coverage becomes available only when the market and quote checks pass."}</p></Card>
-      <Card className="pcf-side-card"><div className="pcf-side-heading"><Database size={18} /><h3>Preview (draft)</h3></div><div className="pcf-preview-pair"><TokenPairIcon pair="WETH / USDC" size="small" /><div><strong>WETH / USDC</strong><small>0.05% fee · local sandbox</small></div></div><div className="pcf-preview-stats"><div><span>STARTING PRICE</span><strong>{money(values.priceUsd)}</strong></div><div><span>RANGE</span><strong>{money(values.lowerPriceUsd)}–{money(values.upperPriceUsd)}</strong></div><div><span>LP / PROTECTION</span><strong>{money(values.liquidityTargetUsd)} / {money(values.collateralBudgetUsd)}</strong></div></div><Badge variant="outline">UNFUNDED DRAFT</Badge></Card>
+      <Card className="pcf-side-card"><div className="pcf-side-heading"><Database size={18} /><h3>Preview (draft)</h3></div><div className="pcf-preview-pair"><TokenPairIcon pair="WETH / nUSDC" size="small" /><div><strong>WETH / nUSDC</strong><small>0.05% fee · local sandbox</small></div></div><div className="pcf-preview-stats"><div><span>STARTING PRICE</span><strong>{money(values.priceUsd)}</strong></div><div><span>RANGE</span><strong>{money(values.lowerPriceUsd)}–{money(values.upperPriceUsd)}</strong></div><div><span>LP / PROTECTION</span><strong>{money(values.liquidityTargetUsd)} / {money(values.collateralBudgetUsd)}</strong></div></div><Badge variant="outline">UNFUNDED DRAFT</Badge></Card>
       <div className="pcf-sandbox-note"><ShieldCheck size={17} /><p>Saved drafts stay in this browser. Created pools are stored by the local Bun server. Neither step writes to Base or deploys a Uniswap pool.</p></div>
     </aside></div>
   </div>;

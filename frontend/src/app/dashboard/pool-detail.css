@@ -36,6 +36,39 @@
 .mw-funding-inner strong small { color: #a1aca3; font-size: 10px; font-weight: 400; }
 .mw-funding-inner progress { width: 100%; height: 7px; accent-color: #4f8a5d; }
 .mw-funding-inner p { margin: 1px 0 0; color: #8b9b90; font-size: 10px; line-height: 1.55; }
+.mw-launch-gate { display: grid; gap: 11px; margin-top: 3px; padding: 14px; border: 1px solid #dce9df; border-radius: 8px; background: #f8fcf8; }
+.mw-launch-heading { display: flex; align-items: center; gap: 10px; color: #467b52; }
+.mw-launch-heading > div { display: grid; gap: 2px; }
+.mw-launch-heading strong { color: #30553c; font-size: 12px; }
+.mw-launch-heading small, .mw-launch-gate > small, .mw-launch-wallet { color: #869d8b; font-size: 10px; line-height: 1.45; }
+.mw-launch-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.mw-launch-checks span { padding: 4px 7px; border: 1px solid #e2e8e3; border-radius: 5px; background: #fff; color: #8b9a8e; font: 9px var(--font-geist-mono), monospace; }
+.mw-launch-checks span.is-passing { border-color: #cbdfce; background: #eef8f0; color: #41774e; }
+.mw-launch-gate [data-slot=button] { justify-self: start; color: #fff; font-size: 11px; }
+.mw-launch-gate [data-slot=button]:disabled { opacity: .57; }
+.mw-launch-gate [data-slot=button][data-variant=outline] { color: #416b4a; }
+.mw-chain-success { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 13px; color: #418053; font-size: 11px; }
+.mw-chain-success strong { font-size: 12px; }
+.mw-chain-success span { font-family: var(--font-geist-mono), monospace; }
+.mw-chain-success a, .mw-chain-link { display: inline-flex; align-items: center; gap: 4px; color: #4a7d55; font-size: 10px; }
+.mw-chain-success a:hover, .mw-chain-link:hover { text-decoration: underline; }
+.mw-underwriter-sim { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mw-underwriter-sim > div { display: grid; align-content: start; gap: 5px; min-height: 58px; padding: 9px; border: 1px solid #dce9df; border-radius: 6px; background: #f7fbf7; }
+.mw-underwriter-sim span { color: #8b9d90; font-size: 9px; line-height: 1.3; }
+.mw-underwriter-sim strong { color: #365a41; font-size: 13px; }
+.mw-trade-inner > .mw-premium-warning { padding: 9px; border: 1px solid #eedec4; border-radius: 6px; background: #fff9f0; color: #9c7646; }
+.mw-onchain-lp { display: grid; gap: 10px; margin-top: 3px; padding: 13px; border: 1px solid #d7e7db; border-radius: 8px; background: #f5faf6; }
+.mw-onchain-lp > div:first-child { display: grid; gap: 3px; }
+.mw-onchain-lp > div:first-child strong { color: #315941; font-size: 12px; }
+.mw-onchain-lp > div:first-child span, .mw-onchain-lp > small { color: #829a88; font-size: 9px; line-height: 1.5; }
+.mw-onchain-lp > [data-slot=button] { width: 100%; min-height: 36px; font-size: 10px; }
+.mw-onchain-lp > .kd-apply-button { color: #fff; }
+.mw-onchain-lp > [data-slot=button]:disabled { opacity: .55; }
+.mw-onchain-lp > a { display: inline-flex; align-items: center; gap: 4px; color: #4a7b55; font-size: 10px; }
+.mw-onchain-lp > strong { color: #3e7650; font-size: 11px; }
+.mw-token-balance { display: grid; gap: 5px; }
+.mw-token-balance span { display: flex; justify-content: space-between; gap: 8px; color: #446b4d; font-size: 10px; }
+.mw-token-balance small { color: #8da394; font-size: 9px; }
 .mw-action-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 4px; border: 1px solid #e3eae5; border-radius: 10px; background: #f2f6f3; }
 .mw-action-tabs button { min-height: 34px; padding: 5px; border: 0; border-radius: 7px; background: transparent; color: #8b9c90; cursor: pointer; font-size: 11px; font-weight: 650; }
 .mw-action-tabs button.is-active { background: #fff; color: #31583d; box-shadow: 0 1px 5px #18311d17; }

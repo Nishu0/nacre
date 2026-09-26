@@ -35,14 +35,14 @@ Dependencies install into ignored `lib/` directories at revisions recorded in th
 
 Copy `.env.example` to `.env` inside `contract/`, set its mode to `600`, and fill `ETHERSCAN_API_KEY`, `PRIVATE_KEY`, `DEPLOYER`, and a checked `WETH_USD_FEED`. The `.env` file and Foundry broadcast data are gitignored. Use a dedicated testnet-only deployer; never put the private key in a command, commit, issue, or frontend variable.
 
-The sample addresses are Uniswap v4's Base Sepolia PoolManager and PositionManager, Circle's six-decimal test USDC, and Base's WETH predeploy. Confirm their deployed code and feed freshness before broadcasting. The deploy script checks chain ID 84532, that the private key matches `DEPLOYER`, and that the account has test ETH:
+The sample addresses are Uniswap v4's Base Sepolia PoolManager and PositionManager, Nacre's six-decimal test nUSDC, and Base's WETH predeploy. Confirm their deployed code and feed freshness before broadcasting. The deploy script checks chain ID 84532, that the private key matches `DEPLOYER`, and that the account has test ETH:
 
 ```bash
 cd contract
 ./scripts/deploy-base-sepolia.sh
 ```
 
-If `AQUA` is unset, the script deploys the pinned Aqua dependency on Base Sepolia, because 1inch's public deployment list does not currently name that testnet. If `FEE_VALUE_ORACLE` is unset, it deploys a fresh oracle and binds the WETH/USD feed. It then deploys the permissioned hook, vault, and Aqua underwriting app, links them, and asks Foundry to verify the source. The script does not deploy SwapVM, initialize a pool, mint an LP position, or collect test USDC. The dashboard's funding records are a local sandbox and do not represent these contracts.
+If `AQUA` is unset, the script deploys the pinned Aqua dependency on Base Sepolia, because 1inch's public deployment list does not currently name that testnet. If `FEE_VALUE_ORACLE` is unset, it deploys a fresh oracle and binds the WETH/USD feed. It then deploys the permissioned hook, vault, and Aqua underwriting app, links them, and asks Foundry to verify the source. This script does not deploy SwapVM, initialize a pool, mint an LP position, or collect test nUSDC. The dashboard's funding records are a local sandbox and do not represent token transfers.
 
 Verification can be retried without broadcasting another deployment: `./scripts/verify-base-sepolia.sh` reads the latest local broadcast, checks each contract's constructor arguments, and uses Aqua's own source remapping only for Aqua.
 
@@ -58,7 +58,23 @@ The deployment from `0x9ACCF6E95219d489E86D5E61eBA44357538077aa` is verified on 
 | Aqua registry | [`0x569c…15f3`](https://sepolia.basescan.org/address/0x569c255369093c80856eda8a49df834b7e9415f3#code) |
 | Chainlink fee-value oracle | [`0x5a3b…e087`](https://sepolia.basescan.org/address/0x5a3b7b7dc08a57f6205497285ea2a8a7fbd6e087#code) |
 
-The hook's `controller` is the vault, and the vault's `aquaApp` is the underwriting app; both links were checked by RPC after deployment. The testnet deployer retained about 0.09996 ETH after deployment. No Nacre v4 pool has been initialized and no policy is active.
+The hook's `controller` is the vault, and the vault's `aquaApp` is the underwriting app; both links were checked by RPC after deployment. This original deployment used Circle's test USDC and is separate from the current nUSDC demo deployment below.
+
+### Current nUSDC demo pool
+
+The fixed WETH / nUSDC pool was initialized on Base Sepolia with the Nacre hook. The dashboard uses these deployments:
+
+| Contract | Address |
+| --- | --- |
+| Nacre Test USDC faucet | [`0xfa35…AAC8`](https://sepolia.basescan.org/address/0xfa35D165b03B8eB193934D338Db8de536e84AAC8#code) |
+| Nacre v4 fee hook | [`0x4851…4f00`](https://sepolia.basescan.org/address/0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00#code) |
+| Policy vault | [`0x5Dc6…8FdA`](https://sepolia.basescan.org/address/0x5Dc6026219bbB88998A8BA61a4490001EC998FdA#code) |
+| Aqua underwriting app | [`0xFCF4…DEFc`](https://sepolia.basescan.org/address/0xFCF408B807D8a188B6FEfD8666799F1C9684DEFc#code) |
+| Aqua registry | [`0xb33a…8E28`](https://sepolia.basescan.org/address/0xb33a189b5BAb0A65Af9aceE0608CDEc47f7a8E28#code) |
+| Chainlink fee-value oracle | [`0x5c7B…8504`](https://sepolia.basescan.org/address/0x5c7Bb75ae16bF790e73C8A92f3041EeF01778504#code) |
+| Admin pool launcher | [`0x49Fc…05a6`](https://sepolia.basescan.org/address/0x49FcA731F70DaF38d828E34204F2437E75a605a6#code) |
+
+The launcher has immutable admin `0xeC5660E8912DC26FC0e5eC700bf05b9f326D6288`. Its [confirmed launch transaction](https://sepolia.basescan.org/tx/0x01554e3f1760acafa7e53f0c0647d5e469ade26474bba4b67e7e883a4aae54a8) initialized pool ID `0xbd5de3746823c61672498c78534510c625648ad7db69af5a3777de02c9e5ba56`. PoolManager initialization itself is permissionless; the admin restriction applies to Nacre's launcher, while the dashboard's two-sided funding check is offchain. The faucet mints 10,000 nUSDC once per address. A deployed pool starts empty; users must mint liquidity separately. No coverage policy is active.
 
 ## Safety boundaries
 

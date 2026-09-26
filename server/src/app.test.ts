@@ -118,3 +118,37 @@ test("fresh oracle quote is recorded and can explicitly move a sandbox tick", as
     expect(synced.json().source).toBe("Pyth");
   } finally { await app.close(); }
 });
+
+test("position ranges and maker premiums persist while deployment stays gated", async () => {
+  const app = buildApp(":memory:");
+  try {
+    const created = await app.inject({ method: "POST", url: "/api/markets", payload: {
+      creator: "participant-range", priceUsd: 2000, lowerPriceUsd: 1800,
+      upperPriceUsd: 2200, liquidityTargetUsd: 1000, collateralBudgetUsd: 100,
+    } });
+    const marketId = created.json().market.id as string;
+    const base = (await app.inject({ method: "GET", url: `/api/markets/${marketId}/quote?depositUsd=1000` })).json().quote;
+    const narrow = (await app.inject({ method: "GET",
+      url: `/api/markets/${marketId}/quote?depositUsd=1000&lowerPriceUsd=1950&upperPriceUsd=2050` })).json().quote;
+    expect(narrow.lowerPriceUsd).toBe(1950);
+    expect(narrow.upperPriceUsd).toBe(2050);
+    expect(narrow.split.ethPercent).not.toBe(base.split.ethPercent);
+    expect((await app.inject({ method: "GET",
+      url: `/api/markets/${marketId}/quote?depositUsd=1000&lowerPriceUsd=1700&upperPriceUsd=2050` })).statusCode).toBe(400);
+
+    const pledge = await app.inject({ method: "POST", url: `/api/markets/${marketId}/pledges`,
+      payload: { participant: "participant-maker", amountUsd: 150, premiumUsd: 2.5, exampleDepositUsd: 1000 } });
+    expect(pledge.statusCode).toBe(201);
+    const proposals = (await app.inject({ method: "GET", url: "/api/underwriting?participant=participant-maker" })).json().pledges;
+    expect(proposals[0]).toMatchObject({ premiumUsd: 2.5, exampleDepositUsd: 1000 });
+
+    const deposit = await app.inject({ method: "POST", url: `/api/markets/${marketId}/positions`,
+      payload: { participant: "participant-range", amountUsd: 1000, requestCover: false,
+        lowerPriceUsd: 1950, upperPriceUsd: 2050 } });
+    expect(deposit.statusCode).toBe(201);
+    const position = (await app.inject({ method: "GET", url: "/api/portfolio?participant=participant-range" })).json().positions[0];
+    expect(position).toMatchObject({ lowerPriceUsd: 1950, upperPriceUsd: 2050 });
+    expect((await app.inject({ method: "POST", url: `/api/markets/${marketId}/deployment`,
+      payload: { txHash: `0x${"0".repeat(64)}` } })).statusCode).toBe(409);
+  } finally { await app.close(); }
+});
