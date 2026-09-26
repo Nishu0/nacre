@@ -235,9 +235,17 @@
 .supply-range-picker { display: grid; gap: 14px; }
 .mw-supply-inner > .supply-range-eligible { border: 1px solid #bdd9c5; border-radius: 9px; padding: 12px 14px; background: #f1f8f3; color: #2c5539; line-height: 1.5; }
 .mw-supply-inner > .supply-error { color: #8b3e24; }
-.bid-investor-navigation { display: flex; align-items: end; flex-wrap: wrap; gap: 18px; }
-.bid-investor-navigation .mw-field { flex: 1; min-width: 240px; }
-.bid-investor-navigation select { width: 100%; }
+.investor-range-choices { min-width: 0; margin: 0; padding: 0; border: 0; }
+.investor-range-choices legend { padding: 0 0 10px; color: #314e3c; font-size: 14px; font-weight: 650; }
+.investor-range-choices > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+.investor-range-option { display: flex; align-items: start; gap: 10px; padding: 14px; border: 1px solid #d4dfd9; border-radius: 10px; background: #fff; color: #294534; cursor: pointer; }
+.investor-range-option:has(input:checked) { border-color: #3977b8; background: #edf5ff; box-shadow: inset 0 0 0 1px #3977b8; }
+.investor-range-option:has(input:focus-visible) { outline: 3px solid #3977b8; outline-offset: 3px; }
+.investor-range-option:has(input:disabled) { background: #f3f5f4; color: #5b6860; cursor: not-allowed; }
+.investor-range-option input { margin-top: 3px; width: 16px; height: 16px; flex: 0 0 16px; accent-color: #3977b8; }
+.investor-range-option > span { display: grid; gap: 5px; }
+.investor-range-option strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+.investor-range-option small { color: #53675a; font-size: 12px; line-height: 1.5; }
 .cw-bid-batch { display: grid; gap: 14px; padding: 18px; border: 1px solid #c9dbcf; border-radius: 12px; background: #f6faf7; color: #30503c; }
 .cw-batch-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
 .cw-batch-heading button { background: #fff; border: 1px solid #bfd1c4; border-radius: 6px; padding: 5px 9px; color: #7e3f34; cursor: pointer; }

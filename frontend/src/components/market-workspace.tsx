@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, ArrowRight, CircleHelp, Droplets, ExternalLink, PiggyBank, Plus, Rocket, ShieldCheck } from "lucide-react";
@@ -73,7 +73,7 @@ function AmountField({ label, value, onChange, min = 0 }: {
   return <label className="mw-field"><span>{label}</span><Input type="number" inputMode="decimal" min={min} step="any" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
-export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccount, onConnect }: { marketId?: string; bid?: CoverageOffer; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void; walletAccount: string | null; onConnect: () => Promise<void> }) {
+export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccount, onConnect, rangeChoices, hideHeading = false }: { marketId?: string; bid?: CoverageOffer; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void; walletAccount: string | null; onConnect: () => Promise<void>; rangeChoices?: ReactNode; hideHeading?: boolean }) {
   const router = useRouter();
   const { data: coverage, error: coverageError } = useCoverage(bid?.poolId);
   const activeBid = coverage?.offers.find((offer) => offer.address.toLowerCase() === bid?.address.toLowerCase());
@@ -400,7 +400,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
     <SupplyConfirmation open={supplyOpen} onOpenChange={setSupplyOpen} review={supplyReview} phase={supplyPhase}
       busy={mintBusy} message={mintStep} error={mintError} hash={mintHash} saved={mintSaved}
       onConfirm={() => void mintOnChain()} onRegister={() => void retryPositionRegistration()} />
-    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Supply liquidity in your selected bid’s range." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
+    {!hideHeading && <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Supply liquidity in your selected bid’s range." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>}
     {error && <div className="mw-message is-error" role="alert">{error}</div>}
     {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre markets yet</h2><p>Create a market proposal to define a pair, range, and launch targets.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
     {!marketId && !!markets.length && <>
@@ -443,6 +443,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
           <div className="kd-card-heading"><h2><PiggyBank size={16} /> Supply liquidity</h2><span>BASE SEPOLIA</span></div>
           <div className="mw-supply-inner">
             <p>Create an LP position with {wethSymbol} and nUSDC. Choose your range before supplying.</p>
+            {rangeChoices && <fieldset className="supply-range-picker" disabled={mintBusy || supplyOpen || (!!mintHash && !mintConfirmed)}>{rangeChoices}</fieldset>}
             {bid && <fieldset className="supply-range-picker" disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>
               <div className="supply-range-summary"><span>Funded boundaries</span><strong>{usd(tickPrice(bid.tickLower))} – {usd(tickPrice(bid.tickUpper))}</strong></div>
               <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}

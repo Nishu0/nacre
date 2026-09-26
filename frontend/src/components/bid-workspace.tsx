@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowRight, ExternalLink, ShieldCheck } from "lucide-react";
 import { formatUnits } from "viem";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,13 +62,14 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
   const [chosen, setChosen] = useState<string | null>(null);
   const bids = data?.offers.filter((bid) => !bid.closed).sort((a, b) => a.premiumBps - b.premiumBps) ?? [];
   const selected = bids.find((bid) => bid.address === chosen);
-  if (role === "lp" && chosen && market && selected) return <div className="mw-page">
-    <div className="bid-investor-navigation">
-      <Button variant="outline" onClick={() => setChosen(null)}><ArrowLeft size={14} /> All funded bids</Button>
-      <label className="mw-field"><span>Choose coverage bid</span><select value={selected.address} onChange={(event) => setChosen(event.target.value)}>{bids.map((offer) => <option key={offer.address} value={offer.address} disabled={!!error || !availableBid(offer, data!.currentTick, walletAccount)}>{money(tickPrice(offer.tickLower))} – {money(tickPrice(offer.tickUpper))} · {offer.premiumBps / 100}% premium · {offer.duration / 86400} days · {offer.supportsSubranges ? "Flexible range" : "Exact range"} · {offer.owner.slice(0, 6)}…{offer.owner.slice(-4)}</option>)}</select></label>
-    </div>
-    <WorkspacePools key={selected.address} marketId={market.id} bid={selected} role={role} walletAccount={walletAccount} onConnect={onConnect} onRoleChange={onRoleChange} />
-  </div>;
+  if (role === "lp" && chosen && selected) return <WorkspacePools key={selected.address} marketId={market.id} bid={selected} role={role} walletAccount={walletAccount} onConnect={onConnect} onRoleChange={onRoleChange} hideHeading
+    rangeChoices={bids.length > 1 ? <fieldset className="investor-range-choices"><legend>Available ranges</legend><div>{bids.map((offer) => {
+      const unavailable = !!error || !data || !availableBid(offer, data.currentTick, walletAccount);
+      return <label className="investor-range-option" key={offer.address}>
+        <input type="radio" name="funded-range" value={offer.address} checked={offer.address === selected.address} disabled={unavailable} onChange={() => setChosen(offer.address)} />
+        <span><strong>{money(tickPrice(offer.tickLower))} – {money(tickPrice(offer.tickUpper))}</strong><small>{offer.duration / 86400} days · {offer.premiumBps / 100}% premium · {offer.supportsSubranges ? "Flexible" : "Fixed"}</small><small>{unavailable ? "Unavailable" : offer.availableSpots !== undefined ? `${offer.availableSpots} spots left` : "Available"} · {offer.owner.slice(0, 6)}…{offer.owner.slice(-4)}</small></span>
+      </label>;
+    })}</div></fieldset> : undefined} />;
   return <div className="mw-page">
     {error && <p role="alert" className="mw-premium-warning">{error}</p>}
     {chosen && !selected && data && <p role="status">That bid is no longer available. Choose another funded bid.</p>}
