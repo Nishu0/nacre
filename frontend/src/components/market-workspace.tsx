@@ -408,7 +408,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
           lower={lower} upper={upper}
           onLower={(value) => setSelectedRange({ marketId: selectedId, lower: Math.max(selected.lowerPriceUsd, Math.min(value, upper - .01)), upper })}
           onUpper={(value) => setSelectedRange({ marketId: selectedId, lower, upper: Math.min(selected.upperPriceUsd, Math.max(value, lower + .01)) })}
-          onCenter={livePrices && !liveError && referencePrice > selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? () => {
+          onCenter={referencePrice > selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? () => {
             const halfWidth = referencePrice * .05;
             setSelectedRange({ marketId: selectedId,
               lower: Number(Math.max(selected.lowerPriceUsd, referencePrice - halfWidth).toFixed(2)),

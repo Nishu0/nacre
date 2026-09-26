@@ -97,7 +97,7 @@ function BidForm({ market, current, account, onConnect, compete }: { compete?: C
   const minimum = tickPrice(priceToRawTick(market.lowerPriceUsd) + 10);
   const maximum = tickPrice(priceToRawTick(market.upperPriceUsd));
   const valid = Number.isFinite(Number(lower)) && Number.isFinite(Number(upper)) && tickPrice(priceInputToTick(lower)) >= minimum
-    && tickPrice(priceInputToTick(upper)) <= maximum && Number(lower) < Number(upper);
+    && tickPrice(priceInputToTick(upper)) <= maximum && priceInputToTick(lower) < priceInputToTick(upper);
   return <div className="bw-form-grid"><div className="bw-left-column"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
     <p>Set the price range you want to cover. Investors will use these exact bins and your bid’s duration.</p>
     <div className="cw-terms"><span>On-chain pool price</span><strong>{money(current)}</strong></div>
