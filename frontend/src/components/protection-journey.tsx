@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { ArrowUpRight, Pause, Play } from "lucide-react";
-import Link from "next/link";
+import { Pause, Play } from "lucide-react";
 import styles from "./protection-journey.module.css";
 
 const stages = [
-  { title: "Fund a range", role: "THE UNDERWRITER", description: "Back a price range with capital. Set the premium, duration and available spots.", detail: "Protection starts with funded capital, ready for an LP to buy coverage." },
-  { title: "Make it yours", role: "THE LIQUIDITY PROVIDER", description: "Choose a funded range, narrow it to fit, and supply your two tokens on Uniswap v4.", detail: "Your position stays within the bid’s funded boundaries. You choose how concentrated it is." },
-  { title: "Protect your fees", role: "THE AGREEMENT", description: "Choose an eligible fee target and pay the premium to activate your coverage.", detail: "Coverage begins when you buy it. Supplying liquidity alone does not activate protection." },
-  { title: "Settle the difference", role: "THE OUTCOME", description: "At expiry, eligible fees are measured. Collateral covers a shortfall up to your policy’s cap.", detail: "Earned fees above the target? No payout is needed. Below it? Coverage pays the eligible difference." },
+  { title: "Fund a range", role: "THE UNDERWRITER", description: "Back a price range with capital. Set the premium, duration and available spots." },
+  { title: "Make it yours", role: "THE LIQUIDITY PROVIDER", description: "Choose a funded range, narrow it to fit, and supply your two tokens on Uniswap v4." },
+  { title: "Protect your fees", role: "THE AGREEMENT", description: "Choose an eligible fee target and pay the premium to activate your coverage." },
+  { title: "Settle the difference", role: "THE OUTCOME", description: "At expiry, eligible fees are measured. Collateral covers a shortfall up to your policy’s cap." },
 ];
 
 function JourneyArt({ step }: { step: number }) {
@@ -84,10 +83,5 @@ export function ProtectionJourney() {
         </li>)}
       </ol>
     </div>
-    <div className={styles.footer}>
-      <p><span className={styles.detailNumber}>0{active + 1} / 04</span>{stages[active].detail}</p>
-      <Link href="/dashboard/pools">Explore funded ranges <ArrowUpRight size={16} aria-hidden="true" /></Link>
-    </div>
-    <p className={styles.note}>Fee income protection · Payouts are capped by the policy · LP principal and impermanent loss are not covered</p>
   </div>;
 }
