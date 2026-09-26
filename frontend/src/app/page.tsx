@@ -4,6 +4,7 @@ import { ArrowDown, ArrowRight, ArrowUpRight, MoveUpRight } from "lucide-react";
 import { SpotlightHero } from "@/components/spotlight-hero";
 import { FlowDither } from "@/components/flow-dither";
 import { ExampleTabs } from "@/components/example-tabs";
+import { ProtectionJourney } from "@/components/protection-journey";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,24 +98,11 @@ export default function Home() {
           </div>
           <div className="idea-copy-wrap">
             <p className="idea-lead">Concentrated liquidity puts your capital exactly where it can work hardest. But once price moves outside your range, the fees can stop.</p>
-            <p>Nacre is a proposed market for a simple promise: a minimum level of fee income over a defined period, priced by people willing to back it.</p>
-            <div className="idea-signoff"><span>THE THESIS</span><ArrowUpRight aria-hidden="true" size={18} /></div>
+            <p>Choose a range backed by an underwriter. Supply liquidity, buy fee protection, and give your position a floor for the agreed period.</p>
+            <div className="idea-signoff"><span>FUNDED RANGES. DEFINED TERMS.</span><ArrowUpRight aria-hidden="true" size={18} /></div>
           </div>
         </div>
-        <div className="range-panel" aria-label="Illustration of price moving outside a liquidity range">
-          <div className="range-panel-top"><span>THE MOMENT THAT MATTERS</span><span>ILLUSTRATIVE MARKET PATH</span></div>
-          <div className="range-chart">
-            <div className="range-band"><span>YOUR ACTIVE RANGE</span></div>
-            <svg viewBox="0 0 1100 275" preserveAspectRatio="none" aria-hidden="true">
-              <path className="range-line-muted" d="M0 179 C85 168 120 210 195 179 S290 117 340 145 S445 184 495 122 S600 108 645 126 S730 141 792 158 S870 190 900 200 S1000 225 1100 214" />
-              <path className="range-line-bright" d="M0 179 C85 168 120 210 195 179 S290 117 340 145 S445 184 495 122 S600 108 645 126 S730 141 792 158" />
-              <circle cx="792" cy="158" r="7" fill="#d6ead5" /><circle cx="792" cy="158" r="16" fill="none" stroke="#d6ead5" opacity=".45" />
-            </svg>
-            <div className="chart-note chart-note-start">ACTIVE / EARNING FEES</div>
-            <div className="chart-note chart-note-end">OUT OF RANGE / FEES AT RISK</div>
-          </div>
-          <div className="range-panel-bottom"><span>PRICE MOVEMENT <ArrowRight size={16} aria-hidden="true" /></span><span>THIS IS WHERE A FEE FLOOR COULD MATTER.</span></div>
-        </div>
+        <ProtectionJourney />
       </section>
 
       <SectionDivider id="model" first="PROTECTION / 002" middle="A FLOOR FOR QUIET RANGES" last="NACRE / THE MODEL" />
