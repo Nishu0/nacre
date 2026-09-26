@@ -39,7 +39,7 @@ function smoothPath(points: { x: number; y: number }[]) {
   }, `M ${points[0].x} ${points[0].y}`);
 }
 
-export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, upper, current, currentLabel, stale = false }: {
+export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, upper, current, stale = false }: {
   points: OraclePoint[];
   livePrice?: number;
   publishedAt?: string;
@@ -47,10 +47,8 @@ export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, 
   lower: number;
   upper: number;
   current: number;
-  currentLabel: string;
   stale?: boolean;
 }) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [windowMinutes, setWindowMinutes] = useState<5 | 60>(5);
   const all = points.filter((point) => Number.isFinite(point.priceUsdc) && point.priceUsdc > 0);
   if (livePrice && publishedAt && !all.some((point) => point.timestamp === publishedAt)) {
@@ -60,7 +58,6 @@ export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, 
   const lastObservedAt = Date.parse(all.at(-1)?.timestamp ?? "");
   const inWindow = all.filter((point) => Date.parse(point.timestamp) >= lastObservedAt - windowMinutes * 60_000);
   const series = (inWindow.length >= 2 ? inWindow : all.slice(-24)).slice(-120);
-  const windowLabel = inWindow.length >= 2 ? `${windowMinutes} MIN` : "RECENT";
   const values = [...series.map((point) => point.priceUsdc), ...(livePrice ? [livePrice] : series.length ? [] : [current])];
   const minimum = Math.min(...values);
   const maximum = Math.max(...values);
@@ -75,20 +72,14 @@ export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, 
     ? 42 + (Date.parse(series[index].timestamp) - firstObservedAt) / shownDuration * 588 : 630;
   const y = (price: number) => 252 - (price - axisMin) / (axisMax - axisMin) * 205;
   const trace = smoothPath(series.map((point, index) => ({ x: x(index), y: y(point.priceUsdc) })));
-  const selectedIndex = activeIndex === null ? series.length - 1
-    : Math.min(activeIndex, series.length - 1);
-  const active = series[selectedIndex];
+  const latest = series.at(-1);
   const liveInRange = livePrice !== undefined && livePrice >= lower && livePrice < upper;
-  const latestTime = publishedAt ? time(publishedAt) : "—";
-  const rangeTop = Math.max(axisMin, Math.min(axisMax, upper));
-  const rangeBottom = Math.max(axisMin, Math.min(axisMax, lower));
-  const hasRangeBand = rangeTop > rangeBottom;
-  const freshLabel = stale ? "LAST PYTH PRICE" : "LIVE WETH / USDC";
+  const freshLabel = stale ? `LAST ${source?.toUpperCase() ?? "ORACLE"} PRICE` : "LIVE WETH / USDC";
   const firstTime = series[0]?.timestamp;
   const lastTime = series.at(-1)?.timestamp;
 
   return <Card className="kd-card pc-card">
-    <div className="kd-card-heading pc-heading"><h2><Activity size={16} /> Live price</h2><div className="pc-heading-actions"><span>{source?.toUpperCase() ?? "AWAITING ORACLE"} · WETH / USDC</span><div className="pc-window-switch" role="group" aria-label="Chart time window"><button type="button" aria-pressed={windowMinutes === 5} className={windowMinutes === 5 ? "is-active" : ""} onClick={() => { setWindowMinutes(5); setActiveIndex(null); }}>5M</button><button type="button" aria-pressed={windowMinutes === 60} className={windowMinutes === 60 ? "is-active" : ""} onClick={() => { setWindowMinutes(60); setActiveIndex(null); }}>1H</button></div></div></div>
+    <div className="kd-card-heading pc-heading"><h2><Activity size={16} /> Live price</h2><div className="pc-heading-actions"><span>{source?.toUpperCase() ?? "AWAITING ORACLE"} · WETH / USDC</span><div className="pc-window-switch" role="group" aria-label="Chart time window"><button type="button" aria-pressed={windowMinutes === 5} className={windowMinutes === 5 ? "is-active" : ""} onClick={() => setWindowMinutes(5)}>5M</button><button type="button" aria-pressed={windowMinutes === 60} className={windowMinutes === 60 ? "is-active" : ""} onClick={() => setWindowMinutes(60)}>1H</button></div></div></div>
     <div className="pc-inner">
       <div className="pc-headline">
         <div><small>{livePrice === undefined ? "AWAITING FRESH ORACLE PRICE" : freshLabel}</small>
@@ -98,30 +89,18 @@ export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, 
         </span>
       </div>
       <div className="pc-plot" role="img" aria-label={`Pyth WETH/USDC recent price history: ${series.length} samples. Latest ${livePrice === undefined ? "unavailable" : usd(livePrice)}. Chart axis ${usd(axisMin)} to ${usd(axisMax)}. Selected LP range ${usd(lower)} to ${usd(upper)}.`}>
-        <svg viewBox="0 0 720 290" preserveAspectRatio="none" aria-hidden="true" onMouseLeave={() => setActiveIndex(null)}>
-          <defs><linearGradient id="pc-range-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#e8f4eb" /><stop offset="1" stopColor="#f7fbf7" /></linearGradient></defs>
-          {hasRangeBand && <rect x="42" y={y(rangeTop)} width="588" height={y(rangeBottom) - y(rangeTop)} fill="url(#pc-range-fill)" />}
+        <svg viewBox="0 0 720 290" preserveAspectRatio="none" aria-hidden="true">
           {ticks.map((tick) => <g key={tick}>
             <line x1="42" x2="638" y1={y(tick)} y2={y(tick)} className="pc-grid-line" />
             <text x="649" y={y(tick) + 4} className="pc-axis-label">{usd(tick)}</text>
           </g>)}
-          {[lower, upper].filter((bound) => bound > axisMin && bound < axisMax).map((bound) =>
-            <line key={bound} x1="42" x2="638" y1={y(bound)} y2={y(bound)} className="pc-range-line" />)}
           {livePrice !== undefined && <line x1="42" x2="638" y1={y(livePrice)} y2={y(livePrice)} className="pc-current-line" />}
           {series.length > 1 && <path key={lastTime} d={trace} className="pc-price-line" />}
-          {series.map((point, index) => <circle key={`${point.timestamp}-${index}`} cx={x(index)} cy={y(point.priceUsdc)} r="8" className="pc-hit-point" onMouseEnter={() => setActiveIndex(index)} />)}
-          {active && <><circle cx={x(selectedIndex)} cy={y(active.priceUsdc)} r="10" className={activeIndex === null ? "pc-point-halo is-live" : "pc-point-halo"} />
-            <circle cx={x(selectedIndex)} cy={y(active.priceUsdc)} r="5" className="pc-point is-active" /></>}
+          {latest && <circle cx={x(series.length - 1)} cy={y(latest.priceUsdc)} r="5" className="pc-point is-active" />}
           {firstTime && <text x="42" y="281" className="pc-time-label">{time(firstTime)}</text>}
           {lastTime && <text x="630" y="281" textAnchor="end" className="pc-time-label">{time(lastTime)}</text>}
         </svg>
-        <span className="pc-range-tag">{windowLabel} PYTH PRICE · LP RANGE {usd(lower)}–{usd(upper)}</span>
       </div>
-      <div className="pc-chart-footer">
-        <span>{series.length > 1 ? `${series.length} observed prices · refreshed every 15 seconds` : "Live samples will build the chart over time"}</span>
-        {active && <strong>{usd(active.priceUsdc)} · {new Date(active.timestamp).toLocaleString()}</strong>}
-      </div>
-      <div className="pc-live-meta"><span>{stale ? "Oracle refresh delayed" : `Oracle published ${latestTime}`}</span><span>LP range {usd(lower)}–{usd(upper)} · {currentLabel} {usd(current)}</span></div>
     </div>
   </Card>;
 }

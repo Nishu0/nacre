@@ -49,6 +49,7 @@ type LivePrices = {
   wethUsdc: number;
 };
 const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
+const unixSeconds = () => Math.floor(Date.now() / 1000);
 
 async function api<T>(path: string, method = "GET", body?: object): Promise<T> {
   const response = await fetch(`/api/workspace/${path}`, {
@@ -86,8 +87,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const [coverageDays, setCoverageDays] = useState(30);
   const [feeTargetInput, setFeeTargetInput] = useState("");
   const [pledge, setPledge] = useState("100");
-  const [rangeLower, setRangeLower] = useState("");
-  const [rangeUpper, setRangeUpper] = useState("");
+  const [selectedRange, setSelectedRange] = useState<{ marketId: string; lower: number; upper: number } | null>(null);
   const [premium, setPremium] = useState("");
   const [wethBalance, setWethBalance] = useState<bigint | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<bigint | null>(null);
@@ -100,11 +100,15 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const [mintConfirmed, setMintConfirmed] = useState(false);
   const [mintSaved, setMintSaved] = useState(false);
   const selected = markets.find((market) => market.id === selectedId);
+  const deployedPoolId = selected?.deployment?.poolId;
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
   const selectedWeth = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const selectedUsdc = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
-  const lower = Number(rangeLower || selected?.lowerPriceUsd);
-  const upper = Number(rangeUpper || selected?.upperPriceUsd);
+  const lower = selectedRange?.marketId === selectedId ? selectedRange.lower : selected?.lowerPriceUsd ?? 0;
+  const upper = selectedRange?.marketId === selectedId ? selectedRange.upper : selected?.upperPriceUsd ?? 0;
+  const referencePrice = livePrices?.wethUsdc ?? poolSlot?.priceUsd ?? selected?.priceUsd ?? 0;
+  const referenceSource = livePrices ? liveError ? `LAST ${livePrices.source.toUpperCase()} PRICE` : `LIVE ${livePrices.source.toUpperCase()} PRICE`
+    : poolSlot ? "ON-CHAIN POOL PRICE" : "PROPOSED PRICE";
   const quote = quoteState?.marketId === selectedId && quoteState.data.depositUsd === Number(deposit)
     && quoteState.data.lowerPriceUsd === lower && quoteState.data.upperPriceUsd === upper
     ? quoteState.data : null;
@@ -119,12 +123,6 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   useEffect(() => {
     if (!marketId) queueMicrotask(() => setHasPoolDraft(Boolean(localStorage.getItem("nacre-pool-create-draft-v1"))));
   }, [marketId]);
-
-  useEffect(() => {
-    if (!selected) return;
-    const timer = setTimeout(() => { setRangeLower(String(selected.lowerPriceUsd)); setRangeUpper(String(selected.upperPriceUsd)); }, 0);
-    return () => clearTimeout(timer);
-  }, [selected?.id, selected?.lowerPriceUsd, selected?.upperPriceUsd]);
 
   useEffect(() => {
     if (!marketId || !walletAccount) {
@@ -174,19 +172,24 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   }, [tokenRefresh]);
 
   useEffect(() => {
-    if (!selected?.deployment) {
+    if (!deployedPoolId) {
       queueMicrotask(() => setPoolSlot(null));
       return;
     }
     let active = true;
-    void baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi,
-      functionName: "getSlot0", args: [selected.deployment.poolId as Hex] })
-      .then(([sqrtPriceX96, tick]) => {
-        if (active) setPoolSlot({ priceUsd: sqrtPriceX96ToWethUsd(sqrtPriceX96), tick });
-      })
-      .catch(() => { if (active) setPoolSlot(null); });
-    return () => { active = false; };
-  }, [selected?.deployment?.poolId]);
+    const poolId = deployedPoolId as Hex;
+    const refresh = () => {
+      void baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi,
+        functionName: "getSlot0", args: [poolId] })
+        .then(([sqrtPriceX96, tick]) => {
+          if (active) setPoolSlot({ priceUsd: sqrtPriceX96ToWethUsd(sqrtPriceX96), tick });
+        })
+        .catch(() => { if (active) setPoolSlot(null); });
+    };
+    refresh();
+    const timer = setInterval(refresh, 15_000);
+    return () => { active = false; clearInterval(timer); };
+  }, [deployedPoolId]);
 
   useEffect(() => {
     if (!marketId) return;
@@ -271,11 +274,11 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     }
     const [permitted, expiration] = await baseClient.readContract({ address: UNISWAP_PERMIT2,
       abi: permit2Abi, functionName: "allowance", args: [account, token, UNISWAP_POSITION_MANAGER] });
-    if (permitted < amount || expiration <= BigInt(Math.floor(Date.now() / 1000) + 120)) {
+    if (permitted < amount || expiration <= BigInt(unixSeconds() + 120)) {
       setMintStep(`Approve PositionManager for ${tokenLabel}…`);
       const tx = await wallet.writeContract({ chain: wallet.chain, account, address: UNISWAP_PERMIT2,
         abi: permit2Abi, functionName: "approve",
-        args: [token, UNISWAP_POSITION_MANAGER, amount, Math.floor(Date.now() / 1000) + 3600] });
+        args: [token, UNISWAP_POSITION_MANAGER, amount, unixSeconds() + 3600] });
       const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
       if (receipt.status !== "success") throw new Error(`${tokenLabel} PositionManager approval reverted.`);
     }
@@ -306,7 +309,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       const wallet = injectedClient();
       const tx = await wallet.writeContract({ chain: wallet.chain, account, address: UNISWAP_POSITION_MANAGER,
         abi: positionManagerAbi, functionName: "modifyLiquidities",
-        args: [params.unlockData, BigInt(Math.floor(Date.now() / 1000) + 600)] });
+        args: [params.unlockData, BigInt(unixSeconds() + 600)] });
       setMintHash(tx);
       const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
       if (receipt.status !== "success") throw new Error("Position mint reverted. Inspect the transaction on BaseScan.");
@@ -366,15 +369,15 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
           </div>
           <div className="mw-overview-range">
             <div><span>PROPOSED LP RANGE</span><strong>{usd(selected.lowerPriceUsd)} <em>to</em> {usd(selected.upperPriceUsd)}</strong><small>Choose exact bounds before minting</small></div>
-            <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, ((poolSlot?.priceUsd ?? livePrices?.wethUsdc ?? selected.priceUsd) - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div>
-            <Badge variant="outline" className={poolSlot && poolSlot.priceUsd >= selected.lowerPriceUsd && poolSlot.priceUsd < selected.upperPriceUsd ? "is-in-range" : "is-out-of-range"}>{!poolSlot ? "POOL NOT INITIALIZED" : poolSlot.priceUsd >= selected.lowerPriceUsd && poolSlot.priceUsd < selected.upperPriceUsd ? "IN RANGE" : "OUT OF RANGE"}</Badge>
+            <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (referencePrice - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div>
+            <Badge variant="outline" className={referencePrice >= selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? "is-in-range" : "is-out-of-range"}>{referencePrice >= selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? "IN RANGE" : "OUT OF RANGE"}</Badge>
           </div>
           <div className="mw-overview-oracle-foot">{livePrices ? <><span>Oracle inputs: WETH/USD {usd(livePrices.assets.WETH.usd)} · USDC/USD {usd(livePrices.assets.USDC.usd)}</span><a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">{livePrices.source} feed <ArrowRight size={12} /></a></> : <span>{liveError ? "Fresh oracle inputs are unavailable; the on-chain pool price is shown separately." : "Checking live oracle inputs…"}</span>}</div>
         </div>
       </Card>
       <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
-        <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={selected.lowerPriceUsd} upper={selected.upperPriceUsd} current={poolSlot?.priceUsd ?? selected.priceUsd} currentLabel={poolSlot ? "on-chain pool price" : "proposed starting price"} stale={liveError} />
+        <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={lower} upper={upper} current={poolSlot?.priceUsd ?? selected.priceUsd} stale={liveError} />
         {!selected.deployment && <Card className="kd-card mw-funding-card">
           <div className="kd-card-heading"><h2><Rocket size={16} /> Pool deployment</h2><Badge variant="outline">PROPOSAL</Badge></div>
           <div className="mw-funding-inner">
@@ -388,10 +391,17 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
           <button type="button" aria-pressed={role === "lp"} className={role === "lp" ? "is-active" : ""} onClick={() => onRoleChange("lp")}>Provide liquidity</button>
           <button type="button" aria-pressed={role === "underwriter"} className={role === "underwriter" ? "is-active" : ""} onClick={() => onRoleChange("underwriter")}>Underwrite</button>
         </div>
-        <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd} current={selected.priceUsd}
+        <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
+          current={referencePrice} currentLabel={referenceSource} onChainPrice={poolSlot?.priceUsd}
           lower={lower} upper={upper}
-          onLower={(value) => setRangeLower(String(Math.max(selected.lowerPriceUsd, Math.min(value, upper - .01))))}
-          onUpper={(value) => setRangeUpper(String(Math.min(selected.upperPriceUsd, Math.max(value, lower + .01))))} />
+          onLower={(value) => setSelectedRange({ marketId: selectedId, lower: Math.max(selected.lowerPriceUsd, Math.min(value, upper - .01)), upper })}
+          onUpper={(value) => setSelectedRange({ marketId: selectedId, lower, upper: Math.min(selected.upperPriceUsd, Math.max(value, lower + .01)) })}
+          onCenter={livePrices && !liveError && referencePrice > selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? () => {
+            const halfWidth = referencePrice * .05;
+            setSelectedRange({ marketId: selectedId,
+              lower: Number(Math.max(selected.lowerPriceUsd, referencePrice - halfWidth).toFixed(2)),
+              upper: Number(Math.min(selected.upperPriceUsd, referencePrice + halfWidth).toFixed(2)) });
+          } : undefined} />
         {role === "lp" ? <Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><PiggyBank size={16} /> Create LP position</h2><span>RANGE · WETH + nUSDC</span></div>
           <div className="mw-trade-inner">
