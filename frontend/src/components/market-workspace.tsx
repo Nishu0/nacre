@@ -18,6 +18,7 @@ type Quote = {
   depositUsd: number; split: { ethAmount: number; usdcAmount: number; swapUsd: number; ethPercent: number };
   feeFloorUsd: number; payoutCapUsd: number; premiumUsd: number; expectedPayoutUsd: number;
   underwriterMarginUsd: number; minimumNetFeesUsd: number; alternative30DayUsd: number;
+  edgeRiskPct: number;
   available: boolean; reasons: string[];
 };
 type Position = {
@@ -57,7 +58,7 @@ export function WorkspacePools() {
   const participant = useParticipant();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const [quoteState, setQuoteState] = useState<{ marketId: string; data: Quote } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -72,6 +73,8 @@ export function WorkspacePools() {
   const [pledge, setPledge] = useState("100");
   const [simulatedPrice, setSimulatedPrice] = useState("");
   const selected = markets.find((market) => market.id === selectedId);
+  const quote = quoteState?.marketId === selectedId && quoteState.data.depositUsd === Number(deposit)
+    ? quoteState.data : null;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -88,8 +91,8 @@ export function WorkspacePools() {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       void api<{ quote: Quote }>(`markets/${selectedId}/quote?depositUsd=${encodeURIComponent(deposit)}`)
-        .then((data) => { if (!controller.signal.aborted) setQuote(data.quote); })
-        .catch(() => { if (!controller.signal.aborted) setQuote(null); });
+        .then((data) => { if (!controller.signal.aborted) setQuoteState({ marketId: selectedId, data: data.quote }); })
+        .catch(() => { if (!controller.signal.aborted) setQuoteState(null); });
     }, 180);
     return () => { controller.abort(); clearTimeout(timeout); };
   }, [selectedId, deposit, refreshKey]);
@@ -138,7 +141,7 @@ export function WorkspacePools() {
     {creating && <Card className="kd-card mw-form-card"><div className="kd-card-heading"><h2><Droplets size={16} /> New pool draft</h2><Badge variant="outline">WETH / USDC · 0.05%</Badge></div><div className="mw-form-inner"><div className="mw-fields"><AmountField label="Current ETH price (USD)" value={price} onChange={setPrice} min={1} /><AmountField label="Lower range price" value={lower} onChange={setLower} min={1} /><AmountField label="Upper range price" value={upper} onChange={setUpper} min={1} /><AmountField label="LP funding target (USD)" value={target} onChange={setTarget} min={100} /><AmountField label="Protection capacity target (USD)" value={budget} onChange={setBudget} min={1} /></div><p>Price and ticks are sandbox inputs. A real v4 pool must use the deployed hook and an independent price feed.</p><Button className="kd-apply-button" disabled={busy || !participant} onClick={createMarket}>Create draft <ArrowRight size={15} /></Button></div></Card>}
     {error && <div className="mw-message is-error" role="alert">{error}</div>}{notice && <div className="mw-message" role="status">{notice}</div>}
     {!markets.length && !creating && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre pool drafts yet</h2><p>Create a sandbox market to test liquidity funding, underwriting interest, tick movement, and limited cover.</p><Button className="kd-apply-button" onClick={() => setCreating(true)}><Plus size={15} /> Create first pool</Button></div></Card>}
-    {!!markets.length && <div className="mw-layout"><div className="mw-market-list">{markets.map((market) => <button type="button" key={market.id} className={`mw-market-button${market.id === selectedId ? " is-active" : ""}`} onClick={() => { setSelectedId(market.id); setQuote(null); setNotice(""); }}><span className="mw-token-icon">Ξ</span><span><strong>{market.pair}</strong><small>{market.feeTier} · {usd(market.priceUsd)} / ETH</small></span><Badge variant="outline">{market.status.replaceAll("_", " ")}</Badge></button>)}</div>
+    {!!markets.length && <div className="mw-layout"><div className="mw-market-list">{markets.map((market) => <button type="button" key={market.id} className={`mw-market-button${market.id === selectedId ? " is-active" : ""}`} onClick={() => { setSelectedId(market.id); setQuoteState(null); setNotice(""); }}><span className="mw-token-icon">Ξ</span><span><strong>{market.pair}</strong><small>{market.feeTier} · {usd(market.priceUsd)} / ETH</small></span><Badge variant="outline">{market.status.replaceAll("_", " ")}</Badge></button>)}</div>
       {selected && <div className="mw-market-detail"><div className="mw-stats"><Card className="kd-card"><div className="mw-stat"><span>LP FUNDED</span><strong>{usd(selected.investedUsd)}</strong><small>of {usd(selected.liquidityTargetUsd)} target</small></div></Card><Card className="kd-card"><div className="mw-stat"><span>PROTECTION PLEDGED</span><strong>{usd(selected.pledgedUsd)}</strong><small>{usd(selected.coverRemainingUsd)} unreserved</small></div></Card><Card className="kd-card"><div className="mw-stat"><span>CURRENT TICK</span><strong>{selected.currentTick}</strong><small>{selected.tickLower} to {selected.tickUpper}</small></div></Card></div>
         <Card className="kd-card mw-panel"><div className="kd-card-heading"><h2><Activity size={16} /> Range and launch status</h2><Badge variant="outline">{selected.inRange ? selected.funded ? "FUNDED · IN RANGE" : "FUNDING · IN RANGE" : "OUT OF RANGE"}</Badge></div><div className="mw-panel-inner"><div className="mw-range"><span>{usd(selected.lowerPriceUsd)}</span><div className="mw-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (selected.priceUsd - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div><span>{usd(selected.upperPriceUsd)}</span></div><p>New insurance closes when the tick falls below {selected.tickLower} or reaches {selected.tickUpper}. Existing sandbox coverage stays recorded for its agreed window.</p><div className="mw-progress-grid"><div><span>Liquidity</span><progress value={selected.investedUsd} max={selected.liquidityTargetUsd} /><small>{Math.min(100, Math.round(selected.investedUsd / selected.liquidityTargetUsd * 100))}% of target</small></div><div><span>Protection</span><progress value={selected.pledgedUsd} max={selected.collateralBudgetUsd} /><small>{Math.min(100, Math.round(selected.pledgedUsd / selected.collateralBudgetUsd * 100))}% of target</small></div></div></div></Card>
         <div className="mw-actions-grid"><Card className="kd-card mw-panel"><div className="kd-card-heading"><h2><PiggyBank size={16} /> Provide liquidity</h2><span>ONE ASSET · USDC</span></div><div className="mw-panel-inner"><AmountField label="USDC to deposit (sandbox USD)" value={deposit} onChange={setDeposit} min={100} />{quote && <><div className="mw-split"><div><small>Swap via SwapVM concept</small><strong>{usd(quote.split.swapUsd)}</strong><span>to {quote.split.ethAmount} WETH</span></div><div><small>Keep as USDC</small><strong>{usd(quote.split.usdcAmount)}</strong><span>{(100 - quote.split.ethPercent).toFixed(1)}% of deposit</span></div></div><p>The {quote.split.ethPercent}% WETH split follows this range and current tick. A custom slider would leave unneeded tokens uninvested.</p><div className="mw-quote"><div><span>30-day fee floor</span><strong>{usd(quote.feeFloorUsd)}</strong></div><div><span>Indicative premium</span><strong>{usd(quote.premiumUsd)}</strong></div><div><span>Fully backed cap</span><strong>{usd(quote.payoutCapUsd)}</strong></div><div><span>LP net floor</span><strong>{usd(quote.minimumNetFeesUsd)}</strong></div></div>{quote.available ? <div className="mw-availability is-open"><ShieldCheck size={15} /> Limited cover available · {usd(selected.coverRemainingUsd)} capacity left</div> : <div className="mw-availability"><ShieldCheck size={15} /> No insurance available{quote.reasons.length ? `: ${quote.reasons.join(" ")}` : ""}</div>}</>}

@@ -11,6 +11,7 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {ModifyLiquidityParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {BalanceDelta, toBalanceDelta, BalanceDeltaLibrary} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {PositionInfo, PositionInfoLibrary} from "@uniswap/v4-periphery/src/libraries/PositionInfoLibrary.sol";
 import {NacreFeeHook} from "../src/NacreFeeHook.sol";
 import {NacrePolicyVault, INacrePositionManager, INacreFeeValueOracle} from "../src/NacrePolicyVault.sol";
 import {NacreAquaUnderwriter} from "../src/NacreAquaUnderwriter.sol";
@@ -21,6 +22,15 @@ contract MockToken is ERC20 {
 }
 
 contract MockPoolManager {
+    int24 public currentTick;
+
+    function setTick(int24 tick) external { currentTick = tick; }
+
+    function extsload(bytes32) external view returns (bytes32) {
+        // StateLibrary decodes sqrtPriceX96 from the low 160 bits and tick above it.
+        return bytes32((uint256(uint24(currentTick)) << 160) | (uint256(1) << 96));
+    }
+
     function collect(NacreFeeHook hook, PoolKey calldata key, uint256 tokenId, uint256 amount0, uint256 amount1)
         external
     {
@@ -58,7 +68,8 @@ contract MockPositionManager is ERC721 {
     }
 
     function getPoolAndPositionInfo(uint256 tokenId) external view returns (PoolKey memory, uint256) {
-        return (keys[tokenId], 0);
+        PositionInfo info = PositionInfoLibrary.initialize(keys[tokenId], -60, 60);
+        return (keys[tokenId], PositionInfo.unwrap(info));
     }
 
     function modifyLiquidities(bytes calldata unlockData, uint256) external {
@@ -188,6 +199,30 @@ contract NacreFlowTest is Test {
         vm.stopPrank();
         assertEq(positions.ownerOf(1), address(vault));
         assertEq(vault.reservedCollateral(), 0);
+    }
+
+    function testNewCoverageClosesWhenTickLeavesPositionRange() public {
+        uint256 id = _request();
+        NacreAquaUnderwriter.Quote memory quote = _quote(id);
+        assertTrue(app.canFill(quote));
+        manager.setTick(60);
+        assertFalse(vault.isInRange(id));
+        assertFalse(app.canFill(quote));
+        vm.startPrank(lp);
+        usdc.approve(address(app), 24e6);
+        vm.expectRevert(NacreAquaUnderwriter.InvalidQuote.selector);
+        app.buyCoverage(quote);
+        vm.stopPrank();
+        assertEq(vault.reservedCollateral(), 0);
+    }
+
+    function testOutOfRangePositionCannotCreateRequest() public {
+        manager.setTick(-61);
+        vm.startPrank(lp);
+        positions.approve(address(vault), 1);
+        vm.expectRevert(NacrePolicyVault.OutOfRange.selector);
+        vault.createRequest(key, 1, 1_000e6, 500e6, 30 days, uint64(block.timestamp + 1 days));
+        vm.stopPrank();
     }
 
     function testShippedQuoteHashAndWalletBacking() public {

@@ -9,6 +9,9 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PositionInfo, PositionInfoLibrary} from "@uniswap/v4-periphery/src/libraries/PositionInfoLibrary.sol";
 import {NacreFeeHook} from "./NacreFeeHook.sol";
 
 interface INacrePositionManager is IERC721 {
@@ -27,6 +30,8 @@ interface INacreFeeValueOracle {
 contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using PoolIdLibrary for PoolKey;
+    using StateLibrary for IPoolManager;
+    using PositionInfoLibrary for PositionInfo;
 
     enum Status { None, Open, Active, Settled, Cancelled }
 
@@ -51,6 +56,7 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
     error TooEarly();
     error InsufficientCollateral();
     error UnsupportedNativeCurrency();
+    error OutOfRange();
 
     IERC20 public immutable settlementToken;
     INacrePositionManager public immutable positionManager;
@@ -102,11 +108,12 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
         if (Currency.unwrap(key.currency0) == address(0) || Currency.unwrap(key.currency1) == address(0)) {
             revert UnsupportedNativeCurrency();
         }
-        (PoolKey memory actual,) = positionManager.getPoolAndPositionInfo(tokenId);
+        (PoolKey memory actual, uint256 packedInfo) = positionManager.getPoolAndPositionInfo(tokenId);
         if (PoolId.unwrap(PoolIdLibrary.toId(actual)) != PoolId.unwrap(key.toId())
             || positionManager.ownerOf(tokenId) != msg.sender) {
             revert InvalidPosition();
         }
+        _requireInRange(key, packedInfo);
 
         requestId = nextRequestId++;
         requests[requestId] = Request({
@@ -133,6 +140,13 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
         return requestPoolKeys[requestId];
     }
 
+    function isInRange(uint256 requestId) external view returns (bool) {
+        Request storage request = requests[requestId];
+        if (request.status != Status.Open) return false;
+        (, uint256 packedInfo) = positionManager.getPoolAndPositionInfo(request.tokenId);
+        return _inRange(requestPoolKeys[requestId], packedInfo);
+    }
+
     /// @dev Called only after the Aqua app pulls the full payout cap into this vault.
     function activate(uint256 requestId, address underwriter, uint256 premium)
         external nonReentrant
@@ -147,6 +161,8 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
         }
 
         PoolKey memory key = requestPoolKeys[requestId];
+        (, uint256 packedInfo) = positionManager.getPoolAndPositionInfo(request.tokenId);
+        _requireInRange(key, packedInfo);
         // Crystallize pre-policy fees before the hook begins recording. The NFT
         // is already held here; an LP cannot withhold the expiry collection.
         (uint256 old0, uint256 old1) = _collect(request.tokenId, key);
@@ -214,6 +230,16 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
     function _forwardFees(address lp, PoolKey memory key, uint256 amount0, uint256 amount1) internal {
         if (amount0 != 0) IERC20(Currency.unwrap(key.currency0)).safeTransfer(lp, amount0);
         if (amount1 != 0) IERC20(Currency.unwrap(key.currency1)).safeTransfer(lp, amount1);
+    }
+
+    function _requireInRange(PoolKey memory key, uint256 packedInfo) internal view {
+        if (!_inRange(key, packedInfo)) revert OutOfRange();
+    }
+
+    function _inRange(PoolKey memory key, uint256 packedInfo) internal view returns (bool) {
+        PositionInfo info = PositionInfo.wrap(packedInfo);
+        (, int24 tick,,) = feeHook.poolManager().getSlot0(key.toId());
+        return tick >= info.tickLower() && tick < info.tickUpper();
     }
 
     function onERC721Received(address, address from, uint256 tokenId, bytes calldata)

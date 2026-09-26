@@ -53,7 +53,8 @@ contract NacreAquaUnderwriter is AquaApp, ReentrancyGuard {
             vault.requestTerms(quote.requestId);
         if (status != NacrePolicyVault.Status.Open || quote.maker == address(0)
             || quote.maker == lp || quote.payoutCap != cap || quote.premium == 0
-            || block.timestamp > quote.expiresAt || quote.expiresAt > deadline) return false;
+            || block.timestamp > quote.expiresAt || quote.expiresAt > deadline
+            || !vault.isInRange(quote.requestId)) return false;
 
         bytes32 hash = keccak256(abi.encode(quote));
         (uint248 available, uint8 tokenCount) =
@@ -70,6 +71,7 @@ contract NacreAquaUnderwriter is AquaApp, ReentrancyGuard {
             || quote.maker == lp || quote.payoutCap != cap || quote.premium == 0) revert InvalidQuote();
         if (msg.sender != lp) revert WrongBuyer();
         if (block.timestamp > quote.expiresAt || quote.expiresAt > deadline) revert QuoteExpired();
+        if (!vault.isInRange(quote.requestId)) revert InvalidQuote();
 
         bytes32 hash = keccak256(abi.encode(quote));
         (uint248 available, uint8 tokenCount) =

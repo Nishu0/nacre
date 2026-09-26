@@ -40,8 +40,8 @@ const navigation = [
 ] as const;
 const pageCopy: Record<DashboardView, { title: string; description: string }> = {
   overview: { title: "Build a fee floor market", description: "Explore historical fee yield, then follow the steps to launch a funded v4 protection pool." },
-  pools: { title: "Pools", description: "Discover Nacre protection markets once liquidity and coverage are both funded." },
-  portfolio: { title: "Portfolio", description: "Your Nacre positions, protected fee floors, and fee income in one place." },
+  pools: { title: "Pools", description: "Configure a range, fund both sides, and explore tick-aware coverage in the sandbox." },
+  portfolio: { title: "Portfolio", description: "Review your saved sandbox deposits and modeled protection." },
   backtest: { title: "Fee backtest", description: "Compare historical Uniswap fee windows at your chosen capital size." },
   references: { title: "Reference data", description: "Three historical Uniswap v3 pairs used as pricing references for future v4 markets." },
   launch: { title: "Launch steps", description: "A new market opens when its liquidity and protection are both funded." },
@@ -205,7 +205,7 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
     </aside>
 
     <main className="kd-main"><header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} /><span>{["overview", "pools", "portfolio"].includes(view) ? "Workspace" : "Research"}</span><span className="kd-breadcrumb-slash">/</span><strong>{navigation.find((item) => item.view === view)?.label}</strong></div><div className="kd-topbar-actions"><Badge variant="outline" className="kd-research-badge">{["overview", "backtest", "references", "pricing"].includes(view) ? "HISTORICAL DATA" : "NACRE WORKSPACE"}</Badge><DropdownMenu.Root><DropdownMenu.Trigger asChild><button type="button" className="kd-notification-button" aria-label="Notifications"><Bell size={17} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu kd-notification-menu" side="bottom" align="end" sideOffset={8}><p>NOTIFICATIONS</p><span>No pool or policy updates yet.</span></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></div></header>
-      <div className="kd-content"><div className="kd-page-intro"><div><h1>{pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{pageCopy[view].description}</p></div><Badge variant="outline" className="kd-no-live-badge">0 LIVE POOLS</Badge></div>
+      <div className="kd-content"><div className="kd-page-intro"><div><h1>{pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{pageCopy[view].description}</p></div><Badge variant="outline" className="kd-no-live-badge">{["pools", "portfolio"].includes(view) ? "SANDBOX MODE" : "0 LIVE POOLS"}</Badge></div>
         {view === "pools" && <WorkspacePools />}
         {view === "portfolio" && <WorkspacePortfolio />}
         {view === "launch" && <div className="kd-launch-page"><LaunchPath expanded /><Card className="kd-card kd-launch-aside"><div className="kd-card-heading"><h2><ShieldCheck size={17} /> Funding gate</h2><span>MARKET STATUS</span></div><div className="kd-launch-aside-inner"><span className="kd-launch-status">NOT FUNDED</span><h2>Both sides commit before a market opens.</h2><p>LP capital establishes the pool. Underwriter collateral backs the selected fee floor. Once both are committed, coverage can begin.</p><Link href="/dashboard/pools" className="kd-text-link">View pool directory <ArrowRight size={15} /></Link></div></Card></div>}

@@ -78,13 +78,17 @@ export function quotePosition(db: Database, row: MarketRow, depositUsd: number) 
   // Protect a conservative portion of expected fees, with an explicit per-position cap.
   const floor = Math.min(recent * 0.85, best * 0.9);
   const cap = Math.min(floor, depositUsd * 0.1);
+  const distanceToEdge = Math.min(row.tick - row.tick_lower, row.tick_upper - row.tick);
+  const halfWidth = (row.tick_upper - row.tick_lower) / 2;
+  const edgeRisk = 1 - Math.max(0, Math.min(1, distanceToEdge / halfWidth));
   const shortfalls = fees.map((fee) => Math.min(cap, Math.max(0, floor - fee)));
-  const stressed = fees.map((fee) => Math.min(cap, Math.max(0, floor - fee * 0.8)));
+  const stressed = fees.map((fee) => Math.min(cap, Math.max(0, floor - fee * (0.8 - edgeRisk * 0.2))));
   const average = (values: number[]) => values.reduce((a, b) => a + b, 0) / values.length;
   const expectedPayout = average(shortfalls) * 0.75 + average(stressed) * 0.25;
-  const premium = expectedPayout * 1.2 + cap * 0.01;
+  const capitalCharge = cap * (0.01 + edgeRisk * 0.005);
+  const premium = expectedPayout * (1.2 + edgeRisk * 0.25) + capitalCharge;
   const lpAlternative = depositUsd * 0.06 * 30 / 365;
-  const underwriterMargin = premium - expectedPayout - cap * 0.01;
+  const underwriterMargin = premium - expectedPayout - capitalCharge;
   const reasons: string[] = [];
   if (!market.inRange) reasons.push("Current tick is outside this position's range.");
   if (!market.funded) reasons.push("Pool liquidity and protection capacity are still funding.");
@@ -95,6 +99,7 @@ export function quotePosition(db: Database, row: MarketRow, depositUsd: number) 
     depositUsd, split, feeFloorUsd: roundUsd(floor), payoutCapUsd: roundUsd(cap),
     premiumUsd: roundUsd(premium), expectedPayoutUsd: roundUsd(expectedPayout),
     underwriterMarginUsd: roundUsd(underwriterMargin),
+    edgeRiskPct: Math.round(edgeRisk * 100),
     minimumNetFeesUsd: roundUsd(floor - premium),
     alternative30DayUsd: roundUsd(lpAlternative),
     available: reasons.length === 0, reasons,
