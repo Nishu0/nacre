@@ -9,13 +9,15 @@ bun run db:seed
 bun run dev
 ```
 
-The checked-in `data/pool-history.json` contains daily [DefiLlama Yields API](https://yields.llama.fi/pools) `apyBase` and TVL observations for 2026-06-26 through 2026-09-25. `bun run dev` seeds them into `data/nacre.sqlite` automatically on first start if the database is empty. `bun run db:seed` reloads them manually; the SQLite file is ignored by Git. `bun run data:refresh` fetches the latest 92 full UTC days and replaces the snapshot and SQLite tables.
+The checked-in `data/pool-history.json` contains 180 aligned daily observations from **2026-03-30 through 2026-09-25**. [DefiLlama Yields](https://yields.llama.fi/pools) supplies pool-level `apyBase` and TVL; [GeckoTerminal OHLCV](https://api.geckoterminal.com/docs/index.html) supplies each pool's daily USD trading volume. `bun run dev` seeds local `data/nacre.sqlite` on first start. `bun run db:seed` reloads it, and `bun run data:refresh` fetches the latest 180 complete UTC days. Neither AWS nor Docker is required.
 
-| Pool | Historical series |
-| --- | --- |
-| Ethereum Uniswap v3 USDC/WETH 0.05% | [DefiLlama](https://yields.llama.fi/chart/665dc8bc-c79d-4800-97f7-304bf368e547) |
-| Ethereum Uniswap v3 WBTC/WETH 0.05% | [DefiLlama](https://yields.llama.fi/chart/d59a5728-d391-4989-86f6-a94e11e0eb3b) |
-| Ethereum Uniswap v3 USDC/USDT 0.01% | [DefiLlama](https://yields.llama.fi/chart/e737d721-f45c-40f0-9793-9f56261862b9) |
+These pools ranked among GeckoTerminal's highest 24-hour-volume Ethereum Uniswap v3 markets when the snapshot was refreshed. The last-90-day totals are **whole-pool** activity, not fees received by one LP:
+
+| Pool | Last 90d volume | Gross fee proxy | Sources |
+| --- | ---: | ---: | --- |
+| USDC/WETH 0.01% | $3.67B | $366,934 | [Volume](https://www.geckoterminal.com/eth/pools/0xe0554a476a092703abdb3ef35c80e0d76d32939f) · [Yield](https://defillama.com/yields/pool/8b3ed515-5e6f-449a-9b64-25113cda7a29) |
+| USDC/WETH 0.05% | $6.95B | $3.48M | [Volume](https://www.geckoterminal.com/eth/pools/0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640) · [Yield](https://defillama.com/yields/pool/665dc8bc-c79d-4800-97f7-304bf368e547) |
+| WETH/USDT 0.30% | $2.79B | $8.37M | [Volume](https://www.geckoterminal.com/eth/pools/0x4e68ccd3e89f51c3074ca5072bbac773960dfa36) · [Yield](https://defillama.com/yields/pool/fc9f488e-8183-416f-a61e-4e5c571d4395) |
 
 ## API
 
@@ -24,8 +26,8 @@ The checked-in `data/pool-history.json` contains daily [DefiLlama Yields API](ht
 - `GET /api/pools/:poolId/backtest?principalUsd=100000`
 - `GET /api/pools/:poolId/quotes?principalUsd=100000`
 
-For each day, modeled fees = `principalUsd × apyBase / 100 / 365`. [DefiLlama's methodology](https://github.com/DefiLlama/yield-server#apy-methodology) calls for fee-based APY over a 24-hour window. A 30-day window sums 30 consecutive daily estimates. Ninety-two days yield 63 *overlapping* windows. The API returns recent, best, worst, and every window. These numbers **are not actual fees earned by an individual LP**: no ticks, range uptime, changing capital share, gas, token P&L, or individual fee accounting are modeled. These are v3 reference pools, not v4 hook pools.
+For each day, gross pool fee proxy = `daily volume × nominal fee tier`; it is before any protocol share and may differ from indexed fee collections. Modeled LP fees = `principalUsd × apyBase / 100 / 365`. [DefiLlama's methodology](https://github.com/DefiLlama/yield-server#apy-methodology) provides context for `apyBase`. A 30-day window sums 30 consecutive daily estimates. The API returns recent, best, worst, and all 151 overlapping windows, plus the last 90 daily volume, gross-fee, TVL, and modeled-LP observations. The dashboard charts the last 90 days but premiums can inspect the full 180-day sample. These numbers **are not actual fees earned by an individual LP**: no ticks, range uptime, changing capital share, gas, token P&L, or position-level fee accounting are modeled. These are v3 references, not v4 hook pools.
 
-The indicative tiers place one fee floor at the latest 30-day run rate and, if higher, a stretch floor at 98% of the observed best 30-day window. The payout cap equals the floor, so the quote models a full fee minimum even if eligible fees are zero. The LP's minimum *net* fee income is the floor minus the upfront premium, before gas or token P&L. The premium heuristic blends 75% of historical capped shortfalls with 25% of shortfalls after a 20% fee haircut, then adds a 20% risk margin and a 1% cap-based capital charge. Because the windows overlap and cover only three months, this is **not** an actuarial fair premium. Actual underwriters set executable prices.
+The indicative tiers place one fee floor at the latest 30-day run rate and, if higher, a stretch floor at 98% of the observed best 30-day window. The payout cap equals the floor, so the quote models a full fee minimum even if eligible fees are zero. The LP's minimum *net* fee income is the floor minus the upfront premium, before gas or token P&L. The premium heuristic blends 75% of historical capped shortfalls with 25% of shortfalls after a 20% fee haircut, then adds a 20% risk margin and a 1% cap-based capital charge. Because the windows overlap and do not represent position-level earnings, this is **not** an actuarial fair premium. Actual underwriters set executable prices.
 
 `bun run check` and `bun test` verify the service. A true concentrated-liquidity backtest needs historical mint, burn, collect, and swap events for a specific position and an archive RPC or indexer. AWS can help with that later, but is unnecessary for this local prototype.

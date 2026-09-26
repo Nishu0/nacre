@@ -44,7 +44,8 @@ export function buildApp(databasePath?: string) {
       ...pool,
       chain: "Ethereum",
       protocol: "Uniswap v3",
-      dataSource: `https://yields.llama.fi/chart/${pool.llamaId}`,
+      dataSource: `https://www.geckoterminal.com/eth/pools/${pool.address}`,
+      yieldSource: `https://defillama.com/yields/pool/${pool.llamaId}`,
       capturedAt: seeded.find((row) => row.id === pool.id)?.captured_at ?? null,
     }));
   });
@@ -62,8 +63,11 @@ export function buildApp(databasePath?: string) {
       if (!observations.length) return reply.code(503).send({ error: "Run bun run db:seed first" });
       return {
         pool,
-        source: `https://yields.llama.fi/chart/${pool.llamaId}`,
-        method: "Pool-level apyBase / 365 x principal, summed over consecutive 30-day windows. This is not observed fees for an individual concentrated LP position or a Uniswap v4 pool.",
+        source: {
+          volume: `https://www.geckoterminal.com/eth/pools/${pool.address}`,
+          yield: `https://defillama.com/yields/pool/${pool.llamaId}`,
+        },
+        method: "Six months of aligned GeckoTerminal daily volume and DefiLlama pool base APY/TVL. Gross pool fees = volume x nominal fee tier, before protocol share. Modeled position fees = pool-level apyBase / 365 x principal. A specific concentrated range may earn much more, less, or zero.",
         ...backtest(observations, principalUsd),
       };
     },
@@ -214,7 +218,7 @@ export function buildApp(databasePath?: string) {
       if (!observations.length) return reply.code(503).send({ error: "Run bun run db:seed first" });
       return {
         pool,
-        source: `https://yields.llama.fi/chart/${pool.llamaId}`,
+        source: `https://www.geckoterminal.com/eth/pools/${pool.address}`,
         warning: "Indicative research prices only. Concentrated-position fees, token price risk, and underwriter quotes are not captured by the pool-level series.",
         ...indicativeQuotes(observations, principalUsd),
       };

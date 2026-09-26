@@ -1,1401 +1,3801 @@
 {
-  "source": "DefiLlama Yields API",
-  "capturedAt": "2026-09-26T06:37:34.626135Z",
-  "from": "2026-06-26",
+  "source": "DefiLlama Yields API + GeckoTerminal OHLCV API",
+  "capturedAt": "2026-09-26T10:42:40.222Z",
+  "from": "2026-03-30",
   "through": "2026-09-25",
   "pools": [
+    {
+      "id": "usdc-weth-001",
+      "observations": [
+        {
+          "date": "2026-03-30",
+          "apyBasePct": 31.10452,
+          "tvlUsd": 3089212,
+          "volumeUsd": 19646459.754641052,
+          "grossPoolFeesUsd": 1964.6459754641053
+        },
+        {
+          "date": "2026-03-31",
+          "apyBasePct": 30.4874,
+          "tvlUsd": 3167705,
+          "volumeUsd": 21158959.071377438,
+          "grossPoolFeesUsd": 2115.895907137744
+        },
+        {
+          "date": "2026-04-01",
+          "apyBasePct": 24.85599,
+          "tvlUsd": 3236963,
+          "volumeUsd": 21490357.7859287,
+          "grossPoolFeesUsd": 2149.03577859287
+        },
+        {
+          "date": "2026-04-02",
+          "apyBasePct": 20.19176,
+          "tvlUsd": 3149282,
+          "volumeUsd": 17193604.461267456,
+          "grossPoolFeesUsd": 1719.3604461267457
+        },
+        {
+          "date": "2026-04-03",
+          "apyBasePct": 18.63041,
+          "tvlUsd": 3146266,
+          "volumeUsd": 9792351.979658967,
+          "grossPoolFeesUsd": 979.2351979658968
+        },
+        {
+          "date": "2026-04-04",
+          "apyBasePct": 7.74361,
+          "tvlUsd": 3191477,
+          "volumeUsd": 6811446.118845723,
+          "grossPoolFeesUsd": 681.1446118845723
+        },
+        {
+          "date": "2026-04-05",
+          "apyBasePct": 10.96274,
+          "tvlUsd": 3248973,
+          "volumeUsd": 10299786.311826196,
+          "grossPoolFeesUsd": 1029.9786311826197
+        },
+        {
+          "date": "2026-04-06",
+          "apyBasePct": 33.57418,
+          "tvlUsd": 3295413,
+          "volumeUsd": 23821292.552136242,
+          "grossPoolFeesUsd": 2382.129255213624
+        },
+        {
+          "date": "2026-04-07",
+          "apyBasePct": 28.9297,
+          "tvlUsd": 3312810,
+          "volumeUsd": 21576197.7878559,
+          "grossPoolFeesUsd": 2157.6197787855904
+        },
+        {
+          "date": "2026-04-08",
+          "apyBasePct": 27.43883,
+          "tvlUsd": 3317290,
+          "volumeUsd": 23210412.929967493,
+          "grossPoolFeesUsd": 2321.0412929967492
+        },
+        {
+          "date": "2026-04-09",
+          "apyBasePct": 28.05953,
+          "tvlUsd": 3337295,
+          "volumeUsd": 20020397.960533008,
+          "grossPoolFeesUsd": 2002.039796053301
+        },
+        {
+          "date": "2026-04-10",
+          "apyBasePct": 17.15187,
+          "tvlUsd": 3382760,
+          "volumeUsd": 22452064.027008187,
+          "grossPoolFeesUsd": 2245.2064027008187
+        },
+        {
+          "date": "2026-04-11",
+          "apyBasePct": 21.29039,
+          "tvlUsd": 3579789,
+          "volumeUsd": 13734748.430737332,
+          "grossPoolFeesUsd": 1373.4748430737332
+        },
+        {
+          "date": "2026-04-12",
+          "apyBasePct": 27.62099,
+          "tvlUsd": 3486044,
+          "volumeUsd": 20867052.119063564,
+          "grossPoolFeesUsd": 2086.7052119063565
+        },
+        {
+          "date": "2026-04-13",
+          "apyBasePct": 25.80348,
+          "tvlUsd": 3690208,
+          "volumeUsd": 27715664.561776727,
+          "grossPoolFeesUsd": 2771.566456177673
+        },
+        {
+          "date": "2026-04-14",
+          "apyBasePct": 38.46297,
+          "tvlUsd": 3729551,
+          "volumeUsd": 37959746.38581134,
+          "grossPoolFeesUsd": 3795.9746385811336
+        },
+        {
+          "date": "2026-04-15",
+          "apyBasePct": 34.94566,
+          "tvlUsd": 3835812,
+          "volumeUsd": 30450844.382671498,
+          "grossPoolFeesUsd": 3045.08443826715
+        },
+        {
+          "date": "2026-04-16",
+          "apyBasePct": 22.01744,
+          "tvlUsd": 3813634,
+          "volumeUsd": 22945127.13926556,
+          "grossPoolFeesUsd": 2294.512713926556
+        },
+        {
+          "date": "2026-04-17",
+          "apyBasePct": 44.51922,
+          "tvlUsd": 3884437,
+          "volumeUsd": 48103118.638546035,
+          "grossPoolFeesUsd": 4810.311863854604
+        },
+        {
+          "date": "2026-04-18",
+          "apyBasePct": 53.30634,
+          "tvlUsd": 3839519,
+          "volumeUsd": 57676075.665120825,
+          "grossPoolFeesUsd": 5767.6075665120825
+        },
+        {
+          "date": "2026-04-19",
+          "apyBasePct": 83.76499,
+          "tvlUsd": 3743754,
+          "volumeUsd": 83912643.90738684,
+          "grossPoolFeesUsd": 8391.264390738685
+        },
+        {
+          "date": "2026-04-20",
+          "apyBasePct": 58.8184,
+          "tvlUsd": 3834291,
+          "volumeUsd": 62315177.09744449,
+          "grossPoolFeesUsd": 6231.517709744449
+        },
+        {
+          "date": "2026-04-21",
+          "apyBasePct": 75.09901,
+          "tvlUsd": 4154583,
+          "volumeUsd": 81315898.7361819,
+          "grossPoolFeesUsd": 8131.589873618191
+        },
+        {
+          "date": "2026-04-22",
+          "apyBasePct": 47.68364,
+          "tvlUsd": 4464902,
+          "volumeUsd": 58131148.91749017,
+          "grossPoolFeesUsd": 5813.114891749017
+        },
+        {
+          "date": "2026-04-23",
+          "apyBasePct": 72.53664,
+          "tvlUsd": 4595519,
+          "volumeUsd": 91777162.21478748,
+          "grossPoolFeesUsd": 9177.71622147875
+        },
+        {
+          "date": "2026-04-24",
+          "apyBasePct": 39.01477,
+          "tvlUsd": 5549207,
+          "volumeUsd": 58062286.53892899,
+          "grossPoolFeesUsd": 5806.228653892899
+        },
+        {
+          "date": "2026-04-25",
+          "apyBasePct": 31.07195,
+          "tvlUsd": 5907030,
+          "volumeUsd": 49318922.63022348,
+          "grossPoolFeesUsd": 4931.892263022349
+        },
+        {
+          "date": "2026-04-26",
+          "apyBasePct": 41.50269,
+          "tvlUsd": 5796362,
+          "volumeUsd": 67107298.52228615,
+          "grossPoolFeesUsd": 6710.729852228615
+        },
+        {
+          "date": "2026-04-27",
+          "apyBasePct": 48.06522,
+          "tvlUsd": 6112712,
+          "volumeUsd": 78488204.63318813,
+          "grossPoolFeesUsd": 7848.820463318813
+        },
+        {
+          "date": "2026-04-28",
+          "apyBasePct": 34.2798,
+          "tvlUsd": 6746496,
+          "volumeUsd": 63467542.51166428,
+          "grossPoolFeesUsd": 6346.754251166428
+        },
+        {
+          "date": "2026-04-29",
+          "apyBasePct": 0,
+          "tvlUsd": 6623741,
+          "volumeUsd": 72108778.54543556,
+          "grossPoolFeesUsd": 7210.877854543556
+        },
+        {
+          "date": "2026-04-30",
+          "apyBasePct": 32.41495,
+          "tvlUsd": 6757088,
+          "volumeUsd": 60434042.30170908,
+          "grossPoolFeesUsd": 6043.404230170908
+        },
+        {
+          "date": "2026-05-01",
+          "apyBasePct": 0,
+          "tvlUsd": 7161026,
+          "volumeUsd": 51848529.76247341,
+          "grossPoolFeesUsd": 5184.852976247342
+        },
+        {
+          "date": "2026-05-02",
+          "apyBasePct": 0,
+          "tvlUsd": 7581988,
+          "volumeUsd": 38355656.27754592,
+          "grossPoolFeesUsd": 3835.5656277545922
+        },
+        {
+          "date": "2026-05-03",
+          "apyBasePct": 18.12909,
+          "tvlUsd": 8046815,
+          "volumeUsd": 38650433.10483589,
+          "grossPoolFeesUsd": 3865.0433104835893
+        },
+        {
+          "date": "2026-05-04",
+          "apyBasePct": 0,
+          "tvlUsd": 6576913,
+          "volumeUsd": 85700388.12059069,
+          "grossPoolFeesUsd": 8570.038812059069
+        },
+        {
+          "date": "2026-05-05",
+          "apyBasePct": 30.4057,
+          "tvlUsd": 6801291,
+          "volumeUsd": 50360848.91840108,
+          "grossPoolFeesUsd": 5036.084891840108
+        },
+        {
+          "date": "2026-05-06",
+          "apyBasePct": 41.22478,
+          "tvlUsd": 7323916,
+          "volumeUsd": 83186376.03979072,
+          "grossPoolFeesUsd": 8318.637603979072
+        },
+        {
+          "date": "2026-05-07",
+          "apyBasePct": 44.08492,
+          "tvlUsd": 7084292,
+          "volumeUsd": 84238023.4120407,
+          "grossPoolFeesUsd": 8423.80234120407
+        },
+        {
+          "date": "2026-05-08",
+          "apyBasePct": 30.37496,
+          "tvlUsd": 7818169,
+          "volumeUsd": 64575476.23716567,
+          "grossPoolFeesUsd": 6457.547623716567
+        },
+        {
+          "date": "2026-05-09",
+          "apyBasePct": 14.23353,
+          "tvlUsd": 8008463,
+          "volumeUsd": 31364973.929748245,
+          "grossPoolFeesUsd": 3136.497392974825
+        },
+        {
+          "date": "2026-05-10",
+          "apyBasePct": 25.94465,
+          "tvlUsd": 7286753,
+          "volumeUsd": 52656372.45388525,
+          "grossPoolFeesUsd": 5265.637245388525
+        },
+        {
+          "date": "2026-05-11",
+          "apyBasePct": 30.93029,
+          "tvlUsd": 7445988,
+          "volumeUsd": 59143340.81577108,
+          "grossPoolFeesUsd": 5914.334081577108
+        },
+        {
+          "date": "2026-05-12",
+          "apyBasePct": 31.76927,
+          "tvlUsd": 7477183,
+          "volumeUsd": 64450283.388079934,
+          "grossPoolFeesUsd": 6445.028338807993
+        },
+        {
+          "date": "2026-05-13",
+          "apyBasePct": 30.47881,
+          "tvlUsd": 6001555,
+          "volumeUsd": 51445539.04965331,
+          "grossPoolFeesUsd": 5144.553904965331
+        },
+        {
+          "date": "2026-05-14",
+          "apyBasePct": 37.58265,
+          "tvlUsd": 5486700,
+          "volumeUsd": 55908871.76246328,
+          "grossPoolFeesUsd": 5590.887176246328
+        },
+        {
+          "date": "2026-05-15",
+          "apyBasePct": 0,
+          "tvlUsd": 5486505,
+          "volumeUsd": 52882884.53888687,
+          "grossPoolFeesUsd": 5288.288453888687
+        },
+        {
+          "date": "2026-05-16",
+          "apyBasePct": 18.81779,
+          "tvlUsd": 5282143,
+          "volumeUsd": 26551010.14993509,
+          "grossPoolFeesUsd": 2655.101014993509
+        },
+        {
+          "date": "2026-05-17",
+          "apyBasePct": 13.52981,
+          "tvlUsd": 5291632,
+          "volumeUsd": 23249184.882379584,
+          "grossPoolFeesUsd": 2324.9184882379586
+        },
+        {
+          "date": "2026-05-18",
+          "apyBasePct": 31.7719,
+          "tvlUsd": 4921064,
+          "volumeUsd": 39449558.68759395,
+          "grossPoolFeesUsd": 3944.9558687593953
+        },
+        {
+          "date": "2026-05-19",
+          "apyBasePct": 16.26783,
+          "tvlUsd": 4699401,
+          "volumeUsd": 21005877.82715117,
+          "grossPoolFeesUsd": 2100.587782715117
+        },
+        {
+          "date": "2026-05-20",
+          "apyBasePct": 18.4238,
+          "tvlUsd": 4638909,
+          "volumeUsd": 23559670.2014902,
+          "grossPoolFeesUsd": 2355.9670201490203
+        },
+        {
+          "date": "2026-05-21",
+          "apyBasePct": 22.22184,
+          "tvlUsd": 4380711,
+          "volumeUsd": 27055526.323240977,
+          "grossPoolFeesUsd": 2705.552632324098
+        },
+        {
+          "date": "2026-05-22",
+          "apyBasePct": 24.79293,
+          "tvlUsd": 5490658,
+          "volumeUsd": 37250240.906890176,
+          "grossPoolFeesUsd": 3725.0240906890176
+        },
+        {
+          "date": "2026-05-23",
+          "apyBasePct": 24.68022,
+          "tvlUsd": 5915669,
+          "volumeUsd": 40044851.839344926,
+          "grossPoolFeesUsd": 4004.485183934493
+        },
+        {
+          "date": "2026-05-24",
+          "apyBasePct": 15.63234,
+          "tvlUsd": 5887465,
+          "volumeUsd": 25372585.90563204,
+          "grossPoolFeesUsd": 2537.258590563204
+        },
+        {
+          "date": "2026-05-25",
+          "apyBasePct": 21.41404,
+          "tvlUsd": 6007079,
+          "volumeUsd": 35455037.11915305,
+          "grossPoolFeesUsd": 3545.5037119153053
+        },
+        {
+          "date": "2026-05-26",
+          "apyBasePct": 25.70703,
+          "tvlUsd": 5617085,
+          "volumeUsd": 39793015.4225642,
+          "grossPoolFeesUsd": 3979.3015422564204
+        },
+        {
+          "date": "2026-05-27",
+          "apyBasePct": 31.73527,
+          "tvlUsd": 4492888,
+          "volumeUsd": 39757739.59544326,
+          "grossPoolFeesUsd": 3975.7739595443268
+        },
+        {
+          "date": "2026-05-28",
+          "apyBasePct": 34.18813,
+          "tvlUsd": 4428351,
+          "volumeUsd": 40443213.34845252,
+          "grossPoolFeesUsd": 4044.3213348452527
+        },
+        {
+          "date": "2026-05-29",
+          "apyBasePct": 23.71958,
+          "tvlUsd": 4371069,
+          "volumeUsd": 28970149.082780637,
+          "grossPoolFeesUsd": 2897.014908278064
+        },
+        {
+          "date": "2026-05-30",
+          "apyBasePct": 16.40782,
+          "tvlUsd": 4423448,
+          "volumeUsd": 19583778.300770108,
+          "grossPoolFeesUsd": 1958.377830077011
+        },
+        {
+          "date": "2026-05-31",
+          "apyBasePct": 0,
+          "tvlUsd": 4519948,
+          "volumeUsd": 26092166.99967277,
+          "grossPoolFeesUsd": 2609.2166999672772
+        },
+        {
+          "date": "2026-06-01",
+          "apyBasePct": 31.11227,
+          "tvlUsd": 4797840,
+          "volumeUsd": 41044265.606992714,
+          "grossPoolFeesUsd": 4104.426560699271
+        },
+        {
+          "date": "2026-06-02",
+          "apyBasePct": 49.46253,
+          "tvlUsd": 4548135,
+          "volumeUsd": 70180449.17651671,
+          "grossPoolFeesUsd": 7018.044917651671
+        },
+        {
+          "date": "2026-06-03",
+          "apyBasePct": 73.26197,
+          "tvlUsd": 4484393,
+          "volumeUsd": 82340287.2130868,
+          "grossPoolFeesUsd": 8234.02872130868
+        },
+        {
+          "date": "2026-06-04",
+          "apyBasePct": 80.10689,
+          "tvlUsd": 4055879,
+          "volumeUsd": 87145491.53324473,
+          "grossPoolFeesUsd": 8714.549153324473
+        },
+        {
+          "date": "2026-06-05",
+          "apyBasePct": 76.50836,
+          "tvlUsd": 3689193,
+          "volumeUsd": 77085046.2215458,
+          "grossPoolFeesUsd": 7708.504622154581
+        },
+        {
+          "date": "2026-06-06",
+          "apyBasePct": 33.75633,
+          "tvlUsd": 3471881,
+          "volumeUsd": 29683038.651326176,
+          "grossPoolFeesUsd": 2968.303865132618
+        },
+        {
+          "date": "2026-06-07",
+          "apyBasePct": 28.93851,
+          "tvlUsd": 3571769,
+          "volumeUsd": 29365241.242085326,
+          "grossPoolFeesUsd": 2936.5241242085326
+        },
+        {
+          "date": "2026-06-08",
+          "apyBasePct": 40.06203,
+          "tvlUsd": 3603199,
+          "volumeUsd": 41183545.44148608,
+          "grossPoolFeesUsd": 4118.3545441486085
+        },
+        {
+          "date": "2026-06-09",
+          "apyBasePct": 33.60615,
+          "tvlUsd": 3419752,
+          "volumeUsd": 28751826.57095803,
+          "grossPoolFeesUsd": 2875.1826570958033
+        },
+        {
+          "date": "2026-06-10",
+          "apyBasePct": 28.6166,
+          "tvlUsd": 3403368,
+          "volumeUsd": 26371508.681000575,
+          "grossPoolFeesUsd": 2637.150868100058
+        },
+        {
+          "date": "2026-06-11",
+          "apyBasePct": 22.23472,
+          "tvlUsd": 3510172,
+          "volumeUsd": 21105656.41952428,
+          "grossPoolFeesUsd": 2110.565641952428
+        },
+        {
+          "date": "2026-06-12",
+          "apyBasePct": 21.61079,
+          "tvlUsd": 3489465,
+          "volumeUsd": 20646322.6273198,
+          "grossPoolFeesUsd": 2064.63226273198
+        },
+        {
+          "date": "2026-06-13",
+          "apyBasePct": 12.65902,
+          "tvlUsd": 3467321,
+          "volumeUsd": 11868127.79546148,
+          "grossPoolFeesUsd": 1186.812779546148
+        },
+        {
+          "date": "2026-06-14",
+          "apyBasePct": 15.26736,
+          "tvlUsd": 3483146,
+          "volumeUsd": 15883255.342376972,
+          "grossPoolFeesUsd": 1588.3255342376972
+        },
+        {
+          "date": "2026-06-15",
+          "apyBasePct": 37.56572,
+          "tvlUsd": 3623259,
+          "volumeUsd": 37150989.26171981,
+          "grossPoolFeesUsd": 3715.098926171981
+        },
+        {
+          "date": "2026-06-16",
+          "apyBasePct": 31.21293,
+          "tvlUsd": 3616928,
+          "volumeUsd": 30801895.41419707,
+          "grossPoolFeesUsd": 3080.189541419707
+        },
+        {
+          "date": "2026-06-17",
+          "apyBasePct": 34.89411,
+          "tvlUsd": 3539612,
+          "volumeUsd": 35170192.16159059,
+          "grossPoolFeesUsd": 3517.0192161590594
+        },
+        {
+          "date": "2026-06-18",
+          "apyBasePct": 36.60558,
+          "tvlUsd": 3484718,
+          "volumeUsd": 34463902.48103234,
+          "grossPoolFeesUsd": 3446.390248103234
+        },
+        {
+          "date": "2026-06-19",
+          "apyBasePct": 23.6953,
+          "tvlUsd": 3485037,
+          "volumeUsd": 21645854.287399366,
+          "grossPoolFeesUsd": 2164.5854287399366
+        },
+        {
+          "date": "2026-06-20",
+          "apyBasePct": 17.62576,
+          "tvlUsd": 3730569,
+          "volumeUsd": 17656930.038067937,
+          "grossPoolFeesUsd": 1765.6930038067937
+        },
+        {
+          "date": "2026-06-21",
+          "apyBasePct": 11.5691,
+          "tvlUsd": 3681812,
+          "volumeUsd": 12339027.63701261,
+          "grossPoolFeesUsd": 1233.9027637012612
+        },
+        {
+          "date": "2026-06-22",
+          "apyBasePct": 28.37139,
+          "tvlUsd": 3685321,
+          "volumeUsd": 28141577.39835802,
+          "grossPoolFeesUsd": 2814.157739835802
+        },
+        {
+          "date": "2026-06-23",
+          "apyBasePct": 28.92853,
+          "tvlUsd": 3607888,
+          "volumeUsd": 28605012.84292522,
+          "grossPoolFeesUsd": 2860.501284292522
+        },
+        {
+          "date": "2026-06-24",
+          "apyBasePct": 38.50091,
+          "tvlUsd": 3552139,
+          "volumeUsd": 37785084.069025196,
+          "grossPoolFeesUsd": 3778.5084069025197
+        },
+        {
+          "date": "2026-06-25",
+          "apyBasePct": 38.85416,
+          "tvlUsd": 3471619,
+          "volumeUsd": 36275072.10470736,
+          "grossPoolFeesUsd": 3627.507210470736
+        },
+        {
+          "date": "2026-06-26",
+          "apyBasePct": 33.2712,
+          "tvlUsd": 3461457,
+          "volumeUsd": 31562642.119527575,
+          "grossPoolFeesUsd": 3156.2642119527577
+        },
+        {
+          "date": "2026-06-27",
+          "apyBasePct": 19.67719,
+          "tvlUsd": 3452945,
+          "volumeUsd": 17289718.423535917,
+          "grossPoolFeesUsd": 1728.9718423535917
+        },
+        {
+          "date": "2026-06-28",
+          "apyBasePct": 20.40759,
+          "tvlUsd": 3461984,
+          "volumeUsd": 20502519.77961819,
+          "grossPoolFeesUsd": 2050.251977961819
+        },
+        {
+          "date": "2026-06-29",
+          "apyBasePct": 32.42153,
+          "tvlUsd": 3662439,
+          "volumeUsd": 32166842.686319437,
+          "grossPoolFeesUsd": 3216.6842686319437
+        },
+        {
+          "date": "2026-06-30",
+          "apyBasePct": 28.08778,
+          "tvlUsd": 3575367,
+          "volumeUsd": 27652446.69013367,
+          "grossPoolFeesUsd": 2765.244669013367
+        },
+        {
+          "date": "2026-07-01",
+          "apyBasePct": 25.61651,
+          "tvlUsd": 3702685,
+          "volumeUsd": 32429884.59552799,
+          "grossPoolFeesUsd": 3242.988459552799
+        },
+        {
+          "date": "2026-07-02",
+          "apyBasePct": 33.01535,
+          "tvlUsd": 3698321,
+          "volumeUsd": 33236808.97000652,
+          "grossPoolFeesUsd": 3323.6808970006523
+        },
+        {
+          "date": "2026-07-03",
+          "apyBasePct": 22.13655,
+          "tvlUsd": 3769486,
+          "volumeUsd": 29387783.28605636,
+          "grossPoolFeesUsd": 2938.778328605636
+        },
+        {
+          "date": "2026-07-04",
+          "apyBasePct": 24.4701,
+          "tvlUsd": 3795212,
+          "volumeUsd": 24648243.862674333,
+          "grossPoolFeesUsd": 2464.8243862674335
+        },
+        {
+          "date": "2026-07-05",
+          "apyBasePct": 17.5918,
+          "tvlUsd": 3810109,
+          "volumeUsd": 24027483.320173435,
+          "grossPoolFeesUsd": 2402.7483320173437
+        },
+        {
+          "date": "2026-07-06",
+          "apyBasePct": 18.18989,
+          "tvlUsd": 3823034,
+          "volumeUsd": 25279859.999463174,
+          "grossPoolFeesUsd": 2527.9859999463174
+        },
+        {
+          "date": "2026-07-07",
+          "apyBasePct": 24.46677,
+          "tvlUsd": 3571500,
+          "volumeUsd": 30120623.4936466,
+          "grossPoolFeesUsd": 3012.06234936466
+        },
+        {
+          "date": "2026-07-08",
+          "apyBasePct": 44.93647,
+          "tvlUsd": 3534586,
+          "volumeUsd": 49642004.21028645,
+          "grossPoolFeesUsd": 4964.200421028646
+        },
+        {
+          "date": "2026-07-09",
+          "apyBasePct": 21.49805,
+          "tvlUsd": 3545182,
+          "volumeUsd": 21027173.816208396,
+          "grossPoolFeesUsd": 2102.7173816208397
+        },
+        {
+          "date": "2026-07-10",
+          "apyBasePct": 19.38393,
+          "tvlUsd": 3747240,
+          "volumeUsd": 25874933.18187883,
+          "grossPoolFeesUsd": 2587.4933181878832
+        },
+        {
+          "date": "2026-07-11",
+          "apyBasePct": 25.22536,
+          "tvlUsd": 4041240,
+          "volumeUsd": 29654758.58530955,
+          "grossPoolFeesUsd": 2965.475858530955
+        },
+        {
+          "date": "2026-07-12",
+          "apyBasePct": 38.16017,
+          "tvlUsd": 4097669,
+          "volumeUsd": 41559559.564934,
+          "grossPoolFeesUsd": 4155.955956493401
+        },
+        {
+          "date": "2026-07-13",
+          "apyBasePct": 55.19954,
+          "tvlUsd": 4087778,
+          "volumeUsd": 68047207.55517839,
+          "grossPoolFeesUsd": 6804.720755517839
+        },
+        {
+          "date": "2026-07-14",
+          "apyBasePct": 37.27585,
+          "tvlUsd": 4281386,
+          "volumeUsd": 44495202.36959611,
+          "grossPoolFeesUsd": 4449.520236959611
+        },
+        {
+          "date": "2026-07-15",
+          "apyBasePct": 49.40382,
+          "tvlUsd": 4412730,
+          "volumeUsd": 63273080.95544275,
+          "grossPoolFeesUsd": 6327.308095544276
+        },
+        {
+          "date": "2026-07-16",
+          "apyBasePct": 44.9891,
+          "tvlUsd": 4519665,
+          "volumeUsd": 50570068.75455156,
+          "grossPoolFeesUsd": 5057.006875455157
+        },
+        {
+          "date": "2026-07-17",
+          "apyBasePct": 23.04521,
+          "tvlUsd": 4324663,
+          "volumeUsd": 31933704.866090998,
+          "grossPoolFeesUsd": 3193.3704866090998
+        },
+        {
+          "date": "2026-07-18",
+          "apyBasePct": 13.3923,
+          "tvlUsd": 4343663,
+          "volumeUsd": 22346811.196956817,
+          "grossPoolFeesUsd": 2234.681119695682
+        },
+        {
+          "date": "2026-07-19",
+          "apyBasePct": 12.29688,
+          "tvlUsd": 4454381,
+          "volumeUsd": 21758002.46338821,
+          "grossPoolFeesUsd": 2175.800246338821
+        },
+        {
+          "date": "2026-07-20",
+          "apyBasePct": 39.80891,
+          "tvlUsd": 4373143,
+          "volumeUsd": 51261896.03893283,
+          "grossPoolFeesUsd": 5126.189603893284
+        },
+        {
+          "date": "2026-07-21",
+          "apyBasePct": 35.64694,
+          "tvlUsd": 4163467,
+          "volumeUsd": 38964712.28331092,
+          "grossPoolFeesUsd": 3896.4712283310923
+        },
+        {
+          "date": "2026-07-22",
+          "apyBasePct": 29.12209,
+          "tvlUsd": 4169280,
+          "volumeUsd": 30184363.1999644,
+          "grossPoolFeesUsd": 3018.43631999644
+        },
+        {
+          "date": "2026-07-23",
+          "apyBasePct": 27.74749,
+          "tvlUsd": 4090431,
+          "volumeUsd": 30614959.09007894,
+          "grossPoolFeesUsd": 3061.495909007894
+        },
+        {
+          "date": "2026-07-24",
+          "apyBasePct": 24.5437,
+          "tvlUsd": 3997321,
+          "volumeUsd": 25561341.19633023,
+          "grossPoolFeesUsd": 2556.134119633023
+        },
+        {
+          "date": "2026-07-25",
+          "apyBasePct": 13.45232,
+          "tvlUsd": 4041085,
+          "volumeUsd": 12894872.931160266,
+          "grossPoolFeesUsd": 1289.4872931160266
+        },
+        {
+          "date": "2026-07-26",
+          "apyBasePct": 14.38542,
+          "tvlUsd": 3872711,
+          "volumeUsd": 17848076.496274013,
+          "grossPoolFeesUsd": 1784.8076496274014
+        },
+        {
+          "date": "2026-07-27",
+          "apyBasePct": 39.61655,
+          "tvlUsd": 3701529,
+          "volumeUsd": 39088078.210294686,
+          "grossPoolFeesUsd": 3908.807821029469
+        },
+        {
+          "date": "2026-07-28",
+          "apyBasePct": 54.16637,
+          "tvlUsd": 3801657,
+          "volumeUsd": 55085421.01793629,
+          "grossPoolFeesUsd": 5508.54210179363
+        },
+        {
+          "date": "2026-07-29",
+          "apyBasePct": 31.50047,
+          "tvlUsd": 3941446,
+          "volumeUsd": 33742737.28078364,
+          "grossPoolFeesUsd": 3374.273728078364
+        },
+        {
+          "date": "2026-07-30",
+          "apyBasePct": 22.9589,
+          "tvlUsd": 3982208,
+          "volumeUsd": 25010346.305402987,
+          "grossPoolFeesUsd": 2501.0346305402986
+        },
+        {
+          "date": "2026-07-31",
+          "apyBasePct": 39.07102,
+          "tvlUsd": 3907618,
+          "volumeUsd": 40811984.795770906,
+          "grossPoolFeesUsd": 4081.198479577091
+        },
+        {
+          "date": "2026-08-01",
+          "apyBasePct": 24.59499,
+          "tvlUsd": 3934223,
+          "volumeUsd": 25936672.61308996,
+          "grossPoolFeesUsd": 2593.6672613089963
+        },
+        {
+          "date": "2026-08-02",
+          "apyBasePct": 18.60554,
+          "tvlUsd": 4085372,
+          "volumeUsd": 21002181.736451745,
+          "grossPoolFeesUsd": 2100.218173645175
+        },
+        {
+          "date": "2026-08-03",
+          "apyBasePct": 22.75747,
+          "tvlUsd": 4184353,
+          "volumeUsd": 26249631.23987332,
+          "grossPoolFeesUsd": 2624.963123987332
+        },
+        {
+          "date": "2026-08-04",
+          "apyBasePct": 21.37262,
+          "tvlUsd": 4234400,
+          "volumeUsd": 24959588.760562804,
+          "grossPoolFeesUsd": 2495.9588760562806
+        },
+        {
+          "date": "2026-08-05",
+          "apyBasePct": 23.13706,
+          "tvlUsd": 4296118,
+          "volumeUsd": 27162948.748203773,
+          "grossPoolFeesUsd": 2716.2948748203776
+        },
+        {
+          "date": "2026-08-06",
+          "apyBasePct": 23.57584,
+          "tvlUsd": 4095020,
+          "volumeUsd": 25851969.598974306,
+          "grossPoolFeesUsd": 2585.1969598974306
+        },
+        {
+          "date": "2026-08-07",
+          "apyBasePct": 22.34696,
+          "tvlUsd": 4276287,
+          "volumeUsd": 26386523.051957667,
+          "grossPoolFeesUsd": 2638.652305195767
+        },
+        {
+          "date": "2026-08-08",
+          "apyBasePct": 18.40209,
+          "tvlUsd": 4557211,
+          "volumeUsd": 20261010.779979765,
+          "grossPoolFeesUsd": 2026.1010779979767
+        },
+        {
+          "date": "2026-08-09",
+          "apyBasePct": 14.04432,
+          "tvlUsd": 4774690,
+          "volumeUsd": 14720866.32740812,
+          "grossPoolFeesUsd": 1472.086632740812
+        },
+        {
+          "date": "2026-08-10",
+          "apyBasePct": 25.69573,
+          "tvlUsd": 4553938,
+          "volumeUsd": 31443778.45453667,
+          "grossPoolFeesUsd": 3144.377845453667
+        },
+        {
+          "date": "2026-08-11",
+          "apyBasePct": 23.02521,
+          "tvlUsd": 4872445,
+          "volumeUsd": 30338176.985737484,
+          "grossPoolFeesUsd": 3033.8176985737487
+        },
+        {
+          "date": "2026-08-12",
+          "apyBasePct": 22.61965,
+          "tvlUsd": 4864655,
+          "volumeUsd": 30750451.626948413,
+          "grossPoolFeesUsd": 3075.0451626948416
+        },
+        {
+          "date": "2026-08-13",
+          "apyBasePct": 25.59424,
+          "tvlUsd": 4891541,
+          "volumeUsd": 33696982.227133244,
+          "grossPoolFeesUsd": 3369.6982227133244
+        },
+        {
+          "date": "2026-08-14",
+          "apyBasePct": 28.35384,
+          "tvlUsd": 5033083,
+          "volumeUsd": 38011683.52298612,
+          "grossPoolFeesUsd": 3801.1683522986123
+        },
+        {
+          "date": "2026-08-15",
+          "apyBasePct": 15.68424,
+          "tvlUsd": 5175194,
+          "volumeUsd": 21816339.48040779,
+          "grossPoolFeesUsd": 2181.633948040779
+        },
+        {
+          "date": "2026-08-16",
+          "apyBasePct": 14.49629,
+          "tvlUsd": 5129668,
+          "volumeUsd": 20451599.35748449,
+          "grossPoolFeesUsd": 2045.159935748449
+        },
+        {
+          "date": "2026-08-17",
+          "apyBasePct": 24.1036,
+          "tvlUsd": 5290277,
+          "volumeUsd": 36092211.8428261,
+          "grossPoolFeesUsd": 3609.22118428261
+        },
+        {
+          "date": "2026-08-18",
+          "apyBasePct": 16.33239,
+          "tvlUsd": 5320015,
+          "volumeUsd": 22678494.11315876,
+          "grossPoolFeesUsd": 2267.849411315876
+        },
+        {
+          "date": "2026-08-19",
+          "apyBasePct": 60.02614,
+          "tvlUsd": 5086242,
+          "volumeUsd": 85216833.1409583,
+          "grossPoolFeesUsd": 8521.68331409583
+        },
+        {
+          "date": "2026-08-20",
+          "apyBasePct": 86.73738,
+          "tvlUsd": 4914947,
+          "volumeUsd": 114810732.80238394,
+          "grossPoolFeesUsd": 11481.073280238395
+        },
+        {
+          "date": "2026-08-21",
+          "apyBasePct": 77.26496,
+          "tvlUsd": 5033286,
+          "volumeUsd": 107529580.94964519,
+          "grossPoolFeesUsd": 10752.958094964519
+        },
+        {
+          "date": "2026-08-22",
+          "apyBasePct": 55.61845,
+          "tvlUsd": 4609988,
+          "volumeUsd": 68083518.43027097,
+          "grossPoolFeesUsd": 6808.351843027097
+        },
+        {
+          "date": "2026-08-23",
+          "apyBasePct": 49.83273,
+          "tvlUsd": 4394643,
+          "volumeUsd": 60722844.9290226,
+          "grossPoolFeesUsd": 6072.28449290226
+        },
+        {
+          "date": "2026-08-24",
+          "apyBasePct": 57.06427,
+          "tvlUsd": 3944875,
+          "volumeUsd": 60737186.07076617,
+          "grossPoolFeesUsd": 6073.718607076617
+        },
+        {
+          "date": "2026-08-25",
+          "apyBasePct": 52.99972,
+          "tvlUsd": 3829760,
+          "volumeUsd": 55843844.032457516,
+          "grossPoolFeesUsd": 5584.384403245752
+        },
+        {
+          "date": "2026-08-26",
+          "apyBasePct": 41.37333,
+          "tvlUsd": 3775560,
+          "volumeUsd": 42826215.88782983,
+          "grossPoolFeesUsd": 4282.621588782983
+        },
+        {
+          "date": "2026-08-27",
+          "apyBasePct": 50.20761,
+          "tvlUsd": 3805997,
+          "volumeUsd": 53949994.98249625,
+          "grossPoolFeesUsd": 5394.999498249625
+        },
+        {
+          "date": "2026-08-28",
+          "apyBasePct": 53.71584,
+          "tvlUsd": 3619690,
+          "volumeUsd": 50689639.46937214,
+          "grossPoolFeesUsd": 5068.963946937214
+        },
+        {
+          "date": "2026-08-29",
+          "apyBasePct": 23.88473,
+          "tvlUsd": 3611502,
+          "volumeUsd": 23668642.04224113,
+          "grossPoolFeesUsd": 2366.864204224113
+        },
+        {
+          "date": "2026-08-30",
+          "apyBasePct": 31.73329,
+          "tvlUsd": 3650475,
+          "volumeUsd": 34080798.4911402,
+          "grossPoolFeesUsd": 3408.0798491140204
+        },
+        {
+          "date": "2026-08-31",
+          "apyBasePct": 41.16091,
+          "tvlUsd": 3642327,
+          "volumeUsd": 37962949.678867646,
+          "grossPoolFeesUsd": 3796.294967886765
+        },
+        {
+          "date": "2026-09-01",
+          "apyBasePct": 41.57673,
+          "tvlUsd": 3653456,
+          "volumeUsd": 41791955.511400335,
+          "grossPoolFeesUsd": 4179.195551140034
+        },
+        {
+          "date": "2026-09-02",
+          "apyBasePct": 38.95177,
+          "tvlUsd": 3635307,
+          "volumeUsd": 38529916.299096234,
+          "grossPoolFeesUsd": 3852.9916299096235
+        },
+        {
+          "date": "2026-09-03",
+          "apyBasePct": 43.38331,
+          "tvlUsd": 3783400,
+          "volumeUsd": 44718283.34302227,
+          "grossPoolFeesUsd": 4471.828334302228
+        },
+        {
+          "date": "2026-09-04",
+          "apyBasePct": 54.52678,
+          "tvlUsd": 3437803,
+          "volumeUsd": 50402464.15847447,
+          "grossPoolFeesUsd": 5040.246415847447
+        },
+        {
+          "date": "2026-09-05",
+          "apyBasePct": 23.56875,
+          "tvlUsd": 3477515,
+          "volumeUsd": 22555746.18854481,
+          "grossPoolFeesUsd": 2255.5746188544813
+        },
+        {
+          "date": "2026-09-06",
+          "apyBasePct": 37.60585,
+          "tvlUsd": 3505611,
+          "volumeUsd": 37092259.57326463,
+          "grossPoolFeesUsd": 3709.2259573264632
+        },
+        {
+          "date": "2026-09-07",
+          "apyBasePct": 42.41583,
+          "tvlUsd": 3555073,
+          "volumeUsd": 40808224.06765235,
+          "grossPoolFeesUsd": 4080.8224067652354
+        },
+        {
+          "date": "2026-09-08",
+          "apyBasePct": 34.1762,
+          "tvlUsd": 3575224,
+          "volumeUsd": 33760688.38867566,
+          "grossPoolFeesUsd": 3376.0688388675662
+        },
+        {
+          "date": "2026-09-09",
+          "apyBasePct": 42.04114,
+          "tvlUsd": 3521722,
+          "volumeUsd": 40445649.58738683,
+          "grossPoolFeesUsd": 4044.5649587386833
+        },
+        {
+          "date": "2026-09-10",
+          "apyBasePct": 33.35582,
+          "tvlUsd": 3508423,
+          "volumeUsd": 32789878.35399941,
+          "grossPoolFeesUsd": 3278.987835399941
+        },
+        {
+          "date": "2026-09-11",
+          "apyBasePct": 55.43829,
+          "tvlUsd": 3502678,
+          "volumeUsd": 51387645.50882451,
+          "grossPoolFeesUsd": 5138.764550882452
+        },
+        {
+          "date": "2026-09-12",
+          "apyBasePct": 24.1544,
+          "tvlUsd": 3487580,
+          "volumeUsd": 22717661.582572002,
+          "grossPoolFeesUsd": 2271.7661582572005
+        },
+        {
+          "date": "2026-09-13",
+          "apyBasePct": 20.89541,
+          "tvlUsd": 3459569,
+          "volumeUsd": 20488577.408923026,
+          "grossPoolFeesUsd": 2048.857740892303
+        },
+        {
+          "date": "2026-09-14",
+          "apyBasePct": 40.19118,
+          "tvlUsd": 3491275,
+          "volumeUsd": 38435285.59788989,
+          "grossPoolFeesUsd": 3843.5285597889892
+        },
+        {
+          "date": "2026-09-15",
+          "apyBasePct": 54.06703,
+          "tvlUsd": 3311646,
+          "volumeUsd": 49072457.10388797,
+          "grossPoolFeesUsd": 4907.245710388797
+        },
+        {
+          "date": "2026-09-16",
+          "apyBasePct": 53.54818,
+          "tvlUsd": 3247603,
+          "volumeUsd": 48166026.01919286,
+          "grossPoolFeesUsd": 4816.602601919286
+        },
+        {
+          "date": "2026-09-17",
+          "apyBasePct": 53.32571,
+          "tvlUsd": 3294473,
+          "volumeUsd": 48211269.09618447,
+          "grossPoolFeesUsd": 4821.126909618447
+        },
+        {
+          "date": "2026-09-18",
+          "apyBasePct": 57.9619,
+          "tvlUsd": 3609603,
+          "volumeUsd": 57483966.99496244,
+          "grossPoolFeesUsd": 5748.396699496244
+        },
+        {
+          "date": "2026-09-19",
+          "apyBasePct": 30.93558,
+          "tvlUsd": 6187606,
+          "volumeUsd": 52113770.95329393,
+          "grossPoolFeesUsd": 5211.377095329393
+        },
+        {
+          "date": "2026-09-20",
+          "apyBasePct": 38.38674,
+          "tvlUsd": 6192382,
+          "volumeUsd": 60069259.17249376,
+          "grossPoolFeesUsd": 6006.925917249377
+        },
+        {
+          "date": "2026-09-21",
+          "apyBasePct": 63.53783,
+          "tvlUsd": 6421185,
+          "volumeUsd": 111619110.93647008,
+          "grossPoolFeesUsd": 11161.911093647008
+        },
+        {
+          "date": "2026-09-22",
+          "apyBasePct": 47.61881,
+          "tvlUsd": 6477956,
+          "volumeUsd": 84669263.27846281,
+          "grossPoolFeesUsd": 8466.926327846282
+        },
+        {
+          "date": "2026-09-23",
+          "apyBasePct": 43.52034,
+          "tvlUsd": 6452608,
+          "volumeUsd": 75905441.42796485,
+          "grossPoolFeesUsd": 7590.544142796485
+        },
+        {
+          "date": "2026-09-24",
+          "apyBasePct": 46.24385,
+          "tvlUsd": 6479921,
+          "volumeUsd": 82311602.60088152,
+          "grossPoolFeesUsd": 8231.160260088152
+        },
+        {
+          "date": "2026-09-25",
+          "apyBasePct": 33.99563,
+          "tvlUsd": 6411038,
+          "volumeUsd": 59156138.31732772,
+          "grossPoolFeesUsd": 5915.613831732772
+        }
+      ]
+    },
     {
       "id": "usdc-weth-005",
       "observations": [
         {
+          "date": "2026-03-30",
+          "apyBasePct": 46.44294,
+          "tvlUsd": 96939418,
+          "volumeUsd": 220445335.6292915,
+          "grossPoolFeesUsd": 110222.66781464576
+        },
+        {
+          "date": "2026-03-31",
+          "apyBasePct": 52.03137,
+          "tvlUsd": 98990150,
+          "volumeUsd": 260737848.9774964,
+          "grossPoolFeesUsd": 130368.92448874819
+        },
+        {
+          "date": "2026-04-01",
+          "apyBasePct": 60.90574,
+          "tvlUsd": 99759273,
+          "volumeUsd": 330185230.76022625,
+          "grossPoolFeesUsd": 165092.61538011313
+        },
+        {
+          "date": "2026-04-02",
+          "apyBasePct": 40.9371,
+          "tvlUsd": 99959356,
+          "volumeUsd": 224454923.233547,
+          "grossPoolFeesUsd": 112227.46161677351
+        },
+        {
+          "date": "2026-04-03",
+          "apyBasePct": 20.84171,
+          "tvlUsd": 100304846,
+          "volumeUsd": 93030509.94271486,
+          "grossPoolFeesUsd": 46515.254971357426
+        },
+        {
+          "date": "2026-04-04",
+          "apyBasePct": 6.61817,
+          "tvlUsd": 100565946,
+          "volumeUsd": 36450430.36155244,
+          "grossPoolFeesUsd": 18225.21518077622
+        },
+        {
+          "date": "2026-04-05",
+          "apyBasePct": 14.12457,
+          "tvlUsd": 101078850,
+          "volumeUsd": 94236643.17213279,
+          "grossPoolFeesUsd": 47118.3215860664
+        },
+        {
+          "date": "2026-04-06",
+          "apyBasePct": 39.57852,
+          "tvlUsd": 101563202,
+          "volumeUsd": 197300944.67384294,
+          "grossPoolFeesUsd": 98650.47233692148
+        },
+        {
+          "date": "2026-04-07",
+          "apyBasePct": 43.68669,
+          "tvlUsd": 101721920,
+          "volumeUsd": 241624269.08742285,
+          "grossPoolFeesUsd": 120812.13454371142
+        },
+        {
+          "date": "2026-04-08",
+          "apyBasePct": 20.60362,
+          "tvlUsd": 99360327,
+          "volumeUsd": 91978919.63347745,
+          "grossPoolFeesUsd": 45989.45981673872
+        },
+        {
+          "date": "2026-04-09",
+          "apyBasePct": 27.61915,
+          "tvlUsd": 99806635,
+          "volumeUsd": 134030494.59627669,
+          "grossPoolFeesUsd": 67015.24729813835
+        },
+        {
+          "date": "2026-04-10",
+          "apyBasePct": 12.03601,
+          "tvlUsd": 100620416,
+          "volumeUsd": 79219571.49750505,
+          "grossPoolFeesUsd": 39609.785748752525
+        },
+        {
+          "date": "2026-04-11",
+          "apyBasePct": 10.36623,
+          "tvlUsd": 100394784,
+          "volumeUsd": 38529986.81446261,
+          "grossPoolFeesUsd": 19264.993407231304
+        },
+        {
+          "date": "2026-04-12",
+          "apyBasePct": 16.56944,
+          "tvlUsd": 99285651,
+          "volumeUsd": 75022450.3434602,
+          "grossPoolFeesUsd": 37511.225171730104
+        },
+        {
+          "date": "2026-04-13",
+          "apyBasePct": 17.65332,
+          "tvlUsd": 101238340,
+          "volumeUsd": 102571071.33468391,
+          "grossPoolFeesUsd": 51285.53566734196
+        },
+        {
+          "date": "2026-04-14",
+          "apyBasePct": 16.08361,
+          "tvlUsd": 101194208,
+          "volumeUsd": 81554642.2126265,
+          "grossPoolFeesUsd": 40777.321106313255
+        },
+        {
+          "date": "2026-04-15",
+          "apyBasePct": 12.80898,
+          "tvlUsd": 101284614,
+          "volumeUsd": 52645356.05589696,
+          "grossPoolFeesUsd": 26322.67802794848
+        },
+        {
+          "date": "2026-04-16",
+          "apyBasePct": 9.45635,
+          "tvlUsd": 100569430,
+          "volumeUsd": 51604911.08541496,
+          "grossPoolFeesUsd": 25802.45554270748
+        },
+        {
+          "date": "2026-04-17",
+          "apyBasePct": 12.9878,
+          "tvlUsd": 100591811,
+          "volumeUsd": 72030374.5281167,
+          "grossPoolFeesUsd": 36015.18726405835
+        },
+        {
+          "date": "2026-04-18",
+          "apyBasePct": 9.48957,
+          "tvlUsd": 99532474,
+          "volumeUsd": 51105514.474170476,
+          "grossPoolFeesUsd": 25552.75723708524
+        },
+        {
+          "date": "2026-04-19",
+          "apyBasePct": 14.5271,
+          "tvlUsd": 99373865,
+          "volumeUsd": 81562100.46365558,
+          "grossPoolFeesUsd": 40781.05023182779
+        },
+        {
+          "date": "2026-04-20",
+          "apyBasePct": 15.25539,
+          "tvlUsd": 100073271,
+          "volumeUsd": 81313695.75469159,
+          "grossPoolFeesUsd": 40656.8478773458
+        },
+        {
+          "date": "2026-04-21",
+          "apyBasePct": 11.57282,
+          "tvlUsd": 99960046,
+          "volumeUsd": 65230679.634577945,
+          "grossPoolFeesUsd": 32615.339817288972
+        },
+        {
+          "date": "2026-04-22",
+          "apyBasePct": 12.15154,
+          "tvlUsd": 102461980,
+          "volumeUsd": 68229562.26452586,
+          "grossPoolFeesUsd": 34114.78113226293
+        },
+        {
+          "date": "2026-04-23",
+          "apyBasePct": 11.92345,
+          "tvlUsd": 103531516,
+          "volumeUsd": 65637537.41579848,
+          "grossPoolFeesUsd": 32818.76870789924
+        },
+        {
+          "date": "2026-04-24",
+          "apyBasePct": 6.88239,
+          "tvlUsd": 103429392,
+          "volumeUsd": 38006692.56285142,
+          "grossPoolFeesUsd": 19003.34628142571
+        },
+        {
+          "date": "2026-04-25",
+          "apyBasePct": 2.64837,
+          "tvlUsd": 100756578,
+          "volumeUsd": 14483897.878379699,
+          "grossPoolFeesUsd": 7241.94893918985
+        },
+        {
+          "date": "2026-04-26",
+          "apyBasePct": 4.70537,
+          "tvlUsd": 102354692,
+          "volumeUsd": 28350379.95544367,
+          "grossPoolFeesUsd": 14175.189977721835
+        },
+        {
+          "date": "2026-04-27",
+          "apyBasePct": 7.55461,
+          "tvlUsd": 100632909,
+          "volumeUsd": 40119454.32695523,
+          "grossPoolFeesUsd": 20059.727163477615
+        },
+        {
+          "date": "2026-04-28",
+          "apyBasePct": 6.24198,
+          "tvlUsd": 100855989,
+          "volumeUsd": 34065528.87321481,
+          "grossPoolFeesUsd": 17032.764436607406
+        },
+        {
+          "date": "2026-04-29",
+          "apyBasePct": 9.24314,
+          "tvlUsd": 101057835,
+          "volumeUsd": 51705661.27345195,
+          "grossPoolFeesUsd": 25852.830636725976
+        },
+        {
+          "date": "2026-04-30",
+          "apyBasePct": 7.60597,
+          "tvlUsd": 102159095,
+          "volumeUsd": 42041991.37305678,
+          "grossPoolFeesUsd": 21020.99568652839
+        },
+        {
+          "date": "2026-05-01",
+          "apyBasePct": 6.22099,
+          "tvlUsd": 102694418,
+          "volumeUsd": 37398584.54108159,
+          "grossPoolFeesUsd": 18699.2922705408
+        },
+        {
+          "date": "2026-05-02",
+          "apyBasePct": 2.52094,
+          "tvlUsd": 102696940,
+          "volumeUsd": 13659946.846827127,
+          "grossPoolFeesUsd": 6829.973423413564
+        },
+        {
+          "date": "2026-05-03",
+          "apyBasePct": 3.9704,
+          "tvlUsd": 102904836,
+          "volumeUsd": 24579012.929472253,
+          "grossPoolFeesUsd": 12289.506464736127
+        },
+        {
+          "date": "2026-05-04",
+          "apyBasePct": 13.11214,
+          "tvlUsd": 102857527,
+          "volumeUsd": 71836618.00579606,
+          "grossPoolFeesUsd": 35918.30900289803
+        },
+        {
+          "date": "2026-05-05",
+          "apyBasePct": 7.89739,
+          "tvlUsd": 103934973,
+          "volumeUsd": 41125037.522772186,
+          "grossPoolFeesUsd": 20562.518761386094
+        },
+        {
+          "date": "2026-05-06",
+          "apyBasePct": 8.73056,
+          "tvlUsd": 102713273,
+          "volumeUsd": 49433175.77403228,
+          "grossPoolFeesUsd": 24716.58788701614
+        },
+        {
+          "date": "2026-05-07",
+          "apyBasePct": 8.19622,
+          "tvlUsd": 101597173,
+          "volumeUsd": 44943619.742141694,
+          "grossPoolFeesUsd": 22471.809871070847
+        },
+        {
+          "date": "2026-05-08",
+          "apyBasePct": 6.38698,
+          "tvlUsd": 101877930,
+          "volumeUsd": 35527011.611498386,
+          "grossPoolFeesUsd": 17763.50580574919
+        },
+        {
+          "date": "2026-05-09",
+          "apyBasePct": 2.6394,
+          "tvlUsd": 102428718,
+          "volumeUsd": 14628193.161467861,
+          "grossPoolFeesUsd": 7314.096580733931
+        },
+        {
+          "date": "2026-05-10",
+          "apyBasePct": 6.88265,
+          "tvlUsd": 103196712,
+          "volumeUsd": 40955068.7871586,
+          "grossPoolFeesUsd": 20477.534393579303
+        },
+        {
+          "date": "2026-05-11",
+          "apyBasePct": 7.29031,
+          "tvlUsd": 103025868,
+          "volumeUsd": 39086035.71103022,
+          "grossPoolFeesUsd": 19543.01785551511
+        },
+        {
+          "date": "2026-05-12",
+          "apyBasePct": 7.89755,
+          "tvlUsd": 102105853,
+          "volumeUsd": 44531995.811281845,
+          "grossPoolFeesUsd": 22265.997905640925
+        },
+        {
+          "date": "2026-05-13",
+          "apyBasePct": 5.70631,
+          "tvlUsd": 101524589,
+          "volumeUsd": 31504955.630148552,
+          "grossPoolFeesUsd": 15752.477815074277
+        },
+        {
+          "date": "2026-05-14",
+          "apyBasePct": 8.17092,
+          "tvlUsd": 102455146,
+          "volumeUsd": 47737900.93566016,
+          "grossPoolFeesUsd": 23868.95046783008
+        },
+        {
+          "date": "2026-05-15",
+          "apyBasePct": 9.64838,
+          "tvlUsd": 102217593,
+          "volumeUsd": 50045062.47537089,
+          "grossPoolFeesUsd": 25022.531237685445
+        },
+        {
+          "date": "2026-05-16",
+          "apyBasePct": 10.49895,
+          "tvlUsd": 101757233,
+          "volumeUsd": 58767217.81922671,
+          "grossPoolFeesUsd": 29383.60890961336
+        },
+        {
+          "date": "2026-05-17",
+          "apyBasePct": 9.89705,
+          "tvlUsd": 101773607,
+          "volumeUsd": 88063548.02406137,
+          "grossPoolFeesUsd": 44031.774012030684
+        },
+        {
+          "date": "2026-05-18",
+          "apyBasePct": 38.72622,
+          "tvlUsd": 99575210,
+          "volumeUsd": 180844816.04558545,
+          "grossPoolFeesUsd": 90422.40802279273
+        },
+        {
+          "date": "2026-05-19",
+          "apyBasePct": 20.11728,
+          "tvlUsd": 99209183,
+          "volumeUsd": 110190943.32020783,
+          "grossPoolFeesUsd": 55095.47166010392
+        },
+        {
+          "date": "2026-05-20",
+          "apyBasePct": 20.43546,
+          "tvlUsd": 99617432,
+          "volumeUsd": 109912169.80378833,
+          "grossPoolFeesUsd": 54956.084901894166
+        },
+        {
+          "date": "2026-05-21",
+          "apyBasePct": 19.46708,
+          "tvlUsd": 99437924,
+          "volumeUsd": 106519871.17928474,
+          "grossPoolFeesUsd": 53259.935589642366
+        },
+        {
+          "date": "2026-05-22",
+          "apyBasePct": 18.21722,
+          "tvlUsd": 100707441,
+          "volumeUsd": 103924181.59101465,
+          "grossPoolFeesUsd": 51962.09079550733
+        },
+        {
+          "date": "2026-05-23",
+          "apyBasePct": 26.22787,
+          "tvlUsd": 101090287,
+          "volumeUsd": 142339925.32017678,
+          "grossPoolFeesUsd": 71169.9626600884
+        },
+        {
+          "date": "2026-05-24",
+          "apyBasePct": 16.81326,
+          "tvlUsd": 101132013,
+          "volumeUsd": 94899916.14820807,
+          "grossPoolFeesUsd": 47449.95807410403
+        },
+        {
+          "date": "2026-05-25",
+          "apyBasePct": 14.67032,
+          "tvlUsd": 101354741,
+          "volumeUsd": 79384282.84225397,
+          "grossPoolFeesUsd": 39692.14142112699
+        },
+        {
+          "date": "2026-05-26",
+          "apyBasePct": 24.92817,
+          "tvlUsd": 100426260,
+          "volumeUsd": 134869332.852081,
+          "grossPoolFeesUsd": 67434.66642604051
+        },
+        {
+          "date": "2026-05-27",
+          "apyBasePct": 27.20351,
+          "tvlUsd": 97290033,
+          "volumeUsd": 149047859.99732625,
+          "grossPoolFeesUsd": 74523.92999866312
+        },
+        {
+          "date": "2026-05-28",
+          "apyBasePct": 36.31427,
+          "tvlUsd": 96750156,
+          "volumeUsd": 187938561.12317666,
+          "grossPoolFeesUsd": 93969.28056158834
+        },
+        {
+          "date": "2026-05-29",
+          "apyBasePct": 27.03133,
+          "tvlUsd": 97615777,
+          "volumeUsd": 149616782.06573898,
+          "grossPoolFeesUsd": 74808.39103286949
+        },
+        {
+          "date": "2026-05-30",
+          "apyBasePct": 9.95775,
+          "tvlUsd": 97977208,
+          "volumeUsd": 48516800.74451524,
+          "grossPoolFeesUsd": 24258.40037225762
+        },
+        {
+          "date": "2026-05-31",
+          "apyBasePct": 11.62559,
+          "tvlUsd": 98128464,
+          "volumeUsd": 66869713.91410401,
+          "grossPoolFeesUsd": 33434.856957052005
+        },
+        {
+          "date": "2026-06-01",
+          "apyBasePct": 35.61289,
+          "tvlUsd": 97026117,
+          "volumeUsd": 189699065.0263163,
+          "grossPoolFeesUsd": 94849.53251315815
+        },
+        {
+          "date": "2026-06-02",
+          "apyBasePct": 56.33249,
+          "tvlUsd": 92282287,
+          "volumeUsd": 302075856.5918332,
+          "grossPoolFeesUsd": 151037.9282959166
+        },
+        {
+          "date": "2026-06-03",
+          "apyBasePct": 42.3576,
+          "tvlUsd": 91927052,
+          "volumeUsd": 199526655.45387465,
+          "grossPoolFeesUsd": 99763.32772693732
+        },
+        {
+          "date": "2026-06-04",
+          "apyBasePct": 49.25784,
+          "tvlUsd": 88924036,
+          "volumeUsd": 232563073.3592516,
+          "grossPoolFeesUsd": 116281.5366796258
+        },
+        {
+          "date": "2026-06-05",
+          "apyBasePct": 54.53211,
+          "tvlUsd": 78384919,
+          "volumeUsd": 232523589.98099434,
+          "grossPoolFeesUsd": 116261.79499049718
+        },
+        {
+          "date": "2026-06-06",
+          "apyBasePct": 17.29747,
+          "tvlUsd": 81528754,
+          "volumeUsd": 75201326.48807715,
+          "grossPoolFeesUsd": 37600.66324403857
+        },
+        {
+          "date": "2026-06-07",
+          "apyBasePct": 16.09574,
+          "tvlUsd": 85352022,
+          "volumeUsd": 77300122.88433655,
+          "grossPoolFeesUsd": 38650.06144216828
+        },
+        {
+          "date": "2026-06-08",
+          "apyBasePct": 18.47785,
+          "tvlUsd": 86360698,
+          "volumeUsd": 91736710.53392024,
+          "grossPoolFeesUsd": 45868.35526696012
+        },
+        {
+          "date": "2026-06-09",
+          "apyBasePct": 14.16044,
+          "tvlUsd": 83600625,
+          "volumeUsd": 58401147.46871528,
+          "grossPoolFeesUsd": 29200.57373435764
+        },
+        {
+          "date": "2026-06-10",
+          "apyBasePct": 13.4801,
+          "tvlUsd": 83627550,
+          "volumeUsd": 62945965.138942346,
+          "grossPoolFeesUsd": 31472.982569471173
+        },
+        {
+          "date": "2026-06-11",
+          "apyBasePct": 11.43174,
+          "tvlUsd": 86055722,
+          "volumeUsd": 53400493.131923996,
+          "grossPoolFeesUsd": 26700.246565962
+        },
+        {
+          "date": "2026-06-12",
+          "apyBasePct": 9.12347,
+          "tvlUsd": 85481951,
+          "volumeUsd": 41608278.68454983,
+          "grossPoolFeesUsd": 20804.139342274917
+        },
+        {
+          "date": "2026-06-13",
+          "apyBasePct": 3.18892,
+          "tvlUsd": 86290857,
+          "volumeUsd": 14966237.588935567,
+          "grossPoolFeesUsd": 7483.118794467784
+        },
+        {
+          "date": "2026-06-14",
+          "apyBasePct": 7.05307,
+          "tvlUsd": 87071197,
+          "volumeUsd": 37297843.32075825,
+          "grossPoolFeesUsd": 18648.92166037913
+        },
+        {
+          "date": "2026-06-15",
+          "apyBasePct": 20.89344,
+          "tvlUsd": 89814666,
+          "volumeUsd": 101641090.21786009,
+          "grossPoolFeesUsd": 50820.54510893005
+        },
+        {
+          "date": "2026-06-16",
+          "apyBasePct": 18.22825,
+          "tvlUsd": 90023797,
+          "volumeUsd": 87612386.05717228,
+          "grossPoolFeesUsd": 43806.193028586145
+        },
+        {
+          "date": "2026-06-17",
+          "apyBasePct": 22.96615,
+          "tvlUsd": 88084356,
+          "volumeUsd": 111112281.17735153,
+          "grossPoolFeesUsd": 55556.14058867577
+        },
+        {
+          "date": "2026-06-18",
+          "apyBasePct": 18.39367,
+          "tvlUsd": 86774997,
+          "volumeUsd": 86989054.18589066,
+          "grossPoolFeesUsd": 43494.52709294533
+        },
+        {
+          "date": "2026-06-19",
+          "apyBasePct": 9.29226,
+          "tvlUsd": 86637477,
+          "volumeUsd": 43076093.37568628,
+          "grossPoolFeesUsd": 21538.04668784314
+        },
+        {
+          "date": "2026-06-20",
+          "apyBasePct": 9.69216,
+          "tvlUsd": 88066141,
+          "volumeUsd": 46472801.45865181,
+          "grossPoolFeesUsd": 23236.400729325906
+        },
+        {
+          "date": "2026-06-21",
+          "apyBasePct": 7.7029,
+          "tvlUsd": 86876034,
+          "volumeUsd": 37806933.52310475,
+          "grossPoolFeesUsd": 18903.466761552376
+        },
+        {
+          "date": "2026-06-22",
+          "apyBasePct": 16.88163,
+          "tvlUsd": 87037484,
+          "volumeUsd": 79191014.11166154,
+          "grossPoolFeesUsd": 39595.50705583077
+        },
+        {
+          "date": "2026-06-23",
+          "apyBasePct": 10.97176,
+          "tvlUsd": 84568482,
+          "volumeUsd": 50356018.496203355,
+          "grossPoolFeesUsd": 25178.00924810168
+        },
+        {
+          "date": "2026-06-24",
+          "apyBasePct": 15.76227,
+          "tvlUsd": 82452732,
+          "volumeUsd": 71465190.75054763,
+          "grossPoolFeesUsd": 35732.59537527382
+        },
+        {
+          "date": "2026-06-25",
+          "apyBasePct": 19.30761,
+          "tvlUsd": 80358980,
+          "volumeUsd": 84525322.02348,
+          "grossPoolFeesUsd": 42262.66101174
+        },
+        {
           "date": "2026-06-26",
           "apyBasePct": 16.93152,
-          "tvlUsd": 80627062
+          "tvlUsd": 80627062,
+          "volumeUsd": 74311619.95973247,
+          "grossPoolFeesUsd": 37155.80997986624
         },
         {
           "date": "2026-06-27",
           "apyBasePct": 5.60069,
-          "tvlUsd": 80629824
+          "tvlUsd": 80629824,
+          "volumeUsd": 24726548.200231884,
+          "grossPoolFeesUsd": 12363.274100115943
         },
         {
           "date": "2026-06-28",
           "apyBasePct": 7.02314,
-          "tvlUsd": 79961345
+          "tvlUsd": 79961345,
+          "volumeUsd": 34271259.8240873,
+          "grossPoolFeesUsd": 17135.62991204365
         },
         {
           "date": "2026-06-29",
           "apyBasePct": 15.4977,
-          "tvlUsd": 82058373
+          "tvlUsd": 82058373,
+          "volumeUsd": 68847194.92310302,
+          "grossPoolFeesUsd": 34423.59746155151
         },
         {
           "date": "2026-06-30",
           "apyBasePct": 8.88182,
-          "tvlUsd": 80464424
+          "tvlUsd": 80464424,
+          "volumeUsd": 38971185.62356325,
+          "grossPoolFeesUsd": 19485.592811781626
         },
         {
           "date": "2026-07-01",
           "apyBasePct": 8.42529,
-          "tvlUsd": 82576365
+          "tvlUsd": 82576365,
+          "volumeUsd": 58264420.040943086,
+          "grossPoolFeesUsd": 29132.210020471543
         },
         {
           "date": "2026-07-02",
           "apyBasePct": 13.53036,
-          "tvlUsd": 85111623
+          "tvlUsd": 85111623,
+          "volumeUsd": 60979169.746835075,
+          "grossPoolFeesUsd": 30489.584873417538
         },
         {
           "date": "2026-07-03",
           "apyBasePct": 10.54183,
-          "tvlUsd": 86875101
+          "tvlUsd": 86875101,
+          "volumeUsd": 69257938.29775392,
+          "grossPoolFeesUsd": 34628.96914887696
         },
         {
           "date": "2026-07-04",
           "apyBasePct": 10.15493,
-          "tvlUsd": 87545486
+          "tvlUsd": 87545486,
+          "volumeUsd": 48518126.81190613,
+          "grossPoolFeesUsd": 24259.063405953064
         },
         {
           "date": "2026-07-05",
           "apyBasePct": 5.46937,
-          "tvlUsd": 87813847
+          "tvlUsd": 87813847,
+          "volumeUsd": 45801768.77822352,
+          "grossPoolFeesUsd": 22900.88438911176
         },
         {
           "date": "2026-07-06",
           "apyBasePct": 16.15158,
-          "tvlUsd": 88384524
+          "tvlUsd": 88384524,
+          "volumeUsd": 95585148.101983,
+          "grossPoolFeesUsd": 47792.5740509915
         },
         {
           "date": "2026-07-07",
           "apyBasePct": 14.91301,
-          "tvlUsd": 86562712
+          "tvlUsd": 86562712,
+          "volumeUsd": 88704657.70380883,
+          "grossPoolFeesUsd": 44352.328851904414
         },
         {
           "date": "2026-07-08",
           "apyBasePct": 13.43518,
-          "tvlUsd": 85319985
+          "tvlUsd": 85319985,
+          "volumeUsd": 79457329.98585899,
+          "grossPoolFeesUsd": 39728.664992929494
         },
         {
           "date": "2026-07-09",
           "apyBasePct": 11.51833,
-          "tvlUsd": 85848379
+          "tvlUsd": 85848379,
+          "volumeUsd": 54764561.26090866,
+          "grossPoolFeesUsd": 27382.280630454334
         },
         {
           "date": "2026-07-10",
           "apyBasePct": 10.76804,
-          "tvlUsd": 87687440
+          "tvlUsd": 87687440,
+          "volumeUsd": 68283698.74602872,
+          "grossPoolFeesUsd": 34141.84937301436
         },
         {
           "date": "2026-07-11",
           "apyBasePct": 7.74874,
-          "tvlUsd": 88132022
+          "tvlUsd": 88132022,
+          "volumeUsd": 42849210.6631287,
+          "grossPoolFeesUsd": 21424.605331564348
         },
         {
           "date": "2026-07-12",
           "apyBasePct": 9.98751,
-          "tvlUsd": 87854547
+          "tvlUsd": 87854547,
+          "volumeUsd": 43001025.369717896,
+          "grossPoolFeesUsd": 21500.51268485895
         },
         {
           "date": "2026-07-13",
           "apyBasePct": 17.53516,
-          "tvlUsd": 86350961
+          "tvlUsd": 86350961,
+          "volumeUsd": 101640724.11359927,
+          "grossPoolFeesUsd": 50820.36205679963
         },
         {
           "date": "2026-07-14",
           "apyBasePct": 15.88485,
-          "tvlUsd": 91739441
+          "tvlUsd": 91739441,
+          "volumeUsd": 79265566.94113548,
+          "grossPoolFeesUsd": 39632.78347056774
         },
         {
           "date": "2026-07-15",
           "apyBasePct": 28.08418,
-          "tvlUsd": 95158089
+          "tvlUsd": 95158089,
+          "volumeUsd": 147682131.4441857,
+          "grossPoolFeesUsd": 73841.06572209286
         },
         {
           "date": "2026-07-16",
           "apyBasePct": 18.44422,
-          "tvlUsd": 93444616
+          "tvlUsd": 93444616,
+          "volumeUsd": 92613114.46926828,
+          "grossPoolFeesUsd": 46306.55723463414
         },
         {
           "date": "2026-07-17",
           "apyBasePct": 11.75343,
-          "tvlUsd": 92459624
+          "tvlUsd": 92459624,
+          "volumeUsd": 76386518.11070497,
+          "grossPoolFeesUsd": 38193.259055352486
         },
         {
           "date": "2026-07-18",
           "apyBasePct": 1.39144,
-          "tvlUsd": 93206101
+          "tvlUsd": 93206101,
+          "volumeUsd": 24535852.575703688,
+          "grossPoolFeesUsd": 12267.926287851844
         },
         {
           "date": "2026-07-19",
           "apyBasePct": 3.27905,
-          "tvlUsd": 93336054
+          "tvlUsd": 93336054,
+          "volumeUsd": 37121800.937988386,
+          "grossPoolFeesUsd": 18560.900468994194
         },
         {
           "date": "2026-07-20",
           "apyBasePct": 21.5207,
-          "tvlUsd": 94636884
+          "tvlUsd": 94636884,
+          "volumeUsd": 112549936.55434568,
+          "grossPoolFeesUsd": 56274.96827717284
         },
         {
           "date": "2026-07-21",
           "apyBasePct": 24.25637,
-          "tvlUsd": 95572533
+          "tvlUsd": 95572533,
+          "volumeUsd": 125574375.88820517,
+          "grossPoolFeesUsd": 62787.18794410259
         },
         {
           "date": "2026-07-22",
           "apyBasePct": 26.24891,
-          "tvlUsd": 96317130
+          "tvlUsd": 96317130,
+          "volumeUsd": 139954340.81535664,
+          "grossPoolFeesUsd": 69977.17040767832
         },
         {
           "date": "2026-07-23",
           "apyBasePct": 20.62003,
-          "tvlUsd": 94621774
+          "tvlUsd": 94621774,
+          "volumeUsd": 102557651.31608735,
+          "grossPoolFeesUsd": 51278.82565804368
         },
         {
           "date": "2026-07-24",
           "apyBasePct": 12.33116,
-          "tvlUsd": 94030706
+          "tvlUsd": 94030706,
+          "volumeUsd": 58372022.055048645,
+          "grossPoolFeesUsd": 29186.011027524324
         },
         {
           "date": "2026-07-25",
           "apyBasePct": 3.97272,
-          "tvlUsd": 95806904
+          "tvlUsd": 95806904,
+          "volumeUsd": 19978513.794918977,
+          "grossPoolFeesUsd": 9989.256897459489
         },
         {
           "date": "2026-07-26",
           "apyBasePct": 8.76242,
-          "tvlUsd": 97487063
+          "tvlUsd": 97487063,
+          "volumeUsd": 61506581.00900638,
+          "grossPoolFeesUsd": 30753.29050450319
         },
         {
           "date": "2026-07-27",
           "apyBasePct": 32.05462,
-          "tvlUsd": 94907051
+          "tvlUsd": 94907051,
+          "volumeUsd": 161142426.68584788,
+          "grossPoolFeesUsd": 80571.21334292395
         },
         {
           "date": "2026-07-28",
           "apyBasePct": 21.63884,
-          "tvlUsd": 99660351
+          "tvlUsd": 99660351,
+          "volumeUsd": 118234239.22319463,
+          "grossPoolFeesUsd": 59117.119611597314
         },
         {
           "date": "2026-07-29",
           "apyBasePct": 31.85807,
-          "tvlUsd": 99956135
+          "tvlUsd": 99956135,
+          "volumeUsd": 171746741.38413915,
+          "grossPoolFeesUsd": 85873.37069206958
         },
         {
           "date": "2026-07-30",
           "apyBasePct": 21.51847,
-          "tvlUsd": 100794624
+          "tvlUsd": 100794624,
+          "volumeUsd": 120770124.76815082,
+          "grossPoolFeesUsd": 60385.06238407541
         },
         {
           "date": "2026-07-31",
           "apyBasePct": 15.66674,
-          "tvlUsd": 98673906
+          "tvlUsd": 98673906,
+          "volumeUsd": 77409886.38741146,
+          "grossPoolFeesUsd": 38704.94319370573
         },
         {
           "date": "2026-08-01",
           "apyBasePct": 5.53062,
-          "tvlUsd": 97981626
+          "tvlUsd": 97981626,
+          "volumeUsd": 28988928.84499844,
+          "grossPoolFeesUsd": 14494.46442249922
         },
         {
           "date": "2026-08-02",
           "apyBasePct": 7.29134,
-          "tvlUsd": 99435186
+          "tvlUsd": 99435186,
+          "volumeUsd": 40258453.73298148,
+          "grossPoolFeesUsd": 20129.226866490742
         },
         {
           "date": "2026-08-03",
           "apyBasePct": 9.99931,
-          "tvlUsd": 98768452
+          "tvlUsd": 98768452,
+          "volumeUsd": 53318845.34078445,
+          "grossPoolFeesUsd": 26659.42267039223
         },
         {
           "date": "2026-08-04",
           "apyBasePct": 10.41717,
-          "tvlUsd": 99329437
+          "tvlUsd": 99329437,
+          "volumeUsd": 57444025.41284962,
+          "grossPoolFeesUsd": 28722.01270642481
         },
         {
           "date": "2026-08-05",
           "apyBasePct": 14.9809,
-          "tvlUsd": 95328311
+          "tvlUsd": 95328311,
+          "volumeUsd": 78028960.93375452,
+          "grossPoolFeesUsd": 39014.48046687726
         },
         {
           "date": "2026-08-06",
           "apyBasePct": 17.45176,
-          "tvlUsd": 95088000
+          "tvlUsd": 95088000,
+          "volumeUsd": 91018048.15314952,
+          "grossPoolFeesUsd": 45509.02407657476
         },
         {
           "date": "2026-08-07",
           "apyBasePct": 20.05701,
-          "tvlUsd": 95268753
+          "tvlUsd": 95268753,
+          "volumeUsd": 102490128.94830209,
+          "grossPoolFeesUsd": 51245.06447415105
         },
         {
           "date": "2026-08-08",
           "apyBasePct": 7.89571,
-          "tvlUsd": 95641323
+          "tvlUsd": 95641323,
+          "volumeUsd": 23758727.45049273,
+          "grossPoolFeesUsd": 11879.363725246365
         },
         {
           "date": "2026-08-09",
           "apyBasePct": 5.55272,
-          "tvlUsd": 95495827
+          "tvlUsd": 95495827,
+          "volumeUsd": 31946692.61552874,
+          "grossPoolFeesUsd": 15973.34630776437
         },
         {
           "date": "2026-08-10",
           "apyBasePct": 16.77799,
-          "tvlUsd": 94319730
+          "tvlUsd": 94319730,
+          "volumeUsd": 82780063.65511942,
+          "grossPoolFeesUsd": 41390.03182755971
         },
         {
           "date": "2026-08-11",
           "apyBasePct": 8.32826,
-          "tvlUsd": 97261863
+          "tvlUsd": 97261863,
+          "volumeUsd": 44530160.404289044,
+          "grossPoolFeesUsd": 22265.080202144523
         },
         {
           "date": "2026-08-12",
           "apyBasePct": 14.7961,
-          "tvlUsd": 97154795
+          "tvlUsd": 97154795,
+          "volumeUsd": 78874052.81103538,
+          "grossPoolFeesUsd": 39437.02640551769
         },
         {
           "date": "2026-08-13",
           "apyBasePct": 10.67495,
-          "tvlUsd": 97801746
+          "tvlUsd": 97801746,
+          "volumeUsd": 56316402.95763395,
+          "grossPoolFeesUsd": 28158.201478816976
         },
         {
           "date": "2026-08-14",
           "apyBasePct": 8.37759,
-          "tvlUsd": 97530219
+          "tvlUsd": 97530219,
+          "volumeUsd": 44358474.527347945,
+          "grossPoolFeesUsd": 22179.23726367397
         },
         {
           "date": "2026-08-15",
           "apyBasePct": 3.08358,
-          "tvlUsd": 97839087
+          "tvlUsd": 97839087,
+          "volumeUsd": 15751514.142460095,
+          "grossPoolFeesUsd": 7875.757071230048
         },
         {
           "date": "2026-08-16",
           "apyBasePct": 3.06172,
-          "tvlUsd": 97784552
+          "tvlUsd": 97784552,
+          "volumeUsd": 16646661.17232425,
+          "grossPoolFeesUsd": 8323.330586162125
         },
         {
           "date": "2026-08-17",
           "apyBasePct": 14.22962,
-          "tvlUsd": 98773631
+          "tvlUsd": 98773631,
+          "volumeUsd": 79645047.13282013,
+          "grossPoolFeesUsd": 39822.52356641006
         },
         {
           "date": "2026-08-18",
           "apyBasePct": 13.61426,
-          "tvlUsd": 99005395
+          "tvlUsd": 99005395,
+          "volumeUsd": 71461497.89593762,
+          "grossPoolFeesUsd": 35730.74894796881
         },
         {
           "date": "2026-08-19",
           "apyBasePct": 52.97023,
-          "tvlUsd": 103600944
+          "tvlUsd": 103600944,
+          "volumeUsd": 295138718.9932491,
+          "grossPoolFeesUsd": 147569.35949662456
         },
         {
           "date": "2026-08-20",
           "apyBasePct": 21.49797,
-          "tvlUsd": 104327876
+          "tvlUsd": 104327876,
+          "volumeUsd": 119562197.8942187,
+          "grossPoolFeesUsd": 59781.09894710935
         },
         {
           "date": "2026-08-21",
           "apyBasePct": 32.57572,
-          "tvlUsd": 104648052
+          "tvlUsd": 104648052,
+          "volumeUsd": 191330746.17933217,
+          "grossPoolFeesUsd": 95665.37308966609
         },
         {
           "date": "2026-08-22",
           "apyBasePct": 21.04406,
-          "tvlUsd": 103581710
+          "tvlUsd": 103581710,
+          "volumeUsd": 113575800.01399186,
+          "grossPoolFeesUsd": 56787.90000699593
         },
         {
           "date": "2026-08-23",
           "apyBasePct": 16.75192,
-          "tvlUsd": 103471415
+          "tvlUsd": 103471415,
+          "volumeUsd": 96794509.59365363,
+          "grossPoolFeesUsd": 48397.25479682682
         },
         {
           "date": "2026-08-24",
           "apyBasePct": 20.00535,
-          "tvlUsd": 104459011
+          "tvlUsd": 104459011,
+          "volumeUsd": 112333076.68746951,
+          "grossPoolFeesUsd": 56166.538343734755
         },
         {
           "date": "2026-08-25",
           "apyBasePct": 15.28083,
-          "tvlUsd": 106377173
+          "tvlUsd": 106377173,
+          "volumeUsd": 88464701.09653823,
+          "grossPoolFeesUsd": 44232.35054826912
         },
         {
           "date": "2026-08-26",
           "apyBasePct": 11.27483,
-          "tvlUsd": 106873112
+          "tvlUsd": 106873112,
+          "volumeUsd": 66685550.26925908,
+          "grossPoolFeesUsd": 33342.77513462954
         },
         {
           "date": "2026-08-27",
           "apyBasePct": 14.59339,
-          "tvlUsd": 107062757
+          "tvlUsd": 107062757,
+          "volumeUsd": 82114530.80563426,
+          "grossPoolFeesUsd": 41057.26540281713
         },
         {
           "date": "2026-08-28",
           "apyBasePct": 13.65903,
-          "tvlUsd": 105480132
+          "tvlUsd": 105480132,
+          "volumeUsd": 77420094.40371941,
+          "grossPoolFeesUsd": 38710.04720185971
         },
         {
           "date": "2026-08-29",
           "apyBasePct": 4.44211,
-          "tvlUsd": 106600440
+          "tvlUsd": 106600440,
+          "volumeUsd": 25586129.400211003,
+          "grossPoolFeesUsd": 12793.064700105502
         },
         {
           "date": "2026-08-30",
           "apyBasePct": 10.32912,
-          "tvlUsd": 106941653
+          "tvlUsd": 106941653,
+          "volumeUsd": 73036251.02405047,
+          "grossPoolFeesUsd": 36518.12551202524
         },
         {
           "date": "2026-08-31",
           "apyBasePct": 13.42936,
-          "tvlUsd": 105473892
+          "tvlUsd": 105473892,
+          "volumeUsd": 64780092.38285837,
+          "grossPoolFeesUsd": 32390.04619142919
         },
         {
           "date": "2026-09-01",
           "apyBasePct": 11.60348,
-          "tvlUsd": 104468437
+          "tvlUsd": 104468437,
+          "volumeUsd": 67084519.69556411,
+          "grossPoolFeesUsd": 33542.25984778206
         },
         {
           "date": "2026-09-02",
           "apyBasePct": 12.92937,
-          "tvlUsd": 104022634
+          "tvlUsd": 104022634,
+          "volumeUsd": 72222710.65358122,
+          "grossPoolFeesUsd": 36111.35532679061
         },
         {
           "date": "2026-09-03",
           "apyBasePct": 17.05667,
-          "tvlUsd": 105522049
+          "tvlUsd": 105522049,
+          "volumeUsd": 98736483.74095161,
+          "grossPoolFeesUsd": 49368.24187047581
         },
         {
           "date": "2026-09-04",
           "apyBasePct": 15.2326,
-          "tvlUsd": 105053039
+          "tvlUsd": 105053039,
+          "volumeUsd": 87045833.53090285,
+          "grossPoolFeesUsd": 43522.916765451424
         },
         {
           "date": "2026-09-05",
           "apyBasePct": 4.37548,
-          "tvlUsd": 105240439
+          "tvlUsd": 105240439,
+          "volumeUsd": 25193505.461810138,
+          "grossPoolFeesUsd": 12596.75273090507
         },
         {
           "date": "2026-09-06",
           "apyBasePct": 9.0526,
-          "tvlUsd": 105632861
+          "tvlUsd": 105632861,
+          "volumeUsd": 54269093.32910086,
+          "grossPoolFeesUsd": 27134.54666455043
         },
         {
           "date": "2026-09-07",
           "apyBasePct": 9.87448,
-          "tvlUsd": 105401153
+          "tvlUsd": 105401153,
+          "volumeUsd": 55533055.186029255,
+          "grossPoolFeesUsd": 27766.527593014627
         },
         {
           "date": "2026-09-08",
           "apyBasePct": 10.45944,
-          "tvlUsd": 105598151
+          "tvlUsd": 105598151,
+          "volumeUsd": 59803353.85382635,
+          "grossPoolFeesUsd": 29901.676926913176
         },
         {
           "date": "2026-09-09",
           "apyBasePct": 14.10639,
-          "tvlUsd": 105560702
+          "tvlUsd": 105560702,
+          "volumeUsd": 82434935.22376588,
+          "grossPoolFeesUsd": 41217.46761188294
         },
         {
           "date": "2026-09-10",
           "apyBasePct": 11.67988,
-          "tvlUsd": 105458697
+          "tvlUsd": 105458697,
+          "volumeUsd": 68141029.77590905,
+          "grossPoolFeesUsd": 34070.51488795452
         },
         {
           "date": "2026-09-11",
           "apyBasePct": 26.79085,
-          "tvlUsd": 106064269
+          "tvlUsd": 106064269,
+          "volumeUsd": 154634276.63920492,
+          "grossPoolFeesUsd": 77317.13831960245
         },
         {
           "date": "2026-09-12",
           "apyBasePct": 3.84859,
-          "tvlUsd": 106610594
+          "tvlUsd": 106610594,
+          "volumeUsd": 20824895.72930389,
+          "grossPoolFeesUsd": 10412.447864651946
         },
         {
           "date": "2026-09-13",
           "apyBasePct": 6.77478,
-          "tvlUsd": 105846630
+          "tvlUsd": 105846630,
+          "volumeUsd": 41074803.10726652,
+          "grossPoolFeesUsd": 20537.401553633263
         },
         {
           "date": "2026-09-14",
           "apyBasePct": 17.23404,
-          "tvlUsd": 106033949
+          "tvlUsd": 106033949,
+          "volumeUsd": 100271639.77060886,
+          "grossPoolFeesUsd": 50135.81988530443
         },
         {
           "date": "2026-09-15",
           "apyBasePct": 19.11381,
-          "tvlUsd": 104359151
+          "tvlUsd": 104359151,
+          "volumeUsd": 109562042.30005313,
+          "grossPoolFeesUsd": 54781.021150026565
         },
         {
           "date": "2026-09-16",
           "apyBasePct": 18.93281,
-          "tvlUsd": 104451666
+          "tvlUsd": 104451666,
+          "volumeUsd": 108871084.32495807,
+          "grossPoolFeesUsd": 54435.54216247904
         },
         {
           "date": "2026-09-17",
           "apyBasePct": 12.24419,
-          "tvlUsd": 103959461
+          "tvlUsd": 103959461,
+          "volumeUsd": 67706710.9869997,
+          "grossPoolFeesUsd": 33853.355493499854
         },
         {
           "date": "2026-09-18",
           "apyBasePct": 18.90297,
-          "tvlUsd": 105849031
+          "tvlUsd": 105849031,
+          "volumeUsd": 110286363.92515704,
+          "grossPoolFeesUsd": 55143.18196257852
         },
         {
           "date": "2026-09-19",
           "apyBasePct": 9.94244,
-          "tvlUsd": 105468759
+          "tvlUsd": 105468759,
+          "volumeUsd": 56904665.07261817,
+          "grossPoolFeesUsd": 28452.332536309088
         },
         {
           "date": "2026-09-20",
           "apyBasePct": 13.17475,
-          "tvlUsd": 105542256
+          "tvlUsd": 105542256,
+          "volumeUsd": 59234485.61701247,
+          "grossPoolFeesUsd": 29617.242808506235
         },
         {
           "date": "2026-09-21",
           "apyBasePct": 18.72794,
-          "tvlUsd": 100904955
+          "tvlUsd": 100904955,
+          "volumeUsd": 102721004.93324555,
+          "grossPoolFeesUsd": 51360.50246662278
         },
         {
           "date": "2026-09-22",
           "apyBasePct": 11.61916,
-          "tvlUsd": 100681005
+          "tvlUsd": 100681005,
+          "volumeUsd": 64125194.235456385,
+          "grossPoolFeesUsd": 32062.597117728194
         },
         {
           "date": "2026-09-23",
           "apyBasePct": 10.35411,
-          "tvlUsd": 100056624
+          "tvlUsd": 100056624,
+          "volumeUsd": 56435354.78885268,
+          "grossPoolFeesUsd": 28217.67739442634
         },
         {
           "date": "2026-09-24",
           "apyBasePct": 10.99048,
-          "tvlUsd": 99279819
+          "tvlUsd": 99279819,
+          "volumeUsd": 58759692.2447688,
+          "grossPoolFeesUsd": 29379.8461223844
         },
         {
           "date": "2026-09-25",
           "apyBasePct": 7.77015,
-          "tvlUsd": 99417045
+          "tvlUsd": 99417045,
+          "volumeUsd": 41951647.52698543,
+          "grossPoolFeesUsd": 20975.823763492714
         }
       ]
     },
     {
-      "id": "wbtc-weth-005",
+      "id": "weth-usdt-03",
       "observations": [
         {
+          "date": "2026-03-30",
+          "apyBasePct": 32.11515,
+          "tvlUsd": 66941541,
+          "volumeUsd": 20219300.50143297,
+          "grossPoolFeesUsd": 60657.90150429891
+        },
+        {
+          "date": "2026-03-31",
+          "apyBasePct": 58.12932,
+          "tvlUsd": 68714497,
+          "volumeUsd": 37590557.5495681,
+          "grossPoolFeesUsd": 112771.6726487043
+        },
+        {
+          "date": "2026-04-01",
+          "apyBasePct": 50.02872,
+          "tvlUsd": 69438876,
+          "volumeUsd": 30447860.63016238,
+          "grossPoolFeesUsd": 91343.58189048714
+        },
+        {
+          "date": "2026-04-02",
+          "apyBasePct": 38.01593,
+          "tvlUsd": 67761463,
+          "volumeUsd": 23478692.1993158,
+          "grossPoolFeesUsd": 70436.07659794741
+        },
+        {
+          "date": "2026-04-03",
+          "apyBasePct": 9.00379,
+          "tvlUsd": 68640975,
+          "volumeUsd": 5221676.758886091,
+          "grossPoolFeesUsd": 15665.030276658275
+        },
+        {
+          "date": "2026-04-04",
+          "apyBasePct": 3.63007,
+          "tvlUsd": 68919380,
+          "volumeUsd": 2283227.597429937,
+          "grossPoolFeesUsd": 6849.682792289812
+        },
+        {
+          "date": "2026-04-05",
+          "apyBasePct": 15.73232,
+          "tvlUsd": 69752758,
+          "volumeUsd": 13714242.759772291,
+          "grossPoolFeesUsd": 41142.72827931688
+        },
+        {
+          "date": "2026-04-06",
+          "apyBasePct": 33.75061,
+          "tvlUsd": 70348558,
+          "volumeUsd": 19579312.325369533,
+          "grossPoolFeesUsd": 58737.9369761086
+        },
+        {
+          "date": "2026-04-07",
+          "apyBasePct": 48.82966,
+          "tvlUsd": 71848653,
+          "volumeUsd": 35627380.45378557,
+          "grossPoolFeesUsd": 106882.14136135671
+        },
+        {
+          "date": "2026-04-08",
+          "apyBasePct": 37.8247,
+          "tvlUsd": 69784772,
+          "volumeUsd": 19572685.48780796,
+          "grossPoolFeesUsd": 58718.056463423876
+        },
+        {
+          "date": "2026-04-09",
+          "apyBasePct": 28.16406,
+          "tvlUsd": 69924799,
+          "volumeUsd": 18497990.699675746,
+          "grossPoolFeesUsd": 55493.97209902724
+        },
+        {
+          "date": "2026-04-10",
+          "apyBasePct": 35.37939,
+          "tvlUsd": 73442991,
+          "volumeUsd": 23754771.88282074,
+          "grossPoolFeesUsd": 71264.31564846222
+        },
+        {
+          "date": "2026-04-11",
+          "apyBasePct": 21.87317,
+          "tvlUsd": 76198665,
+          "volumeUsd": 14761537.88342367,
+          "grossPoolFeesUsd": 44284.61365027101
+        },
+        {
+          "date": "2026-04-12",
+          "apyBasePct": 25.0431,
+          "tvlUsd": 73360944,
+          "volumeUsd": 16236207.557197487,
+          "grossPoolFeesUsd": 48708.622671592464
+        },
+        {
+          "date": "2026-04-13",
+          "apyBasePct": 36.92606,
+          "tvlUsd": 76133767,
+          "volumeUsd": 27694053.901942257,
+          "grossPoolFeesUsd": 83082.16170582677
+        },
+        {
+          "date": "2026-04-14",
+          "apyBasePct": 45.1126,
+          "tvlUsd": 73828877,
+          "volumeUsd": 28327355.143138904,
+          "grossPoolFeesUsd": 84982.06542941672
+        },
+        {
+          "date": "2026-04-15",
+          "apyBasePct": 26.3884,
+          "tvlUsd": 75219004,
+          "volumeUsd": 18393902.216916583,
+          "grossPoolFeesUsd": 55181.70665074975
+        },
+        {
+          "date": "2026-04-16",
+          "apyBasePct": 41.53382,
+          "tvlUsd": 75660649,
+          "volumeUsd": 28371685.081725657,
+          "grossPoolFeesUsd": 85115.05524517698
+        },
+        {
+          "date": "2026-04-17",
+          "apyBasePct": 31.5973,
+          "tvlUsd": 81758107,
+          "volumeUsd": 24114331.929260094,
+          "grossPoolFeesUsd": 72342.99578778028
+        },
+        {
+          "date": "2026-04-18",
+          "apyBasePct": 12.52877,
+          "tvlUsd": 80765147,
+          "volumeUsd": 8496142.388190368,
+          "grossPoolFeesUsd": 25488.427164571105
+        },
+        {
+          "date": "2026-04-19",
+          "apyBasePct": 27.31215,
+          "tvlUsd": 72751087,
+          "volumeUsd": 18509017.111723043,
+          "grossPoolFeesUsd": 55527.05133516913
+        },
+        {
+          "date": "2026-04-20",
+          "apyBasePct": 49.93906,
+          "tvlUsd": 70848250,
+          "volumeUsd": 32190738.796032637,
+          "grossPoolFeesUsd": 96572.21638809792
+        },
+        {
+          "date": "2026-04-21",
+          "apyBasePct": 32.42769,
+          "tvlUsd": 69290060,
+          "volumeUsd": 21532771.50564576,
+          "grossPoolFeesUsd": 64598.31451693728
+        },
+        {
+          "date": "2026-04-22",
+          "apyBasePct": 22.76611,
+          "tvlUsd": 70678533,
+          "volumeUsd": 14856739.689249326,
+          "grossPoolFeesUsd": 44570.21906774798
+        },
+        {
+          "date": "2026-04-23",
+          "apyBasePct": 30.40205,
+          "tvlUsd": 69437874,
+          "volumeUsd": 18051341.16422615,
+          "grossPoolFeesUsd": 54154.02349267845
+        },
+        {
+          "date": "2026-04-24",
+          "apyBasePct": 13.84349,
+          "tvlUsd": 69378593,
+          "volumeUsd": 8744904.525475552,
+          "grossPoolFeesUsd": 26234.713576426657
+        },
+        {
+          "date": "2026-04-25",
+          "apyBasePct": 3.9724,
+          "tvlUsd": 69586608,
+          "volumeUsd": 2527827.323668816,
+          "grossPoolFeesUsd": 7583.4819710064485
+        },
+        {
+          "date": "2026-04-26",
+          "apyBasePct": 11.31694,
+          "tvlUsd": 69950792,
+          "volumeUsd": 7871840.730214293,
+          "grossPoolFeesUsd": 23615.52219064288
+        },
+        {
+          "date": "2026-04-27",
+          "apyBasePct": 26.1803,
+          "tvlUsd": 74231389,
+          "volumeUsd": 18041240.812630378,
+          "grossPoolFeesUsd": 54123.722437891134
+        },
+        {
+          "date": "2026-04-28",
+          "apyBasePct": 22.23378,
+          "tvlUsd": 74367950,
+          "volumeUsd": 14206963.320650488,
+          "grossPoolFeesUsd": 42620.88996195146
+        },
+        {
+          "date": "2026-04-29",
+          "apyBasePct": 33.43845,
+          "tvlUsd": 75638842,
+          "volumeUsd": 23104451.48900508,
+          "grossPoolFeesUsd": 69313.35446701525
+        },
+        {
+          "date": "2026-04-30",
+          "apyBasePct": 18.58549,
+          "tvlUsd": 80308692,
+          "volumeUsd": 13698884.92777746,
+          "grossPoolFeesUsd": 41096.65478333238
+        },
+        {
+          "date": "2026-05-01",
+          "apyBasePct": 5.3626,
+          "tvlUsd": 81906866,
+          "volumeUsd": 12687919.634678166,
+          "grossPoolFeesUsd": 38063.7589040345
+        },
+        {
+          "date": "2026-05-02",
+          "apyBasePct": 7.88955,
+          "tvlUsd": 81476036,
+          "volumeUsd": 5994809.544552241,
+          "grossPoolFeesUsd": 17984.428633656724
+        },
+        {
+          "date": "2026-05-03",
+          "apyBasePct": 12.33216,
+          "tvlUsd": 81629941,
+          "volumeUsd": 10589965.517144077,
+          "grossPoolFeesUsd": 31769.89655143223
+        },
+        {
+          "date": "2026-05-04",
+          "apyBasePct": 41.8658,
+          "tvlUsd": 83121740,
+          "volumeUsd": 30892202.969171815,
+          "grossPoolFeesUsd": 92676.60890751545
+        },
+        {
+          "date": "2026-05-05",
+          "apyBasePct": 20.58265,
+          "tvlUsd": 83664533,
+          "volumeUsd": 14874503.110927343,
+          "grossPoolFeesUsd": 44623.50933278203
+        },
+        {
+          "date": "2026-05-06",
+          "apyBasePct": 23.27178,
+          "tvlUsd": 82682642,
+          "volumeUsd": 17659373.889592577,
+          "grossPoolFeesUsd": 52978.121668777734
+        },
+        {
+          "date": "2026-05-07",
+          "apyBasePct": 21.2454,
+          "tvlUsd": 86006643,
+          "volumeUsd": 16107140.849163353,
+          "grossPoolFeesUsd": 48321.42254749006
+        },
+        {
+          "date": "2026-05-08",
+          "apyBasePct": 19.85729,
+          "tvlUsd": 86341778,
+          "volumeUsd": 15952250.24178642,
+          "grossPoolFeesUsd": 47856.75072535926
+        },
+        {
+          "date": "2026-05-09",
+          "apyBasePct": 8.11547,
+          "tvlUsd": 87563260,
+          "volumeUsd": 6557478.110321764,
+          "grossPoolFeesUsd": 19672.43433096529
+        },
+        {
+          "date": "2026-05-10",
+          "apyBasePct": 20.61061,
+          "tvlUsd": 85539238,
+          "volumeUsd": 15748263.079337202,
+          "grossPoolFeesUsd": 47244.78923801161
+        },
+        {
+          "date": "2026-05-11",
+          "apyBasePct": 20.06301,
+          "tvlUsd": 85751189,
+          "volumeUsd": 15517488.624475705,
+          "grossPoolFeesUsd": 46552.465873427114
+        },
+        {
+          "date": "2026-05-12",
+          "apyBasePct": 19.11017,
+          "tvlUsd": 85344484,
+          "volumeUsd": 15372958.455584208,
+          "grossPoolFeesUsd": 46118.875366752625
+        },
+        {
+          "date": "2026-05-13",
+          "apyBasePct": 23.57223,
+          "tvlUsd": 89016266,
+          "volumeUsd": 18583882.33402989,
+          "grossPoolFeesUsd": 55751.647002089674
+        },
+        {
+          "date": "2026-05-14",
+          "apyBasePct": 27.3045,
+          "tvlUsd": 90579011,
+          "volumeUsd": 23603339.166232284,
+          "grossPoolFeesUsd": 70810.01749869685
+        },
+        {
+          "date": "2026-05-15",
+          "apyBasePct": 16.32675,
+          "tvlUsd": 85521684,
+          "volumeUsd": 20548294.28317533,
+          "grossPoolFeesUsd": 61644.882849525995
+        },
+        {
+          "date": "2026-05-16",
+          "apyBasePct": 11.72548,
+          "tvlUsd": 88950943,
+          "volumeUsd": 9502574.696268776,
+          "grossPoolFeesUsd": 28507.72408880633
+        },
+        {
+          "date": "2026-05-17",
+          "apyBasePct": 7.49044,
+          "tvlUsd": 90425241,
+          "volumeUsd": 13718397.422772631,
+          "grossPoolFeesUsd": 41155.19226831789
+        },
+        {
+          "date": "2026-05-18",
+          "apyBasePct": 38.24702,
+          "tvlUsd": 84694647,
+          "volumeUsd": 22344886.227641236,
+          "grossPoolFeesUsd": 67034.6586829237
+        },
+        {
+          "date": "2026-05-19",
+          "apyBasePct": 15.38192,
+          "tvlUsd": 90776767,
+          "volumeUsd": 12858723.807626253,
+          "grossPoolFeesUsd": 38576.17142287876
+        },
+        {
+          "date": "2026-05-20",
+          "apyBasePct": 14.60317,
+          "tvlUsd": 90791113,
+          "volumeUsd": 11737199.5168666,
+          "grossPoolFeesUsd": 35211.5985505998
+        },
+        {
+          "date": "2026-05-21",
+          "apyBasePct": 25.01452,
+          "tvlUsd": 92746339,
+          "volumeUsd": 21427825.78937313,
+          "grossPoolFeesUsd": 64283.47736811939
+        },
+        {
+          "date": "2026-05-22",
+          "apyBasePct": 15.01047,
+          "tvlUsd": 91163299,
+          "volumeUsd": 13139102.67137096,
+          "grossPoolFeesUsd": 39417.30801411288
+        },
+        {
+          "date": "2026-05-23",
+          "apyBasePct": 32.25348,
+          "tvlUsd": 85628047,
+          "volumeUsd": 24852653.12068678,
+          "grossPoolFeesUsd": 74557.95936206034
+        },
+        {
+          "date": "2026-05-24",
+          "apyBasePct": 20.97743,
+          "tvlUsd": 88030418,
+          "volumeUsd": 17203050.870256156,
+          "grossPoolFeesUsd": 51609.15261076847
+        },
+        {
+          "date": "2026-05-25",
+          "apyBasePct": 15.69921,
+          "tvlUsd": 86812070,
+          "volumeUsd": 11623274.316254644,
+          "grossPoolFeesUsd": 34869.82294876393
+        },
+        {
+          "date": "2026-05-26",
+          "apyBasePct": 29.73134,
+          "tvlUsd": 83741162,
+          "volumeUsd": 22124344.37256805,
+          "grossPoolFeesUsd": 66373.03311770415
+        },
+        {
+          "date": "2026-05-27",
+          "apyBasePct": 30.81631,
+          "tvlUsd": 87375456,
+          "volumeUsd": 24978089.851880424,
+          "grossPoolFeesUsd": 74934.26955564127
+        },
+        {
+          "date": "2026-05-28",
+          "apyBasePct": 27.32771,
+          "tvlUsd": 88732774,
+          "volumeUsd": 21653800.38086591,
+          "grossPoolFeesUsd": 64961.40114259773
+        },
+        {
+          "date": "2026-05-29",
+          "apyBasePct": 27.54952,
+          "tvlUsd": 88908827,
+          "volumeUsd": 22877075.56501425,
+          "grossPoolFeesUsd": 68631.22669504276
+        },
+        {
+          "date": "2026-05-30",
+          "apyBasePct": 7.00556,
+          "tvlUsd": 89545885,
+          "volumeUsd": 5274142.905282352,
+          "grossPoolFeesUsd": 15822.428715847056
+        },
+        {
+          "date": "2026-05-31",
+          "apyBasePct": 7.75359,
+          "tvlUsd": 88300199,
+          "volumeUsd": 8715206.300410295,
+          "grossPoolFeesUsd": 26145.618901230886
+        },
+        {
+          "date": "2026-06-01",
+          "apyBasePct": 31.23365,
+          "tvlUsd": 87737278,
+          "volumeUsd": 22744485.64974967,
+          "grossPoolFeesUsd": 68233.45694924901
+        },
+        {
+          "date": "2026-06-02",
+          "apyBasePct": 43.20475,
+          "tvlUsd": 80076367,
+          "volumeUsd": 34151474.67274993,
+          "grossPoolFeesUsd": 102454.42401824979
+        },
+        {
+          "date": "2026-06-03",
+          "apyBasePct": 60.2814,
+          "tvlUsd": 73358141,
+          "volumeUsd": 38547965.60128187,
+          "grossPoolFeesUsd": 115643.89680384561
+        },
+        {
+          "date": "2026-06-04",
+          "apyBasePct": 65.03403,
+          "tvlUsd": 70764755,
+          "volumeUsd": 42239558.97114857,
+          "grossPoolFeesUsd": 126718.67691344573
+        },
+        {
+          "date": "2026-06-05",
+          "apyBasePct": 194.06701,
+          "tvlUsd": 61897836,
+          "volumeUsd": 110330041.80273551,
+          "grossPoolFeesUsd": 330990.12540820654
+        },
+        {
+          "date": "2026-06-06",
+          "apyBasePct": 75.73382,
+          "tvlUsd": 69228325,
+          "volumeUsd": 46539851.59172233,
+          "grossPoolFeesUsd": 139619.554775167
+        },
+        {
+          "date": "2026-06-07",
+          "apyBasePct": 45.31672,
+          "tvlUsd": 73002187,
+          "volumeUsd": 30186064.14221673,
+          "grossPoolFeesUsd": 90558.19242665019
+        },
+        {
+          "date": "2026-06-08",
+          "apyBasePct": 40.56503,
+          "tvlUsd": 75103433,
+          "volumeUsd": 29371765.204731096,
+          "grossPoolFeesUsd": 88115.2956141933
+        },
+        {
+          "date": "2026-06-09",
+          "apyBasePct": 37.13962,
+          "tvlUsd": 74025445,
+          "volumeUsd": 23298944.948957108,
+          "grossPoolFeesUsd": 69896.83484687132
+        },
+        {
+          "date": "2026-06-10",
+          "apyBasePct": 42.42307,
+          "tvlUsd": 71658625,
+          "volumeUsd": 28313788.693444315,
+          "grossPoolFeesUsd": 84941.36608033295
+        },
+        {
+          "date": "2026-06-11",
+          "apyBasePct": 37.96153,
+          "tvlUsd": 73564598,
+          "volumeUsd": 24824650.891419858,
+          "grossPoolFeesUsd": 74473.95267425958
+        },
+        {
+          "date": "2026-06-12",
+          "apyBasePct": 26.24427,
+          "tvlUsd": 73005811,
+          "volumeUsd": 17250289.58249566,
+          "grossPoolFeesUsd": 51750.86874748698
+        },
+        {
+          "date": "2026-06-13",
+          "apyBasePct": 12.85136,
+          "tvlUsd": 73870848,
+          "volumeUsd": 8927978.050625559,
+          "grossPoolFeesUsd": 26783.934151876678
+        },
+        {
+          "date": "2026-06-14",
+          "apyBasePct": 31.55162,
+          "tvlUsd": 75060141,
+          "volumeUsd": 21419810.97981132,
+          "grossPoolFeesUsd": 64259.43293943396
+        },
+        {
+          "date": "2026-06-15",
+          "apyBasePct": 35.99783,
+          "tvlUsd": 75924729,
+          "volumeUsd": 25546345.51786075,
+          "grossPoolFeesUsd": 76639.03655358225
+        },
+        {
+          "date": "2026-06-16",
+          "apyBasePct": 41.86759,
+          "tvlUsd": 75992251,
+          "volumeUsd": 28301107.62855137,
+          "grossPoolFeesUsd": 84903.32288565411
+        },
+        {
+          "date": "2026-06-17",
+          "apyBasePct": 52.87511,
+          "tvlUsd": 74706816,
+          "volumeUsd": 36235738.29444927,
+          "grossPoolFeesUsd": 108707.21488334781
+        },
+        {
+          "date": "2026-06-18",
+          "apyBasePct": 33.25795,
+          "tvlUsd": 74610396,
+          "volumeUsd": 22414966.497253917,
+          "grossPoolFeesUsd": 67244.89949176175
+        },
+        {
+          "date": "2026-06-19",
+          "apyBasePct": 18.44774,
+          "tvlUsd": 76621425,
+          "volumeUsd": 12944050.762775842,
+          "grossPoolFeesUsd": 38832.152288327525
+        },
+        {
+          "date": "2026-06-20",
+          "apyBasePct": 19.94125,
+          "tvlUsd": 77778948,
+          "volumeUsd": 12783680.394478254,
+          "grossPoolFeesUsd": 38351.04118343476
+        },
+        {
+          "date": "2026-06-21",
+          "apyBasePct": 12.69851,
+          "tvlUsd": 76917899,
+          "volumeUsd": 9524674.750454856,
+          "grossPoolFeesUsd": 28574.024251364568
+        },
+        {
+          "date": "2026-06-22",
+          "apyBasePct": 29.29742,
+          "tvlUsd": 78799182,
+          "volumeUsd": 20861681.02333465,
+          "grossPoolFeesUsd": 62585.04307000394
+        },
+        {
+          "date": "2026-06-23",
+          "apyBasePct": 37.41787,
+          "tvlUsd": 76292624,
+          "volumeUsd": 25894090.2289096,
+          "grossPoolFeesUsd": 77682.2706867288
+        },
+        {
+          "date": "2026-06-24",
+          "apyBasePct": 64.7065,
+          "tvlUsd": 74754609,
+          "volumeUsd": 43428489.76540211,
+          "grossPoolFeesUsd": 130285.46929620633
+        },
+        {
+          "date": "2026-06-25",
+          "apyBasePct": 72.86921,
+          "tvlUsd": 72944019,
+          "volumeUsd": 48922242.6813065,
+          "grossPoolFeesUsd": 146766.72804391952
+        },
+        {
           "date": "2026-06-26",
-          "apyBasePct": 19.12788,
-          "tvlUsd": 39604662
+          "apyBasePct": 61.20683,
+          "tvlUsd": 73633414,
+          "volumeUsd": 40470991.740015164,
+          "grossPoolFeesUsd": 121412.9752200455
         },
         {
           "date": "2026-06-27",
-          "apyBasePct": 3.98682,
-          "tvlUsd": 39579990
+          "apyBasePct": 11.02311,
+          "tvlUsd": 74809800,
+          "volumeUsd": 8922212.073584758,
+          "grossPoolFeesUsd": 26766.636220754273
         },
         {
           "date": "2026-06-28",
-          "apyBasePct": 5.5386,
-          "tvlUsd": 39261295
+          "apyBasePct": 17.15823,
+          "tvlUsd": 73664876,
+          "volumeUsd": 15162920.770731378,
+          "grossPoolFeesUsd": 45488.762312194136
         },
         {
           "date": "2026-06-29",
-          "apyBasePct": 11.30888,
-          "tvlUsd": 40782477
+          "apyBasePct": 55.63208,
+          "tvlUsd": 77039129,
+          "volumeUsd": 37690528.87977638,
+          "grossPoolFeesUsd": 113071.58663932915
         },
         {
           "date": "2026-06-30",
-          "apyBasePct": 8.66169,
-          "tvlUsd": 39720627
+          "apyBasePct": 25.20008,
+          "tvlUsd": 75601706,
+          "volumeUsd": 16890703.07033592,
+          "grossPoolFeesUsd": 50672.109211007766
         },
         {
           "date": "2026-07-01",
-          "apyBasePct": 7.4977,
-          "tvlUsd": 41066392
+          "apyBasePct": 43.51408,
+          "tvlUsd": 77499354,
+          "volumeUsd": 31874510.92337044,
+          "grossPoolFeesUsd": 95623.53277011133
         },
         {
           "date": "2026-07-02",
-          "apyBasePct": 13.89174,
-          "tvlUsd": 42501823
+          "apyBasePct": 38.80782,
+          "tvlUsd": 80491324,
+          "volumeUsd": 27705248.58901211,
+          "grossPoolFeesUsd": 83115.74576703632
         },
         {
           "date": "2026-07-03",
-          "apyBasePct": 5.58656,
-          "tvlUsd": 41983734
+          "apyBasePct": 30.76803,
+          "tvlUsd": 82265550,
+          "volumeUsd": 22871825.722431112,
+          "grossPoolFeesUsd": 68615.47716729334
         },
         {
           "date": "2026-07-04",
-          "apyBasePct": 8.18757,
-          "tvlUsd": 40358385
+          "apyBasePct": 20.33809,
+          "tvlUsd": 83472168,
+          "volumeUsd": 16653991.018356828,
+          "grossPoolFeesUsd": 49961.973055070484
         },
         {
           "date": "2026-07-05",
-          "apyBasePct": 4.20998,
-          "tvlUsd": 40656749
+          "apyBasePct": 18.59053,
+          "tvlUsd": 82844089,
+          "volumeUsd": 14456895.65077076,
+          "grossPoolFeesUsd": 43370.68695231228
         },
         {
           "date": "2026-07-06",
-          "apyBasePct": 6.00868,
-          "tvlUsd": 41016763
+          "apyBasePct": 49.04296,
+          "tvlUsd": 83714609,
+          "volumeUsd": 37405954.81983138,
+          "grossPoolFeesUsd": 112217.86445949414
         },
         {
           "date": "2026-07-07",
-          "apyBasePct": 3.91487,
-          "tvlUsd": 40493953
+          "apyBasePct": 44.97755,
+          "tvlUsd": 83593000,
+          "volumeUsd": 33813001.19790765,
+          "grossPoolFeesUsd": 101439.00359372295
         },
         {
           "date": "2026-07-08",
-          "apyBasePct": 3.27393,
-          "tvlUsd": 39634807
+          "apyBasePct": 26.60136,
+          "tvlUsd": 83429845,
+          "volumeUsd": 20048714.46738266,
+          "grossPoolFeesUsd": 60146.14340214797
         },
         {
           "date": "2026-07-09",
-          "apyBasePct": 4.55595,
-          "tvlUsd": 43942028
+          "apyBasePct": 20.5286,
+          "tvlUsd": 83715671,
+          "volumeUsd": 15879896.516635595,
+          "grossPoolFeesUsd": 47639.68954990678
         },
         {
           "date": "2026-07-10",
-          "apyBasePct": 5.40375,
-          "tvlUsd": 41701236
+          "apyBasePct": 26.73848,
+          "tvlUsd": 85563413,
+          "volumeUsd": 20824991.834945716,
+          "grossPoolFeesUsd": 62474.97550483715
         },
         {
           "date": "2026-07-11",
-          "apyBasePct": 4.73701,
-          "tvlUsd": 41959500
+          "apyBasePct": 13.54069,
+          "tvlUsd": 84881858,
+          "volumeUsd": 12899446.125518022,
+          "grossPoolFeesUsd": 38698.338376554064
         },
         {
           "date": "2026-07-12",
-          "apyBasePct": 4.96895,
-          "tvlUsd": 41673766
+          "apyBasePct": 16.34019,
+          "tvlUsd": 83392002,
+          "volumeUsd": 9822481.619860698,
+          "grossPoolFeesUsd": 29467.444859582094
         },
         {
           "date": "2026-07-13",
-          "apyBasePct": 6.78586,
-          "tvlUsd": 38505040
+          "apyBasePct": 36.96402,
+          "tvlUsd": 82037787,
+          "volumeUsd": 28950336.618977718,
+          "grossPoolFeesUsd": 86851.00985693316
         },
         {
           "date": "2026-07-14",
-          "apyBasePct": 11.47461,
-          "tvlUsd": 39856552
+          "apyBasePct": 31.43941,
+          "tvlUsd": 85656885,
+          "volumeUsd": 23781523.102066364,
+          "grossPoolFeesUsd": 71344.56930619909
         },
         {
           "date": "2026-07-15",
-          "apyBasePct": 7.13249,
-          "tvlUsd": 41157501
+          "apyBasePct": 29.41849,
+          "tvlUsd": 85567532,
+          "volumeUsd": 22776195.491972473,
+          "grossPoolFeesUsd": 68328.58647591741
         },
         {
           "date": "2026-07-16",
-          "apyBasePct": 5.11037,
-          "tvlUsd": 43989265
+          "apyBasePct": 26.48144,
+          "tvlUsd": 86522116,
+          "volumeUsd": 21696704.587751072,
+          "grossPoolFeesUsd": 65090.11376325322
         },
         {
           "date": "2026-07-17",
-          "apyBasePct": 3.42801,
-          "tvlUsd": 40560538
+          "apyBasePct": 43.72532,
+          "tvlUsd": 84646048,
+          "volumeUsd": 32800218.238668326,
+          "grossPoolFeesUsd": 98400.65471600498
         },
         {
           "date": "2026-07-18",
-          "apyBasePct": 2.18029,
-          "tvlUsd": 40403079
+          "apyBasePct": 4.21616,
+          "tvlUsd": 84976561,
+          "volumeUsd": 3365914.492507514,
+          "grossPoolFeesUsd": 10097.743477522543
         },
         {
           "date": "2026-07-19",
-          "apyBasePct": 7.18807,
-          "tvlUsd": 43641836
+          "apyBasePct": 9.74941,
+          "tvlUsd": 84538611,
+          "volumeUsd": 7771661.6164620165,
+          "grossPoolFeesUsd": 23314.984849386048
         },
         {
           "date": "2026-07-20",
-          "apyBasePct": 8.87547,
-          "tvlUsd": 40796195
+          "apyBasePct": 43.68351,
+          "tvlUsd": 85173097,
+          "volumeUsd": 33913263.71997122,
+          "grossPoolFeesUsd": 101739.79115991366
         },
         {
           "date": "2026-07-21",
-          "apyBasePct": 5.45095,
-          "tvlUsd": 40360672
+          "apyBasePct": 15.35765,
+          "tvlUsd": 86229429,
+          "volumeUsd": 12616279.280605225,
+          "grossPoolFeesUsd": 37848.83784181568
         },
         {
           "date": "2026-07-22",
-          "apyBasePct": 6.72772,
-          "tvlUsd": 41346171
+          "apyBasePct": 24.59475,
+          "tvlUsd": 86682331,
+          "volumeUsd": 19162493.443829533,
+          "grossPoolFeesUsd": 57487.4803314886
         },
         {
           "date": "2026-07-23",
-          "apyBasePct": 5.62058,
-          "tvlUsd": 40460944
+          "apyBasePct": 18.64279,
+          "tvlUsd": 85064051,
+          "volumeUsd": 13897830.252056215,
+          "grossPoolFeesUsd": 41693.49075616865
         },
         {
           "date": "2026-07-24",
-          "apyBasePct": 6.75682,
-          "tvlUsd": 39916690
+          "apyBasePct": 21.54186,
+          "tvlUsd": 84862632,
+          "volumeUsd": 15527631.230142403,
+          "grossPoolFeesUsd": 46582.89369042721
         },
         {
           "date": "2026-07-25",
-          "apyBasePct": 1.65382,
-          "tvlUsd": 40080025
+          "apyBasePct": 3.3673,
+          "tvlUsd": 85293616,
+          "volumeUsd": 2612588.596419821,
+          "grossPoolFeesUsd": 7837.765789259463
         },
         {
           "date": "2026-07-26",
-          "apyBasePct": 2.65836,
-          "tvlUsd": 40764147
+          "apyBasePct": 11.41587,
+          "tvlUsd": 86520311,
+          "volumeUsd": 12357410.869094942,
+          "grossPoolFeesUsd": 37072.23260728482
         },
         {
           "date": "2026-07-27",
-          "apyBasePct": 6.95279,
-          "tvlUsd": 39889162
+          "apyBasePct": 37.52117,
+          "tvlUsd": 82212200,
+          "volumeUsd": 26176232.256356835,
+          "grossPoolFeesUsd": 78528.6967690705
         },
         {
           "date": "2026-07-28",
-          "apyBasePct": 6.63647,
-          "tvlUsd": 40290151
+          "apyBasePct": 33.05081,
+          "tvlUsd": 84736902,
+          "volumeUsd": 26390285.58170207,
+          "grossPoolFeesUsd": 79170.85674510621
         },
         {
           "date": "2026-07-29",
-          "apyBasePct": 6.75308,
-          "tvlUsd": 40222680
+          "apyBasePct": 42.50698,
+          "tvlUsd": 84879959,
+          "volumeUsd": 31127779.780314974,
+          "grossPoolFeesUsd": 93383.33934094492
         },
         {
           "date": "2026-07-30",
-          "apyBasePct": 4.00538,
-          "tvlUsd": 40716152
+          "apyBasePct": 13.49302,
+          "tvlUsd": 85085071,
+          "volumeUsd": 11292148.929079762,
+          "grossPoolFeesUsd": 33876.446787239285
         },
         {
           "date": "2026-07-31",
-          "apyBasePct": 7.49372,
-          "tvlUsd": 40596307
+          "apyBasePct": 24.71526,
+          "tvlUsd": 83144388,
+          "volumeUsd": 17311405.901054826,
+          "grossPoolFeesUsd": 51934.217703164475
         },
         {
           "date": "2026-08-01",
-          "apyBasePct": 4.24328,
-          "tvlUsd": 40392078
+          "apyBasePct": 11.50922,
+          "tvlUsd": 82934937,
+          "volumeUsd": 8247960.948053909,
+          "grossPoolFeesUsd": 24743.882844161726
         },
         {
           "date": "2026-08-02",
-          "apyBasePct": 3.80087,
-          "tvlUsd": 42981866
+          "apyBasePct": 18.00599,
+          "tvlUsd": 84089087,
+          "volumeUsd": 13954664.750818525,
+          "grossPoolFeesUsd": 41863.99425245557
         },
         {
           "date": "2026-08-03",
-          "apyBasePct": 3.62134,
-          "tvlUsd": 42700089
+          "apyBasePct": 22.12466,
+          "tvlUsd": 83564667,
+          "volumeUsd": 16419707.537569908,
+          "grossPoolFeesUsd": 49259.122612709725
         },
         {
           "date": "2026-08-04",
-          "apyBasePct": 3.92268,
-          "tvlUsd": 42573211
+          "apyBasePct": 17.06894,
+          "tvlUsd": 83896369,
+          "volumeUsd": 13432266.312886432,
+          "grossPoolFeesUsd": 40296.798938659296
         },
         {
           "date": "2026-08-05",
-          "apyBasePct": 7.45807,
-          "tvlUsd": 43114813
+          "apyBasePct": 23.92411,
+          "tvlUsd": 76048062,
+          "volumeUsd": 16175339.716815148,
+          "grossPoolFeesUsd": 48526.01915044544
         },
         {
           "date": "2026-08-06",
-          "apyBasePct": 3.46803,
-          "tvlUsd": 42993450
+          "apyBasePct": 9.89954,
+          "tvlUsd": 76179254,
+          "volumeUsd": 7440567.705939717,
+          "grossPoolFeesUsd": 22321.70311781915
         },
         {
           "date": "2026-08-07",
-          "apyBasePct": 5.38534,
-          "tvlUsd": 43333399
+          "apyBasePct": 15.16667,
+          "tvlUsd": 76244908,
+          "volumeUsd": 9993006.526877055,
+          "grossPoolFeesUsd": 29979.019580631164
         },
         {
           "date": "2026-08-08",
-          "apyBasePct": 4.32405,
-          "tvlUsd": 43362254
+          "apyBasePct": 1.53404,
+          "tvlUsd": 77977592,
+          "volumeUsd": 892642.4292019259,
+          "grossPoolFeesUsd": 2677.9272876057776
         },
         {
           "date": "2026-08-09",
-          "apyBasePct": 2.38027,
-          "tvlUsd": 42890630
+          "apyBasePct": 5.70027,
+          "tvlUsd": 78156018,
+          "volumeUsd": 4846319.62655329,
+          "grossPoolFeesUsd": 14538.95887965987
         },
         {
           "date": "2026-08-10",
-          "apyBasePct": 4.79363,
-          "tvlUsd": 42087977
+          "apyBasePct": 17.91282,
+          "tvlUsd": 76986984,
+          "volumeUsd": 11567452.344279576,
+          "grossPoolFeesUsd": 34702.35703283873
         },
         {
           "date": "2026-08-11",
-          "apyBasePct": 4.24909,
-          "tvlUsd": 42045103
+          "apyBasePct": 12.62671,
+          "tvlUsd": 79758981,
+          "volumeUsd": 9199222.514422359,
+          "grossPoolFeesUsd": 27597.667543267078
         },
         {
           "date": "2026-08-12",
-          "apyBasePct": 9.08988,
-          "tvlUsd": 42131821
+          "apyBasePct": 17.41937,
+          "tvlUsd": 79556604,
+          "volumeUsd": 12675912.923113076,
+          "grossPoolFeesUsd": 38027.73876933923
         },
         {
           "date": "2026-08-13",
-          "apyBasePct": 5.61691,
-          "tvlUsd": 42330482
+          "apyBasePct": 17.44161,
+          "tvlUsd": 79886653,
+          "volumeUsd": 12426174.749169081,
+          "grossPoolFeesUsd": 37278.524247507245
         },
         {
           "date": "2026-08-14",
-          "apyBasePct": 3.94213,
-          "tvlUsd": 42081785
+          "apyBasePct": 7.67232,
+          "tvlUsd": 79725528,
+          "volumeUsd": 5440912.491682156,
+          "grossPoolFeesUsd": 16322.737475046468
         },
         {
           "date": "2026-08-15",
-          "apyBasePct": 1.15255,
-          "tvlUsd": 42153670
+          "apyBasePct": 0.62597,
+          "tvlUsd": 79829788,
+          "volumeUsd": 316293.3161454877,
+          "grossPoolFeesUsd": 948.8799484364631
         },
         {
           "date": "2026-08-16",
-          "apyBasePct": 2.15036,
-          "tvlUsd": 41985412
+          "apyBasePct": 3.97668,
+          "tvlUsd": 79586228,
+          "volumeUsd": 2748917.5282426765,
+          "grossPoolFeesUsd": 8246.75258472803
         },
         {
           "date": "2026-08-17",
-          "apyBasePct": 4.98558,
-          "tvlUsd": 43865453
+          "apyBasePct": 13.33836,
+          "tvlUsd": 80263039,
+          "volumeUsd": 10275739.465535924,
+          "grossPoolFeesUsd": 30827.218396607772
         },
         {
           "date": "2026-08-18",
-          "apyBasePct": 3.53621,
-          "tvlUsd": 44083455
+          "apyBasePct": 12.8787,
+          "tvlUsd": 80565919,
+          "volumeUsd": 8864924.853381345,
+          "grossPoolFeesUsd": 26594.774560144037
         },
         {
           "date": "2026-08-19",
-          "apyBasePct": 26.16359,
-          "tvlUsd": 52028165
+          "apyBasePct": 88.55959,
+          "tvlUsd": 79823977,
+          "volumeUsd": 63728751.75616436,
+          "grossPoolFeesUsd": 191186.25526849309
         },
         {
           "date": "2026-08-20",
-          "apyBasePct": 18.84951,
-          "tvlUsd": 35263584
+          "apyBasePct": 90.88095,
+          "tvlUsd": 88263825,
+          "volumeUsd": 73059429.78854418,
+          "grossPoolFeesUsd": 219178.28936563255
         },
         {
           "date": "2026-08-21",
-          "apyBasePct": 25.03214,
-          "tvlUsd": 38321338
+          "apyBasePct": 122.80206,
+          "tvlUsd": 116107661,
+          "volumeUsd": 134059669.3716569,
+          "grossPoolFeesUsd": 402179.0081149707
         },
         {
           "date": "2026-08-22",
-          "apyBasePct": 13.83745,
-          "tvlUsd": 37612784
+          "apyBasePct": 69.84274,
+          "tvlUsd": 115344728,
+          "volumeUsd": 68720582.83295164,
+          "grossPoolFeesUsd": 206161.7484988549
         },
         {
           "date": "2026-08-23",
-          "apyBasePct": 13.30824,
-          "tvlUsd": 37554949
+          "apyBasePct": 74.02086,
+          "tvlUsd": 117035350,
+          "volumeUsd": 82812243.08664809,
+          "grossPoolFeesUsd": 248436.7292599443
         },
         {
           "date": "2026-08-24",
-          "apyBasePct": 10.75372,
-          "tvlUsd": 37586720
+          "apyBasePct": 82.53011,
+          "tvlUsd": 118549468,
+          "volumeUsd": 84760703.66489576,
+          "grossPoolFeesUsd": 254282.11099468727
         },
         {
           "date": "2026-08-25",
-          "apyBasePct": 9.71287,
-          "tvlUsd": 37259671
+          "apyBasePct": 47.78915,
+          "tvlUsd": 122298361,
+          "volumeUsd": 53175064.395044856,
+          "grossPoolFeesUsd": 159525.19318513456
         },
         {
           "date": "2026-08-26",
-          "apyBasePct": 5.64139,
-          "tvlUsd": 37526513
+          "apyBasePct": 45.95749,
+          "tvlUsd": 123389292,
+          "volumeUsd": 52569181.23682695,
+          "grossPoolFeesUsd": 157707.54371048085
         },
         {
           "date": "2026-08-27",
-          "apyBasePct": 7.79631,
-          "tvlUsd": 38837789
+          "apyBasePct": 54.2129,
+          "tvlUsd": 114226956,
+          "volumeUsd": 54720823.35180104,
+          "grossPoolFeesUsd": 164162.47005540313
         },
         {
           "date": "2026-08-28",
-          "apyBasePct": 7.29857,
-          "tvlUsd": 36217496
+          "apyBasePct": 63.67989,
+          "tvlUsd": 113824367,
+          "volumeUsd": 64491403.063725986,
+          "grossPoolFeesUsd": 193474.20919117797
         },
         {
           "date": "2026-08-29",
-          "apyBasePct": 1.58887,
-          "tvlUsd": 36459139
+          "apyBasePct": 4.2131,
+          "tvlUsd": 113856033,
+          "volumeUsd": 3845003.448048599,
+          "grossPoolFeesUsd": 11535.010344145798
         },
         {
           "date": "2026-08-30",
-          "apyBasePct": 5.01262,
-          "tvlUsd": 35277777
+          "apyBasePct": 28.73441,
+          "tvlUsd": 113816521,
+          "volumeUsd": 44898071.60470274,
+          "grossPoolFeesUsd": 134694.2148141082
         },
         {
           "date": "2026-08-31",
-          "apyBasePct": 5.73095,
-          "tvlUsd": 35316193
+          "apyBasePct": 43.95808,
+          "tvlUsd": 113904368,
+          "volumeUsd": 31297754.833521843,
+          "grossPoolFeesUsd": 93893.26450056554
         },
         {
           "date": "2026-09-01",
-          "apyBasePct": 4.08124,
-          "tvlUsd": 34549346
+          "apyBasePct": 41.3024,
+          "tvlUsd": 110723823,
+          "volumeUsd": 41906557.12882138,
+          "grossPoolFeesUsd": 125719.67138646415
         },
         {
           "date": "2026-09-02",
-          "apyBasePct": 6.49959,
-          "tvlUsd": 34179860
+          "apyBasePct": 43.49359,
+          "tvlUsd": 110365088,
+          "volumeUsd": 42020762.01237047,
+          "grossPoolFeesUsd": 126062.28603711141
         },
         {
           "date": "2026-09-03",
-          "apyBasePct": 8.12311,
-          "tvlUsd": 35990812
+          "apyBasePct": 56.25422,
+          "tvlUsd": 105196132,
+          "volumeUsd": 54171890.45978106,
+          "grossPoolFeesUsd": 162515.67137934317
         },
         {
           "date": "2026-09-04",
-          "apyBasePct": 8.91778,
-          "tvlUsd": 35250758
+          "apyBasePct": 47.288,
+          "tvlUsd": 108706227,
+          "volumeUsd": 46371599.25094404,
+          "grossPoolFeesUsd": 139114.79775283212
         },
         {
           "date": "2026-09-05",
-          "apyBasePct": 2.44403,
-          "tvlUsd": 35432720
+          "apyBasePct": 6.46283,
+          "tvlUsd": 108831653,
+          "volumeUsd": 6423954.4188314965,
+          "grossPoolFeesUsd": 19271.86325649449
         },
         {
           "date": "2026-09-06",
-          "apyBasePct": 5.21309,
-          "tvlUsd": 35691501
+          "apyBasePct": 24.10435,
+          "tvlUsd": 109786074,
+          "volumeUsd": 26534102.1422908,
+          "grossPoolFeesUsd": 79602.3064268724
         },
         {
           "date": "2026-09-07",
-          "apyBasePct": 5.14785,
-          "tvlUsd": 35227217
+          "apyBasePct": 36.32842,
+          "tvlUsd": 109604096,
+          "volumeUsd": 34337125.70265948,
+          "grossPoolFeesUsd": 103011.37710797845
         },
         {
           "date": "2026-09-08",
-          "apyBasePct": 5.79548,
-          "tvlUsd": 35182654
+          "apyBasePct": 32.25667,
+          "tvlUsd": 109784177,
+          "volumeUsd": 31940587.52369317,
+          "grossPoolFeesUsd": 95821.76257107951
         },
         {
           "date": "2026-09-09",
-          "apyBasePct": 5.59271,
-          "tvlUsd": 34870604
+          "apyBasePct": 41.2612,
+          "tvlUsd": 108876258,
+          "volumeUsd": 42769025.30673717,
+          "grossPoolFeesUsd": 128307.07592021152
         },
         {
           "date": "2026-09-10",
-          "apyBasePct": 4.91854,
-          "tvlUsd": 34584850
+          "apyBasePct": 37.88354,
+          "tvlUsd": 108763636,
+          "volumeUsd": 37355469.400617875,
+          "grossPoolFeesUsd": 112066.40820185363
         },
         {
           "date": "2026-09-11",
-          "apyBasePct": 12.5475,
-          "tvlUsd": 35083689
+          "apyBasePct": 90.04967,
+          "tvlUsd": 111621661,
+          "volumeUsd": 90084152.62307805,
+          "grossPoolFeesUsd": 270252.45786923415
         },
         {
           "date": "2026-09-12",
-          "apyBasePct": 2.00428,
-          "tvlUsd": 35201467
+          "apyBasePct": 6.43611,
+          "tvlUsd": 112198378,
+          "volumeUsd": 6452306.238728002,
+          "grossPoolFeesUsd": 19356.918716184005
         },
         {
           "date": "2026-09-13",
-          "apyBasePct": 3.89315,
-          "tvlUsd": 33057819
+          "apyBasePct": 20.88448,
+          "tvlUsd": 112067868,
+          "volumeUsd": 21740203.173616998,
+          "grossPoolFeesUsd": 65220.609520850994
         },
         {
           "date": "2026-09-14",
-          "apyBasePct": 9.5791,
-          "tvlUsd": 33828298
+          "apyBasePct": 53.44757,
+          "tvlUsd": 113657395,
+          "volumeUsd": 58380405.196495816,
+          "grossPoolFeesUsd": 175141.21558948746
         },
         {
           "date": "2026-09-15",
-          "apyBasePct": 15.54622,
-          "tvlUsd": 32176875
+          "apyBasePct": 74.50399,
+          "tvlUsd": 109565878,
+          "volumeUsd": 73098902.18421161,
+          "grossPoolFeesUsd": 219296.70655263483
         },
         {
           "date": "2026-09-16",
-          "apyBasePct": 8.2414,
-          "tvlUsd": 33084441
+          "apyBasePct": 63.95956,
+          "tvlUsd": 109288651,
+          "volumeUsd": 65423453.69639176,
+          "grossPoolFeesUsd": 196270.36108917528
         },
         {
           "date": "2026-09-17",
-          "apyBasePct": 6.21032,
-          "tvlUsd": 33725056
+          "apyBasePct": 47.5476,
+          "tvlUsd": 112461272,
+          "volumeUsd": 45379803.79016436,
+          "grossPoolFeesUsd": 136139.4113704931
         },
         {
           "date": "2026-09-18",
-          "apyBasePct": 12.18266,
-          "tvlUsd": 36370333
+          "apyBasePct": 54.03201,
+          "tvlUsd": 111827474,
+          "volumeUsd": 56211383.18665277,
+          "grossPoolFeesUsd": 168634.1495599583
         },
         {
           "date": "2026-09-19",
-          "apyBasePct": 6.82275,
-          "tvlUsd": 37827269
+          "apyBasePct": 30.91609,
+          "tvlUsd": 110748534,
+          "volumeUsd": 30630050.50296081,
+          "grossPoolFeesUsd": 91890.15150888242
         },
         {
           "date": "2026-09-20",
-          "apyBasePct": 10.61463,
-          "tvlUsd": 37690616
+          "apyBasePct": 30.87671,
+          "tvlUsd": 112658216,
+          "volumeUsd": 31262663.545693517,
+          "grossPoolFeesUsd": 93787.99063708055
         },
         {
           "date": "2026-09-21",
-          "apyBasePct": 22.68948,
-          "tvlUsd": 48369674
+          "apyBasePct": 95.10044,
+          "tvlUsd": 100829335,
+          "volumeUsd": 87873693.90506503,
+          "grossPoolFeesUsd": 263621.0817151951
         },
         {
           "date": "2026-09-22",
-          "apyBasePct": 10.8744,
-          "tvlUsd": 39464455
+          "apyBasePct": 37.37604,
+          "tvlUsd": 101058035,
+          "volumeUsd": 36171315.93202013,
+          "grossPoolFeesUsd": 108513.94779606038
         },
         {
           "date": "2026-09-23",
-          "apyBasePct": 8.09999,
-          "tvlUsd": 41356251
+          "apyBasePct": 48.29344,
+          "tvlUsd": 108185083,
+          "volumeUsd": 45268816.7041903,
+          "grossPoolFeesUsd": 135806.4501125709
         },
         {
           "date": "2026-09-24",
-          "apyBasePct": 6.36587,
-          "tvlUsd": 58269771
+          "apyBasePct": 62.76935,
+          "tvlUsd": 108502181,
+          "volumeUsd": 61772963.69348203,
+          "grossPoolFeesUsd": 185318.89108044608
         },
         {
           "date": "2026-09-25",
-          "apyBasePct": 29.8469,
-          "tvlUsd": 41448820
-        }
-      ]
-    },
-    {
-      "id": "usdc-usdt-001",
-      "observations": [
-        {
-          "date": "2026-06-26",
-          "apyBasePct": 0.97719,
-          "tvlUsd": 22716604
-        },
-        {
-          "date": "2026-06-27",
-          "apyBasePct": 0.72528,
-          "tvlUsd": 22739242
-        },
-        {
-          "date": "2026-06-28",
-          "apyBasePct": 0.25209,
-          "tvlUsd": 22419234
-        },
-        {
-          "date": "2026-06-29",
-          "apyBasePct": 8.97765,
-          "tvlUsd": 22426274
-        },
-        {
-          "date": "2026-06-30",
-          "apyBasePct": 1.63245,
-          "tvlUsd": 32245435
-        },
-        {
-          "date": "2026-07-01",
-          "apyBasePct": 0.63387,
-          "tvlUsd": 32323365
-        },
-        {
-          "date": "2026-07-02",
-          "apyBasePct": 1.8986,
-          "tvlUsd": 32154963
-        },
-        {
-          "date": "2026-07-03",
-          "apyBasePct": 0.38756,
-          "tvlUsd": 34285500
-        },
-        {
-          "date": "2026-07-04",
-          "apyBasePct": 0.40256,
-          "tvlUsd": 33065762
-        },
-        {
-          "date": "2026-07-05",
-          "apyBasePct": 0.09265,
-          "tvlUsd": 33013144
-        },
-        {
-          "date": "2026-07-06",
-          "apyBasePct": 0.84618,
-          "tvlUsd": 36062904
-        },
-        {
-          "date": "2026-07-07",
-          "apyBasePct": 1.89011,
-          "tvlUsd": 35556393
-        },
-        {
-          "date": "2026-07-08",
-          "apyBasePct": 0.88663,
-          "tvlUsd": 35569423
-        },
-        {
-          "date": "2026-07-09",
-          "apyBasePct": 0.70851,
-          "tvlUsd": 35530842
-        },
-        {
-          "date": "2026-07-10",
-          "apyBasePct": 0.63865,
-          "tvlUsd": 35498016
-        },
-        {
-          "date": "2026-07-11",
-          "apyBasePct": 0.89232,
-          "tvlUsd": 35480791
-        },
-        {
-          "date": "2026-07-12",
-          "apyBasePct": 0.57373,
-          "tvlUsd": 35484391
-        },
-        {
-          "date": "2026-07-13",
-          "apyBasePct": 0.90913,
-          "tvlUsd": 36445392
-        },
-        {
-          "date": "2026-07-14",
-          "apyBasePct": 1.05571,
-          "tvlUsd": 36855487
-        },
-        {
-          "date": "2026-07-15",
-          "apyBasePct": 1.14655,
-          "tvlUsd": 36840704
-        },
-        {
-          "date": "2026-07-16",
-          "apyBasePct": 0.69392,
-          "tvlUsd": 37012626
-        },
-        {
-          "date": "2026-07-17",
-          "apyBasePct": 0.5872,
-          "tvlUsd": 36986336
-        },
-        {
-          "date": "2026-07-18",
-          "apyBasePct": 0.05069,
-          "tvlUsd": 36986701
-        },
-        {
-          "date": "2026-07-19",
-          "apyBasePct": 0.13174,
-          "tvlUsd": 34654678
-        },
-        {
-          "date": "2026-07-20",
-          "apyBasePct": 0.88496,
-          "tvlUsd": 34658088
-        },
-        {
-          "date": "2026-07-21",
-          "apyBasePct": 2.14027,
-          "tvlUsd": 34721846
-        },
-        {
-          "date": "2026-07-22",
-          "apyBasePct": 0.91186,
-          "tvlUsd": 34725507
-        },
-        {
-          "date": "2026-07-23",
-          "apyBasePct": 1.06573,
-          "tvlUsd": 34720150
-        },
-        {
-          "date": "2026-07-24",
-          "apyBasePct": 0.76368,
-          "tvlUsd": 34719384
-        },
-        {
-          "date": "2026-07-25",
-          "apyBasePct": 0.1772,
-          "tvlUsd": 34784765
-        },
-        {
-          "date": "2026-07-26",
-          "apyBasePct": 0.17909,
-          "tvlUsd": 34822529
-        },
-        {
-          "date": "2026-07-27",
-          "apyBasePct": 1.13384,
-          "tvlUsd": 34700277
-        },
-        {
-          "date": "2026-07-28",
-          "apyBasePct": 1.73348,
-          "tvlUsd": 34597482
-        },
-        {
-          "date": "2026-07-29",
-          "apyBasePct": 1.37833,
-          "tvlUsd": 34578773
-        },
-        {
-          "date": "2026-07-30",
-          "apyBasePct": 1.41295,
-          "tvlUsd": 34591221
-        },
-        {
-          "date": "2026-07-31",
-          "apyBasePct": 1.09921,
-          "tvlUsd": 35373093
-        },
-        {
-          "date": "2026-08-01",
-          "apyBasePct": 0.62378,
-          "tvlUsd": 35459058
-        },
-        {
-          "date": "2026-08-02",
-          "apyBasePct": 0.34657,
-          "tvlUsd": 35437697
-        },
-        {
-          "date": "2026-08-03",
-          "apyBasePct": 0.769,
-          "tvlUsd": 35438229
-        },
-        {
-          "date": "2026-08-04",
-          "apyBasePct": 1.97447,
-          "tvlUsd": 35426342
-        },
-        {
-          "date": "2026-08-05",
-          "apyBasePct": 2.96216,
-          "tvlUsd": 35901310
-        },
-        {
-          "date": "2026-08-06",
-          "apyBasePct": 1.3608,
-          "tvlUsd": 35720164
-        },
-        {
-          "date": "2026-08-07",
-          "apyBasePct": 0.92292,
-          "tvlUsd": 35445716
-        },
-        {
-          "date": "2026-08-08",
-          "apyBasePct": 0.95706,
-          "tvlUsd": 35436491
-        },
-        {
-          "date": "2026-08-09",
-          "apyBasePct": 0.51297,
-          "tvlUsd": 33226413
-        },
-        {
-          "date": "2026-08-10",
-          "apyBasePct": 1.82146,
-          "tvlUsd": 33236125
-        },
-        {
-          "date": "2026-08-11",
-          "apyBasePct": 1.00491,
-          "tvlUsd": 33246299
-        },
-        {
-          "date": "2026-08-12",
-          "apyBasePct": 1.11162,
-          "tvlUsd": 33250273
-        },
-        {
-          "date": "2026-08-13",
-          "apyBasePct": 0.32439,
-          "tvlUsd": 33248781
-        },
-        {
-          "date": "2026-08-14",
-          "apyBasePct": 0.77273,
-          "tvlUsd": 33245690
-        },
-        {
-          "date": "2026-08-15",
-          "apyBasePct": 0.17011,
-          "tvlUsd": 33379119
-        },
-        {
-          "date": "2026-08-16",
-          "apyBasePct": 0.43308,
-          "tvlUsd": 33379557
-        },
-        {
-          "date": "2026-08-17",
-          "apyBasePct": 0.65148,
-          "tvlUsd": 33680016
-        },
-        {
-          "date": "2026-08-18",
-          "apyBasePct": 0.72529,
-          "tvlUsd": 33705281
-        },
-        {
-          "date": "2026-08-19",
-          "apyBasePct": 2.67891,
-          "tvlUsd": 33709187
-        },
-        {
-          "date": "2026-08-20",
-          "apyBasePct": 2.8423,
-          "tvlUsd": 33853147
-        },
-        {
-          "date": "2026-08-21",
-          "apyBasePct": 2.55462,
-          "tvlUsd": 34388210
-        },
-        {
-          "date": "2026-08-22",
-          "apyBasePct": 0.78918,
-          "tvlUsd": 34387708
-        },
-        {
-          "date": "2026-08-23",
-          "apyBasePct": 0.5986,
-          "tvlUsd": 34096911
-        },
-        {
-          "date": "2026-08-24",
-          "apyBasePct": 1.38092,
-          "tvlUsd": 34457689
-        },
-        {
-          "date": "2026-08-25",
-          "apyBasePct": 1.83823,
-          "tvlUsd": 34383627
-        },
-        {
-          "date": "2026-08-26",
-          "apyBasePct": 0.6707,
-          "tvlUsd": 34381888
-        },
-        {
-          "date": "2026-08-27",
-          "apyBasePct": 0.89218,
-          "tvlUsd": 34549685
-        },
-        {
-          "date": "2026-08-28",
-          "apyBasePct": 0.76588,
-          "tvlUsd": 34536207
-        },
-        {
-          "date": "2026-08-29",
-          "apyBasePct": 1.28035,
-          "tvlUsd": 34512872
-        },
-        {
-          "date": "2026-08-30",
-          "apyBasePct": 0.27911,
-          "tvlUsd": 34512605
-        },
-        {
-          "date": "2026-08-31",
-          "apyBasePct": 1.20175,
-          "tvlUsd": 34075353
-        },
-        {
-          "date": "2026-09-01",
-          "apyBasePct": 3.12534,
-          "tvlUsd": 34072708
-        },
-        {
-          "date": "2026-09-02",
-          "apyBasePct": 1.28223,
-          "tvlUsd": 34098305
-        },
-        {
-          "date": "2026-09-03",
-          "apyBasePct": 8.35838,
-          "tvlUsd": 34116722
-        },
-        {
-          "date": "2026-09-04",
-          "apyBasePct": 0.76429,
-          "tvlUsd": 34272197
-        },
-        {
-          "date": "2026-09-05",
-          "apyBasePct": 0.68237,
-          "tvlUsd": 34239014
-        },
-        {
-          "date": "2026-09-06",
-          "apyBasePct": 0.41328,
-          "tvlUsd": 34264213
-        },
-        {
-          "date": "2026-09-07",
-          "apyBasePct": 0.5198,
-          "tvlUsd": 34209009
-        },
-        {
-          "date": "2026-09-08",
-          "apyBasePct": 1.20366,
-          "tvlUsd": 34165606
-        },
-        {
-          "date": "2026-09-09",
-          "apyBasePct": 1.14035,
-          "tvlUsd": 34143921
-        },
-        {
-          "date": "2026-09-10",
-          "apyBasePct": 1.49861,
-          "tvlUsd": 34096539
-        },
-        {
-          "date": "2026-09-11",
-          "apyBasePct": 1.05351,
-          "tvlUsd": 33384574
-        },
-        {
-          "date": "2026-09-12",
-          "apyBasePct": 0.30757,
-          "tvlUsd": 33414871
-        },
-        {
-          "date": "2026-09-13",
-          "apyBasePct": 0.59056,
-          "tvlUsd": 33267688
-        },
-        {
-          "date": "2026-09-14",
-          "apyBasePct": 1.21496,
-          "tvlUsd": 34247357
-        },
-        {
-          "date": "2026-09-15",
-          "apyBasePct": 3.98878,
-          "tvlUsd": 34197173
-        },
-        {
-          "date": "2026-09-16",
-          "apyBasePct": 1.16332,
-          "tvlUsd": 34198774
-        },
-        {
-          "date": "2026-09-17",
-          "apyBasePct": 0.71801,
-          "tvlUsd": 34127079
-        },
-        {
-          "date": "2026-09-18",
-          "apyBasePct": 2.00851,
-          "tvlUsd": 34273182
-        },
-        {
-          "date": "2026-09-19",
-          "apyBasePct": 0.42695,
-          "tvlUsd": 34367460
-        },
-        {
-          "date": "2026-09-20",
-          "apyBasePct": 0.42319,
-          "tvlUsd": 34327619
-        },
-        {
-          "date": "2026-09-21",
-          "apyBasePct": 2.96707,
-          "tvlUsd": 34320810
-        },
-        {
-          "date": "2026-09-22",
-          "apyBasePct": 2.83258,
-          "tvlUsd": 34242197
-        },
-        {
-          "date": "2026-09-23",
-          "apyBasePct": 0.73733,
-          "tvlUsd": 34290196
-        },
-        {
-          "date": "2026-09-24",
-          "apyBasePct": 0.89123,
-          "tvlUsd": 34319485
-        },
-        {
-          "date": "2026-09-25",
-          "apyBasePct": 1.28498,
-          "tvlUsd": 34324711
+          "apyBasePct": 43.49002,
+          "tvlUsd": 108545449,
+          "volumeUsd": 43125646.77045914,
+          "grossPoolFeesUsd": 129376.94031137742
         }
       ]
     }

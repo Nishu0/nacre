@@ -41,6 +41,8 @@
 .kd-underwriter-evidence-grid strong{color:#2e5339;font-size:19px;letter-spacing:-.04em}
 .kd-underwriter-evidence>p{margin:8px 14px 15px;color:#8b998e;font-size:10px;line-height:1.55}
 .kd-underwriter-evidence>p a{margin-left:8px;color:#4d7d59;text-decoration:underline}
+.kd-data-section .kd-table-panel table{min-width:920px}
+.kd-source-link+.kd-source-link{margin-left:8px}
 .kd-launch-inner{display:flex;flex:1;flex-direction:column;padding:13px;border:1px solid #e8eaec;border-radius:9px;background:#fff}
 .kd-launch-heading{padding:2px 2px 9px}.kd-launch-heading [data-slot=badge]{border-color:#dce9df;background:#f4f9f5;color:#5c8468;font:9px var(--font-geist-mono),monospace}
 .kd-launch-heading p{margin:8px 0 0;color:#697a70;font-size:11px;line-height:1.45}

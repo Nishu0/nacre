@@ -6,6 +6,8 @@ const observations: Observation[] = Array.from({ length: 35 }, (_, index) => ({
   date: new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10),
   apyBasePct: index < 30 ? 7.3 : 3.65,
   tvlUsd: 1_000_000,
+  volumeUsd: 100_000,
+  grossPoolFeesUsd: 50,
 }));
 
 test("30-day windows sum fee yield and reject gaps", () => {

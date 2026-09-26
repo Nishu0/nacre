@@ -39,6 +39,17 @@ export function roundUsd(value: number): number {
 export function backtest(observations: Observation[], principalUsd: number) {
   const windows = rollingWindows(observations, principalUsd);
   if (!windows.length) throw new Error("At least 30 consecutive daily observations are required");
+  const latest90 = [...observations].sort((a, b) => a.date.localeCompare(b.date)).slice(-90);
+  const daily = latest90.map((row) => ({
+    date: row.date,
+    volumeUsd: roundUsd(row.volumeUsd),
+    grossPoolFeesUsd: roundUsd(row.grossPoolFeesUsd),
+    modeledPositionFeesUsd: roundUsd(dailyFeeEstimate(principalUsd, row.apyBasePct)),
+    tvlUsd: roundUsd(row.tvlUsd),
+  }));
+  const sum = (key: "volumeUsd" | "grossPoolFeesUsd" | "modeledPositionFeesUsd") =>
+    roundUsd(daily.reduce((total, row) => total + row[key], 0));
+  const orderedVolume = daily.map((row) => row.volumeUsd).sort((a, b) => a - b);
   const fees = windows.map((window) => window.feesUsd);
   const best = windows.reduce((a, b) => (a.feesUsd >= b.feesUsd ? a : b));
   const worst = windows.reduce((a, b) => (a.feesUsd <= b.feesUsd ? a : b));
@@ -48,6 +59,12 @@ export function backtest(observations: Observation[], principalUsd: number) {
     sampleDays: observations.length,
     windowDays: 30,
     windowCount: windows.length,
+    displayedDays: daily.length,
+    daily,
+    volume90dUsd: sum("volumeUsd"),
+    grossPoolFees90dUsd: sum("grossPoolFeesUsd"),
+    modeledPositionFees90dUsd: sum("modeledPositionFeesUsd"),
+    medianDailyVolumeUsd: roundUsd(orderedVolume[Math.floor(orderedVolume.length / 2)]),
     recent: { ...recent, feesUsd: roundUsd(recent.feesUsd) },
     best: { ...best, feesUsd: roundUsd(best.feesUsd) },
     worst: { ...worst, feesUsd: roundUsd(worst.feesUsd) },

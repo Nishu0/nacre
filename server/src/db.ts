@@ -61,6 +61,13 @@ export function openDb(path = DATABASE_PATH): Database {
       created_at TEXT NOT NULL
     );
   `);
+  const columns = db.query("PRAGMA table_info(observations)").all() as { name: string }[];
+  if (!columns.some((column) => column.name === "volume_usd")) {
+    db.exec("ALTER TABLE observations ADD COLUMN volume_usd REAL NOT NULL DEFAULT 0");
+  }
+  if (!columns.some((column) => column.name === "gross_pool_fees_usd")) {
+    db.exec("ALTER TABLE observations ADD COLUMN gross_pool_fees_usd REAL NOT NULL DEFAULT 0");
+  }
   return db;
 }
 
@@ -68,28 +75,37 @@ export function seedDb(db: Database, snapshot: Snapshot): void {
   const insertPool = db.prepare(`INSERT OR REPLACE INTO pools
     (id, symbol, fee_tier, llama_id, source, captured_at) VALUES (?, ?, ?, ?, ?, ?)`);
   const insertObservation = db.prepare(`INSERT OR REPLACE INTO observations
-    (pool_id, date, apy_base_pct, tvl_usd) VALUES (?, ?, ?, ?)`);
+    (pool_id, date, apy_base_pct, tvl_usd, volume_usd, gross_pool_fees_usd)
+    VALUES (?, ?, ?, ?, ?, ?)`);
   db.transaction(() => {
+    const ids = POOLS.map((pool) => pool.id);
+    const placeholders = ids.map(() => "?").join(",");
+    db.prepare(`DELETE FROM observations WHERE pool_id NOT IN (${placeholders})`).run(...ids);
+    db.prepare(`DELETE FROM pools WHERE id NOT IN (${placeholders})`).run(...ids);
     for (const pool of POOLS) {
       insertPool.run(pool.id, pool.symbol, pool.feeTier, pool.llamaId, snapshot.source, snapshot.capturedAt);
       db.prepare("DELETE FROM observations WHERE pool_id = ?").run(pool.id);
       const history = snapshot.pools.find((entry) => entry.id === pool.id);
       if (!history) throw new Error(`Missing history for ${pool.id}`);
       for (const row of history.observations) {
-        insertObservation.run(pool.id, row.date, row.apyBasePct, row.tvlUsd);
+        insertObservation.run(pool.id, row.date, row.apyBasePct, row.tvlUsd,
+          row.volumeUsd, row.grossPoolFeesUsd);
       }
     }
   })();
 }
 
 export function getObservations(db: Database, poolId: PoolId): Observation[] {
-  const rows = db.query(`SELECT date, apy_base_pct, tvl_usd FROM observations
+  const rows = db.query(`SELECT date, apy_base_pct, tvl_usd, volume_usd, gross_pool_fees_usd FROM observations
     WHERE pool_id = ? ORDER BY date`).all(poolId) as {
       date: string; apy_base_pct: number; tvl_usd: number;
+      volume_usd: number; gross_pool_fees_usd: number;
     }[];
   return rows.map((row) => ({
     date: row.date,
     apyBasePct: row.apy_base_pct,
     tvlUsd: row.tvl_usd,
+    volumeUsd: row.volume_usd,
+    grossPoolFeesUsd: row.gross_pool_fees_usd,
   }));
 }

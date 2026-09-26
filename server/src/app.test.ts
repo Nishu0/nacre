@@ -15,6 +15,10 @@ test("first start seeds research data and serves backtests and premium tiers", a
     const backtest = await app.inject({ method: "GET", url: "/api/pools/usdc-weth-005/backtest?principalUsd=100000" });
     expect(backtest.statusCode).toBe(200);
     expect(backtest.json().windowCount).toBeGreaterThan(0);
+    expect(backtest.json().sampleDays).toBe(180);
+    expect(backtest.json().daily).toHaveLength(90);
+    expect(backtest.json().volume90dUsd).toBeGreaterThan(1_000_000_000);
+    expect(backtest.json().grossPoolFees90dUsd).toBeGreaterThan(1_000_000);
 
     const quotes = await app.inject({ method: "GET", url: "/api/pools/usdc-weth-005/quotes?principalUsd=100000" });
     expect(quotes.statusCode).toBe(200);
