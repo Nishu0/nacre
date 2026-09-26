@@ -1,0 +1,57 @@
+name: nacre
+services:
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_PATH: /data/nacre.sqlite
+      FRONTEND_ORIGIN: https://nacre.lol
+      NACRE_PUBLIC_DEPLOYMENT: "1"
+      BASE_SEPOLIA_RPC_URL: ${BASE_SEPOLIA_RPC_URL:-https://sepolia.base.org}
+    volumes:
+      - api_data:/data
+    expose:
+      - "3001"
+    init: true
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      NACRE_API_URL: http://api:3001
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "3000"
+    init: true
+    logging: *logging
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+volumes:
+  api_data:
+  caddy_data:
+  caddy_config:

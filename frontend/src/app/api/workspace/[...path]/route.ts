@@ -44,7 +44,7 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
       headers: { "content-type": response.headers.get("content-type") ?? "application/json" },
     });
   } catch {
-    return Response.json({ error: "Workspace API unavailable. Start the Bun server." }, { status: 503 });
+    return Response.json({ error: "The service is temporarily unavailable. Please try again." }, { status: 503 });
   }
 }
 

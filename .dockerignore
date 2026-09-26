@@ -1,0 +1,14 @@
+.git
+**/node_modules
+**/.next
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.sqlite
+**/*.sqlite-*
+**/*.tsbuildinfo
+contract
+.deploy
+deploy/production.env
+.DS_Store

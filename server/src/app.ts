@@ -67,6 +67,22 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
 
   app.addHook("onClose", async () => db.close());
 
+  // Internet deployment exposes verified transaction registration, not local
+  // sandbox writes that can change simulated market prices and positions.
+  if (process.env.NACRE_PUBLIC_DEPLOYMENT === "1") {
+    app.addHook("onRequest", (request, reply, done) => {
+      if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return done();
+      const path = request.url.split("?")[0];
+      const registration = request.method === "POST" && (path === "/api/open-pools"
+        || /^\/api\/markets\/[0-9a-f-]{36}\/chain-positions$/i.test(path));
+      if (!registration) {
+        reply.code(403).send({ error: "Local sandbox actions are disabled on the public service." });
+        return;
+      }
+      done();
+    });
+  }
+
   app.register(cors, {
     origin: process.env.FRONTEND_ORIGIN ?? "http://localhost:3000",
   });

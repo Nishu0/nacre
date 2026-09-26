@@ -1,0 +1,25 @@
+nacre.lol {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	reverse_proxy frontend:3000
+}
+
+www.nacre.lol {
+	redir https://nacre.lol{uri} permanent
+}
+
+api.nacre.lol {
+	encode zstd gzip
+	request_body {
+		max_size 128KB
+	}
+	header {
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy api:3001
+}

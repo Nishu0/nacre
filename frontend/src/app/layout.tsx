@@ -9,6 +9,7 @@ const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subset
 const notoSerif = Noto_Serif({ variable: "--font-noto-serif", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nacre.lol"),
   title: "Nacre — A floor beneath your fee income",
   description: "Nacre is a concept for a market in Uniswap liquidity provider fee income protection, with competing quotes powered by 1inch Aqua.",
 };

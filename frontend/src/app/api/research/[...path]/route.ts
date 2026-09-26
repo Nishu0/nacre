@@ -23,7 +23,7 @@ export async function GET(request: Request, context: { params: Promise<{ path: s
     });
   } catch {
     return Response.json(
-      { error: "Research API unavailable. Start the Bun server and try again." },
+      { error: "Research data is temporarily unavailable. Please try again." },
       { status: 503 },
     );
   }
