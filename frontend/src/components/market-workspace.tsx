@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TokenPairIcon } from "@/components/token-pair-icon";
-import { PoolPriceChart, type OraclePoint } from "@/components/pool-price-chart";
+import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
+import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
 import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
   NACRE_TEST_USDC, BASE_WETH, UNISWAP_PERMIT2,
@@ -42,12 +43,6 @@ type FeePreview = {
   method: string;
 };
 type ChainPosition = { tokenId: string; marketId: string; txHash: string; wethRaw: string; usdcRaw: string; mintedAt: string };
-type LivePrices = {
-  source: "Pyth" | "Chainlink"; network: string; sourceUrl: string; fetchedAt: string;
-  assets: { WETH: { usd: number; publishedAt: string; confidenceUsd?: number };
-    USDC: { usd: number; publishedAt: string; confidenceUsd?: number } };
-  wethUsdc: number;
-};
 const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 const unixSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -72,9 +67,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const [markets, setMarkets] = useState<Market[]>([]);
   const [chainPositions, setChainPositions] = useState<ChainPosition[]>([]);
   const [poolSlot, setPoolSlot] = useState<{ priceUsd: number; tick: number } | null>(null);
-  const [oraclePoints, setOraclePoints] = useState<OraclePoint[]>([]);
-  const [livePrices, setLivePrices] = useState<LivePrices | null>(null);
-  const [liveError, setLiveError] = useState(false);
+  const { points: oraclePoints, livePrices, liveError } = useHyperliquidPrice();
   const [selectedId, setSelectedId] = useState(marketId ?? "");
   const [quoteState, setQuoteState] = useState<{ marketId: string; data: Quote } | null>(null);
   const [feePreviewState, setFeePreviewState] = useState<{ marketId: string; targetInput: string; data: FeePreview } | null>(null);
@@ -107,7 +100,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const lower = selectedRange?.marketId === selectedId ? selectedRange.lower : selected?.lowerPriceUsd ?? 0;
   const upper = selectedRange?.marketId === selectedId ? selectedRange.upper : selected?.upperPriceUsd ?? 0;
   const referencePrice = livePrices?.wethUsdc ?? poolSlot?.priceUsd ?? selected?.priceUsd ?? 0;
-  const referenceSource = livePrices ? liveError ? `LAST ${livePrices.source.toUpperCase()} PRICE` : `LIVE ${livePrices.source.toUpperCase()} PRICE`
+  const referenceSource = livePrices ? liveError ? "LAST ETH PRICE" : "LIVE ETH PRICE"
     : poolSlot ? "ON-CHAIN POOL PRICE" : "PROPOSED PRICE";
   const quote = quoteState?.marketId === selectedId && quoteState.data.depositUsd === Number(deposit)
     && quoteState.data.lowerPriceUsd === lower && quoteState.data.upperPriceUsd === upper
@@ -138,20 +131,6 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       .catch(() => { if (active) { setWethBalance(null); setUsdcBalance(null); } });
     return () => { active = false; };
   }, [marketId, walletAccount, tokenRefresh]);
-
-  useEffect(() => {
-    let active = true;
-    const refresh = () => {
-      void api<LivePrices>("live-prices").then((value) => {
-        if (!active) return;
-        setLivePrices(value);
-        setLiveError(false);
-      }).catch(() => { if (active) setLiveError(true); });
-    };
-    refresh();
-    const timer = setInterval(refresh, 15_000);
-    return () => { active = false; clearInterval(timer); };
-  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -190,15 +169,6 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     const timer = setInterval(refresh, 15_000);
     return () => { active = false; clearInterval(timer); };
   }, [deployedPoolId]);
-
-  useEffect(() => {
-    if (!marketId) return;
-    let active = true;
-    void api<{ points: OraclePoint[] }>("live-price-history")
-      .then(({ points }) => { if (active) setOraclePoints(points); })
-      .catch(() => { if (active) setOraclePoints([]); });
-    return () => { active = false; };
-  }, [marketId, livePrices]);
 
   useEffect(() => {
     if (!marketId || !selectedId || !Number(deposit) || !lower || !upper || lower >= upper) return;
@@ -362,7 +332,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
         <div className="mw-overview-wide-inner">
           <div className="mw-overview-tiles">
             <div><span>ON-CHAIN POOL PRICE</span><strong>{poolSlot ? usd(poolSlot.priceUsd) : "—"}</strong><small>{poolSlot ? `per WETH · tick ${poolSlot.tick}` : "Available after deployment"}</small></div>
-            <div><span>LIVE WETH / USDC</span><strong>{livePrices ? usd(livePrices.wethUsdc) : "—"}</strong><small>{livePrices ? `${livePrices.source} · ${new Date(livePrices.assets.WETH.publishedAt).toLocaleTimeString()}` : liveError ? "Oracle unavailable" : "Fetching oracle…"}</small></div>
+            <div><span>{liveError ? "LAST ETH PERP / USDC" : "LIVE ETH PERP / USDC"}</span><strong>{livePrices ? usd(livePrices.wethUsdc) : "—"}</strong><small>{livePrices ? `${livePrices.source} · ${new Date(livePrices.assets.WETH.publishedAt).toLocaleTimeString()}` : liveError ? "Live feed unavailable" : "Connecting live feed…"}</small></div>
             <div><span>LIQUIDITY POSITIONS</span><strong>{selectedChainPositions.length}</strong><small>Verified Base Sepolia mints</small></div>
             <div><span>WETH PROVIDED</span><strong>{Number(formatUnits(selectedWeth, 18)).toFixed(5)}</strong><small>At mint</small></div>
             <div><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(selectedUsdc, 6)).toFixed(2)}</strong><small>At mint</small></div>
@@ -372,7 +342,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
             <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (referencePrice - selected.lowerPriceUsd) / (selected.upperPriceUsd - selected.lowerPriceUsd) * 100))}%` }} /></div>
             <Badge variant="outline" className={referencePrice >= selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? "is-in-range" : "is-out-of-range"}>{referencePrice >= selected.lowerPriceUsd && referencePrice < selected.upperPriceUsd ? "IN RANGE" : "OUT OF RANGE"}</Badge>
           </div>
-          <div className="mw-overview-oracle-foot">{livePrices ? <><span>Oracle inputs: WETH/USD {usd(livePrices.assets.WETH.usd)} · USDC/USD {usd(livePrices.assets.USDC.usd)}</span><a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">{livePrices.source} feed <ArrowRight size={12} /></a></> : <span>{liveError ? "Fresh oracle inputs are unavailable; the on-chain pool price is shown separately." : "Checking live oracle inputs…"}</span>}</div>
+          <div className="mw-overview-oracle-foot">{livePrices ? <><span>ETH perpetual market reference</span><a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">{livePrices.source} feed <ArrowRight size={12} /></a></> : <span>{liveError ? "Live market prices are temporarily unavailable." : "Connecting to Hyperliquid…"}</span>}</div>
         </div>
       </Card>
       <div className="mw-market-layout">
@@ -447,7 +417,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
             {quote && Number(premium) > 0 && <div className="mw-underwriter-sim"><div><span>Positions this capacity could fully back</span><strong>{quote.payoutCapUsd > 0 ? Math.floor(Number(pledge) / quote.payoutCapUsd) : 0}</strong></div><div><span>Modeled margin per position</span><strong>{usd(Number(premium) - quote.expectedPayoutUsd - (quote.premiumUsd - quote.expectedPayoutUsd - quote.underwriterMarginUsd))}</strong></div><div><span>Worst net payout per position</span><strong>{usd(Math.max(0, quote.payoutCapUsd - Number(premium)))}</strong></div><div><span>LP net floor at your premium</span><strong>{usd(quote.feeFloorUsd - Number(premium))}</strong></div></div>}
             {quote && Number(premium) > 0 && quote.feeFloorUsd - Number(premium) <= quote.alternative30DayUsd && <p className="mw-premium-warning">At this premium the LP net floor falls below the 6% annualized comparison rate. The quote may not attract LPs.</p>}
             {poolSlot && (poolSlot.priceUsd < lower || poolSlot.priceUsd >= upper) && <div className="mw-availability"><ShieldCheck size={15} /> The current on-chain price is outside this proposed range.</div>}
-            <Button asChild variant="outline"><Link href="/dashboard/faucet">Get test nUSDC <ArrowRight size={14} /></Link></Button>
+            <Button asChild variant="outline" className="mw-faucet-link"><Link href="/dashboard/faucet">Get test nUSDC <ArrowRight size={14} /></Link></Button>
             <Link className="mw-evidence-link" href="/dashboard/backtest">Review six-month fee evidence <ArrowRight size={14} /></Link>
             <small className="mw-action-note">This calculator does not create a pledge or collect a premium. No underwriter collateral is locked.</small>
           </div>

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { backtest, feeRequestPreview, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
+import { getHyperliquidHistory, type PriceHistory } from "./hyperliquid";
 import { getLivePrices, type LivePrices } from "./live-prices";
 import { buildRiskAnalysis } from "./risk-analysis";
 import { getMarket, listMarkets, listPositions, presentMarket, priceToTick, quotePosition, VALID_REFERENCE } from "./market-model";
@@ -45,7 +46,8 @@ const positionReads = parseAbi([
 const chainClient = createPublicClient({ chain: baseSepolia,
   transport: http(process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org") });
 
-export function buildApp(databasePath?: string, priceProvider: () => Promise<LivePrices> = getLivePrices) {
+export function buildApp(databasePath?: string, priceProvider: () => Promise<LivePrices> = getLivePrices,
+  historyProvider: () => Promise<PriceHistory> = getHyperliquidHistory) {
   const app = Fastify({ logger: true });
   const db = openDb(databasePath);
   const existingObservations = db.query("SELECT COUNT(*) AS count FROM observations").get() as { count: number };
@@ -84,32 +86,14 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
   app.get("/api/live-prices", async (_request, reply) => {
     try {
       const live = await priceProvider();
-      if (live.source === "Pyth") db.prepare(`INSERT OR IGNORE INTO oracle_price_samples
-        (published_at, weth_usdc, weth_usd, usdc_usd, source) VALUES (?, ?, ?, ?, ?)`)
-        .run(live.assets.WETH.publishedAt, live.wethUsdc,
-          live.assets.WETH.usd, live.assets.USDC.usd, live.source);
       return live;
     }
-    catch { return reply.code(503).send({ error: "Fresh oracle prices are unavailable. Try again shortly." }); }
+    catch { return reply.code(503).send({ error: "Live Hyperliquid prices are unavailable. Try again shortly." }); }
   });
 
-  app.get("/api/live-price-history", async () => {
-    const snapshot = JSON.parse(readFileSync(
-      new URL("../data/pyth-weth-history.json", import.meta.url), "utf8",
-    )) as { capturedAt: string; points: [string, number][] };
-    const since = Date.now() - 25 * 60 * 60 * 1000;
-    const stored = db.query(`SELECT published_at, weth_usdc FROM oracle_price_samples
-      WHERE published_at >= ? AND source = 'Pyth' ORDER BY published_at`)
-      .all(new Date(since).toISOString()) as { published_at: string; weth_usdc: number }[];
-    const byTime = new Map<string, number>();
-    if (Date.parse(snapshot.capturedAt) >= Date.now() - 48 * 60 * 60 * 1000) {
-      for (const [timestamp, price] of snapshot.points) {
-        if (Date.parse(timestamp) >= since) byTime.set(timestamp, price);
-      }
-    }
-    for (const row of stored) byTime.set(row.published_at, row.weth_usdc);
-    return { source: "Pyth", points: [...byTime].sort(([a], [b]) => a.localeCompare(b))
-      .map(([timestamp, priceUsdc]) => ({ timestamp, priceUsdc })) };
+  app.get("/api/live-price-history", async (_request, reply) => {
+    try { return await historyProvider(); }
+    catch { return reply.code(503).send({ error: "Hyperliquid price history is unavailable." }); }
   });
 
   app.get<{ Params: { poolId: string }; Querystring: { principalUsd?: string } }>(
@@ -486,7 +470,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         return { market: presentMarket(db, getMarket(db, row.id)!),
           source: live.source, publishedAt: live.assets.WETH.publishedAt };
       } catch {
-        return reply.code(503).send({ error: "Fresh oracle prices are unavailable. Sandbox tick was not changed." });
+        return reply.code(503).send({ error: "Live Hyperliquid prices are unavailable. Sandbox tick was not changed." });
       }
     },
   );

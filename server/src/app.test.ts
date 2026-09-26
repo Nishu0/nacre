@@ -6,7 +6,9 @@ import { buildApp } from "./app";
 
 test("first start seeds research data and serves backtests and premium tiers", async () => {
   const directory = mkdtempSync(join(tmpdir(), "nacre-api-"));
-  const app = buildApp(join(directory, "research.sqlite"));
+  const app = buildApp(join(directory, "research.sqlite"), undefined, async () => ({
+    source: "Hyperliquid", points: [{ timestamp: new Date().toISOString(), priceUsdc: 2700 }],
+  }));
   try {
     const pools = await app.inject({ method: "GET", url: "/api/pools" });
     expect(pools.statusCode).toBe(200);
@@ -14,8 +16,8 @@ test("first start seeds research data and serves backtests and premium tiers", a
 
     const prices = await app.inject({ method: "GET", url: "/api/live-price-history" });
     expect(prices.statusCode).toBe(200);
-    expect(prices.json().source).toBe("Pyth");
-    expect(prices.json().points.length).toBeGreaterThan(10);
+    expect(prices.json().source).toBe("Hyperliquid");
+    expect(prices.json().points).toHaveLength(1);
 
     const backtest = await app.inject({ method: "GET", url: "/api/pools/usdc-weth-005/backtest?principalUsd=100000" });
     expect(backtest.statusCode).toBe(200);
@@ -140,7 +142,7 @@ test("sandbox funding, position coverage, and tick exit remain capacity bounded"
   } finally { await app.close(); }
 });
 
-test("fresh oracle quote is recorded and can explicitly move a sandbox tick", async () => {
+test("live quote can explicitly move a sandbox tick without mixing chart sources", async () => {
   const publishedAt = new Date().toISOString();
   const live = {
     source: "Pyth" as const, network: "Pyth Core", sourceUrl: "https://www.pyth.network/price-feeds",
@@ -148,7 +150,9 @@ test("fresh oracle quote is recorded and can explicitly move a sandbox tick", as
     assets: { WETH: { usd: 2700, publishedAt }, USDC: { usd: 1, publishedAt } },
     wethUsdc: 2700,
   };
-  const app = buildApp(":memory:", async () => live);
+  const app = buildApp(":memory:", async () => live, async () => ({
+    source: "Hyperliquid", points: [{ timestamp: publishedAt, priceUsdc: 2699 }],
+  }));
   try {
     const created = await app.inject({ method: "POST", url: "/api/markets", payload: {
       creator: "participant-oracle", priceUsd: 2000, lowerPriceUsd: 1800,
@@ -158,7 +162,8 @@ test("fresh oracle quote is recorded and can explicitly move a sandbox tick", as
     const current = await app.inject({ method: "GET", url: "/api/live-prices" });
     expect(current.json().source).toBe("Pyth");
     const history = await app.inject({ method: "GET", url: "/api/live-price-history" });
-    expect(history.json().points.at(-1).priceUsdc).toBe(2700);
+    expect(history.json().source).toBe("Hyperliquid");
+    expect(history.json().points.at(-1).priceUsdc).toBe(2699);
     const synced = await app.inject({ method: "POST", url: `/api/markets/${marketId}/oracle-sync` });
     expect(synced.statusCode).toBe(200);
     expect(synced.json().market.priceUsd).toBe(2700);
