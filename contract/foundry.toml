@@ -6,13 +6,19 @@ solc_version = "0.8.30"
 optimizer = true
 optimizer_runs = 200
 evm_version = "cancun"
+auto_detect_remappings = false
 remappings = [
   "forge-std/=lib/forge-std/src/",
   "@uniswap/v4-core/=lib/v4-core/",
   "@uniswap/v4-periphery/=lib/v4-periphery/",
   "@1inch/aqua/=lib/aqua/",
   "@1inch/solidity-utils/=lib/solidity-utils/",
-  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "v4-core/=lib/v4-core/src/",
+  "v4-periphery/=lib/v4-periphery/src/",
+  "solmate/=lib/v4-core/lib/solmate/src/",
+  "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+  "solidity-utils/=lib/solidity-utils/contracts/"
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

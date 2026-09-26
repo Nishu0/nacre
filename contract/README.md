@@ -10,7 +10,7 @@ This Foundry workspace implements the original **position-specific fee floor** f
 4. The vault holds the NFT for the window. The hook rejects liquidity changes to the covered position and records fees collected by the PositionManager.
 5. At expiry, anyone can call `settle`. A zero-liquidity decrease collects accrued fees; the hook ledger must equal the tokens received. A configured price oracle values both fee tokens in USDC units. The vault pays `min(max(floor - eligibleFees, 0), cap)`, returns unused collateral and the NFT.
 
-`src/NacreFeeHook.sol` implements v4 `IHooks` and requires a CREATE2 address with before/after add/remove liquidity permission bits. `script/NacreDeploy.s.sol` mines that address. `src/NacreAquaUnderwriter.sol` calls the official Aqua registry; the integration test deploys the official Aqua contract. SwapVM is not yet integrated.
+`src/NacreFeeHook.sol` implements v4 `IHooks` and requires a CREATE2 address with before/after add/remove liquidity permission bits. `script/NacreDeploy.s.sol` mines and deploys that address through the canonical CREATE2 deployer. `src/NacreAquaUnderwriter.sol` calls Aqua; the integration test deploys the official Aqua contract. New coverage is rejected if the v4 PoolManager tick is outside the NFT's `[tickLower, tickUpper)` range. SwapVM is not yet integrated.
 
 ## Aqua source references
 
@@ -31,7 +31,34 @@ forge test --offline
 
 Dependencies install into ignored `lib/` directories at revisions recorded in the script. Solidity uses Cancun EVM features and compiler 0.8.30. The full flow test uses official Aqua with a mock v4 pool and PositionManager, rather than a live chain fork.
 
-For deployment, configure `NacreChainlinkFeeOracle` with one-time USD feed bindings. Set `POOL_MANAGER`, `POSITION_MANAGER`, `SETTLEMENT_TOKEN` (six-decimal USDC), `FEE_VALUE_ORACLE`, `AQUA`, and `DEPLOYER` (the broadcasting address) before running `script/NacreDeploy.s.sol` with your chosen RPC and deployer.
+## Base Sepolia deployment
+
+Copy `.env.example` to `.env` inside `contract/`, set its mode to `600`, and fill `ETHERSCAN_API_KEY`, `PRIVATE_KEY`, `DEPLOYER`, and a checked `WETH_USD_FEED`. The `.env` file and Foundry broadcast data are gitignored. Use a dedicated testnet-only deployer; never put the private key in a command, commit, issue, or frontend variable.
+
+The sample addresses are Uniswap v4's Base Sepolia PoolManager and PositionManager, Circle's six-decimal test USDC, and Base's WETH predeploy. Confirm their deployed code and feed freshness before broadcasting. The deploy script checks chain ID 84532, that the private key matches `DEPLOYER`, and that the account has test ETH:
+
+```bash
+cd contract
+./scripts/deploy-base-sepolia.sh
+```
+
+If `AQUA` is unset, the script deploys the pinned Aqua dependency on Base Sepolia, because 1inch's public deployment list does not currently name that testnet. If `FEE_VALUE_ORACLE` is unset, it deploys a fresh oracle and binds the WETH/USD feed. It then deploys the permissioned hook, vault, and Aqua underwriting app, links them, and asks Foundry to verify the source. The script does not deploy SwapVM, initialize a pool, mint an LP position, or collect test USDC. The dashboard's funding records are a local sandbox and do not represent these contracts.
+
+Verification can be retried without broadcasting another deployment: `./scripts/verify-base-sepolia.sh` reads the latest local broadcast, checks each contract's constructor arguments, and uses Aqua's own source remapping only for Aqua.
+
+### Verified Base Sepolia deployment
+
+The deployment from `0x9ACCF6E95219d489E86D5E61eBA44357538077aa` is verified on BaseScan:
+
+| Contract | Address |
+| --- | --- |
+| Nacre v4 fee hook | [`0x253b…8f00`](https://sepolia.basescan.org/address/0x253b6089405104d480723ca7ab27021f81268f00#code) |
+| Policy vault | [`0xb920…696a`](https://sepolia.basescan.org/address/0xb920ee1841c334b0979508d91b5ed1a8ff32696a#code) |
+| Aqua underwriting app | [`0x917a…a0c5`](https://sepolia.basescan.org/address/0x917a35660eeb5f9c14ad30f18ee8cb4ae158a0c5#code) |
+| Aqua registry | [`0x569c…15f3`](https://sepolia.basescan.org/address/0x569c255369093c80856eda8a49df834b7e9415f3#code) |
+| Chainlink fee-value oracle | [`0x5a3b…e087`](https://sepolia.basescan.org/address/0x5a3b7b7dc08a57f6205497285ea2a8a7fbd6e087#code) |
+
+The hook's `controller` is the vault, and the vault's `aquaApp` is the underwriting app; both links were checked by RPC after deployment. The testnet deployer retained about 0.09996 ETH after deployment. No Nacre v4 pool has been initialized and no policy is active.
 
 ## Safety boundaries
 
