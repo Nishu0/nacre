@@ -25,7 +25,7 @@ export function WorkspaceBalances({ account, onConnect }: { account: string | nu
   }, [account, refresh]);
   const values = data?.account === account ? data.values : null;
   return <div className="mw-page mw-wallet-balances">
-    <div className="mw-stats">{["nUSDC BALANCE", "nWETH BALANCE", "ETH FOR GAS"].map((label, index) => <Card className="kd-card" key={label}><div className="mw-stat"><span>{label}</span><strong>{!account ? "—" : !values ? "…" : Number(formatUnits(values[index], index === 0 ? 6 : 18)).toLocaleString("en-US", { maximumFractionDigits: index === 0 ? 2 : 5 })}</strong><small>Wallet balance · Base Sepolia</small></div></Card>)}</div>
+    <div className="mw-stats">{["nUSDC BALANCE", "nWETH BALANCE", "ETH FOR GAS"].map((label, index) => <Card className="kd-card" key={label}><div className="mw-stat"><span>{label}</span><strong>{!account ? "0" : !values ? "…" : Number(formatUnits(values[index], index === 0 ? 6 : 18)).toLocaleString("en-US", { maximumFractionDigits: index === 0 ? 2 : 5 })}</strong><small>Wallet balance · Base Sepolia</small></div></Card>)}</div>
     {error && <p role="status">{error}</p>}
     {!account ? <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet</Button> : <Button variant="outline" onClick={() => setRefresh((value) => value + 1)}>Refresh balances</Button>}
   </div>;
