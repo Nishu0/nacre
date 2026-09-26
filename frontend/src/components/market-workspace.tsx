@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, ArrowRight, CircleHelp, Droplets, ExternalLink, PiggyBank, Plus, Rocket, ShieldCheck } from "lucide-react";
@@ -14,9 +14,10 @@ import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
 import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
 import { preparePositionMint, positionMintError } from "@/lib/position-mint";
-import { testPool, TEST_WETH_POOL, NACRE_TEST_WETH, type TestPoolConfig } from "@/lib/test-pools";
+import { testPool, NACRE_TEST_WETH, type TestPoolConfig } from "@/lib/test-pools";
 import { tickPrice, type CoverageOffer, type CoverageSnapshot } from "@/lib/coverage-contracts";
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
+import { SupplyConfirmation, type SupplyReview, type SupplyPhase } from "@/components/supply-confirmation";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
 import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
   NACRE_TEST_USDC, BASE_WETH as CANONICAL_WETH, UNISWAP_PERMIT2,
@@ -104,12 +105,15 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const [mintTokenId, setMintTokenId] = useState<string | null>(null);
   const [mintConfirmed, setMintConfirmed] = useState(false);
   const [mintSaved, setMintSaved] = useState(false);
+  const [supplyOpen, setSupplyOpen] = useState(false);
+  const [supplyReview, setSupplyReview] = useState<SupplyReview | null>(null);
+  const [supplyPhase, setSupplyPhase] = useState<SupplyPhase>("review");
+  const supplyLock = useRef(false);
   const selected = markets.find((market) => market.id === selectedId);
   const poolConfig = selected?.poolConfig ?? testPool(selected?.deployment?.poolId);
   const BASE_WETH = poolConfig?.weth ?? CANONICAL_WETH;
   const wethSymbol = poolConfig?.symbol ?? "WETH";
   const isTestWeth = poolConfig?.weth === NACRE_TEST_WETH;
-  const faucetMarket = markets.find((market) => market.deployment?.poolId === TEST_WETH_POOL);
   const deployedPoolId = selected?.deployment?.poolId;
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
   const selectedWeth = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
@@ -288,65 +292,103 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
     }
   }
 
+  function reviewSupply() {
+    if (mintHash || mintConfirmed) { setSupplyOpen(true); return; }
+    if (!selected?.deployment || !quote || !walletAccount) return;
+    setSupplyReview({ account: walletAccount, marketId: selected.id, poolId: selected.deployment.poolId,
+      token: BASE_WETH, symbol: wethSymbol, fee: selected.feeBps ?? 500, lower, upper,
+      wethAmount: quote.split.ethAmount, usdcAmount: quote.split.usdcAmount, total: quote.depositUsd });
+    setSupplyPhase("review"); setMintError(""); setMintStep("");
+    setSupplyOpen(true);
+  }
+
+  async function finishSupply(tx: Hex, review: SupplyReview) {
+    setSupplyPhase("supply"); setMintStep("Waiting for the supply transaction to confirm…");
+    let replaced = false;
+    const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000,
+      onReplaced: ({ reason }) => { if (reason !== "repriced") replaced = true; },
+    });
+    if (replaced) {
+      setMintHash(null); setSupplyPhase("review");
+      throw new Error("The supply transaction was cancelled or replaced. Review your wallet before trying again.");
+    }
+    if (receipt.status !== "success") {
+      setMintHash(null); setSupplyPhase("review");
+      throw new Error("Supply reverted. No liquidity was supplied. You can try again.");
+    }
+    setMintHash(receipt.transactionHash);
+    setMintConfirmed(true); setSupplyPhase("done");
+    setMintStep("Supply confirmed. Updating your portfolio…");
+    setTokenRefresh((value) => value + 1);
+    const recorded = await api<{ tokenId: string }>(`markets/${review.marketId}/chain-positions`, "POST", { txHash: receipt.transactionHash, account: review.account });
+    setMintTokenId(recorded.tokenId); setMintSaved(true);
+    setTokenRefresh((value) => value + 1);
+    setMintStep(`Position #${recorded.tokenId} added to your portfolio.`);
+  }
+
   async function mintOnChain() {
-    if (!selected?.deployment || !quote || !walletAccount || mintBusy) return;
-    setMintBusy(true); setMintError(""); setMintStep("Checking on-chain pool price…");
+    if (!supplyReview || supplyLock.current || mintConfirmed) return;
+    supplyLock.current = true;
+    setMintBusy(true); setMintError("");
     try {
+      // A pending submission must be checked, never sent a second time.
+      if (mintHash) { await finishSupply(mintHash, supplyReview); return; }
+      const review = supplyReview;
+      setSupplyPhase("approval"); setMintStep("Checking your wallet and token balances…");
       await ensureBaseSepolia();
       if (bid) await requireAvailableBid();
-      const account = walletAccount as Address;
+      const account = review.account as Address;
       const [connected] = await injectedClient().getAddresses();
-      if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Wallet changed. Reconnect before minting.");
-      const wethAmount = parseUnits(quote.split.ethAmount.toFixed(8), 18);
-      const usdcAmount = parseUnits(quote.split.usdcAmount.toFixed(6), 6);
+      if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Switch back to the wallet used to review this supply.");
+      const wethAmount = parseUnits(review.wethAmount.toFixed(8), 18);
+      const usdcAmount = parseUnits(review.usdcAmount.toFixed(6), 6);
       const [weth, usdc, slot] = await Promise.all([
-        baseClient.readContract({ address: BASE_WETH, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
+        baseClient.readContract({ address: review.token, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
         baseClient.readContract({ address: NACRE_TEST_USDC, abi: erc20Abi, functionName: "balanceOf", args: [account] }),
-        baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi,
-          functionName: "getSlot0", args: [selected.deployment.poolId as Hex] }),
+        baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi, functionName: "getSlot0", args: [review.poolId as Hex] }),
       ]);
-      if (weth < wethAmount) throw new Error(isTestWeth ? "Claim free nWETH from the faucet first." : `Wrap ${formatUnits(wethAmount - weth, 18)} test ETH into WETH first.`);
-      if (usdc < usdcAmount) throw new Error(`Claim test nUSDC from the faucet first. Required: ${formatUnits(usdcAmount, 6)}.`);
-      if (slot[0] === BigInt(0)) throw new Error("The Uniswap pool has not been initialized.");
-      const params = mintParameters({ fee: selected.feeBps ?? 500, sqrtPriceX96: slot[0], lowerPriceUsd: lower,
-        upperPriceUsd: upper, wethAmount, usdcAmount, recipient: account, wethToken: BASE_WETH });
-      await approveForPosition(BASE_WETH, wethAmount, account);
+      if (weth < wethAmount) throw new Error(`Insufficient ${review.symbol}. Get test tokens from the faucet first.`);
+      if (usdc < usdcAmount) throw new Error("Insufficient nUSDC. Get test tokens from the faucet first.");
+      if (slot[0] === 0n) throw new Error("The Uniswap pool has not been initialized.");
+      const params = mintParameters({ fee: review.fee, sqrtPriceX96: slot[0], lowerPriceUsd: review.lower,
+        upperPriceUsd: review.upper, wethAmount, usdcAmount, recipient: account, wethToken: review.token });
+      await approveForPosition(review.token, wethAmount, account);
       await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);
       if (bid) await requireAvailableBid();
-      setMintStep("Estimating gas and checking your position…");
+      setSupplyPhase("supply"); setMintStep("Checking the transaction and estimating gas…");
       const request = await preparePositionMint(account, params.unlockData);
-      setMintStep("Confirm the position mint in your wallet…");
+      setMintStep("Confirm supply in your wallet…");
       const wallet = injectedClient();
+      const [currentAccount] = await wallet.getAddresses();
+      if (currentAccount?.toLowerCase() !== account.toLowerCase()) throw new Error("Wallet changed. Switch back before supplying.");
       const tx = await wallet.writeContract({ ...request, chain: wallet.chain });
       setMintHash(tx);
-      const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
-      if (receipt.status !== "success") throw new Error("Position mint reverted. Inspect the transaction on BaseScan.");
-      setMintConfirmed(true);
-      setMintStep("Saving the verified position to your portfolio…");
-      const recorded = await api<{ tokenId: string }>(`markets/${selected.id}/chain-positions`, "POST", { txHash: tx, account });
-      setMintTokenId(recorded.tokenId);
-      setMintSaved(true);
-      setTokenRefresh((value) => value + 1);
-      setMintStep("Position minted on Base Sepolia.");
-    } catch (reason) { setMintError(positionMintError(reason)); }
-    finally { setMintBusy(false); }
+      await finishSupply(tx, review);
+    } catch (reason) { setMintError(positionMintError(reason).replace(/minting/gi, "supplying").replace(/mint/gi, "supply")); }
+    finally { supplyLock.current = false; setMintBusy(false); }
   }
 
   async function retryPositionRegistration() {
-    if (!selected || !walletAccount || !mintHash || mintBusy) return;
-    setMintBusy(true); setMintError(""); setMintStep("Verifying your minted position…");
+    if (!supplyReview || !mintHash || supplyLock.current) return;
+    supplyLock.current = true;
+    setMintBusy(true); setMintError("");
     try {
-      const recorded = await api<{ tokenId: string }>(`markets/${selected.id}/chain-positions`, "POST",
-        { txHash: mintHash, account: walletAccount });
-      setMintTokenId(recorded.tokenId);
-      setMintSaved(true);
-      setMintStep("Position added to your portfolio.");
-    } catch (reason) { setMintError(reason instanceof Error ? reason.message : "Could not register the position."); }
-    finally { setMintBusy(false); }
+      setMintStep("Updating your portfolio…");
+      const recorded = await api<{ tokenId: string }>(`markets/${supplyReview.marketId}/chain-positions`, "POST",
+        { txHash: mintHash, account: supplyReview.account });
+      setMintTokenId(recorded.tokenId); setMintSaved(true);
+      setTokenRefresh((value) => value + 1);
+      setMintStep(`Position #${recorded.tokenId} added to your portfolio.`);
+    }
+    catch (reason) { setMintError(reason instanceof Error ? reason.message : "Could not update your portfolio."); }
+    finally { supplyLock.current = false; setMintBusy(false); }
   }
 
   return <div className="mw-page">
-    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review your funded bid before minting a matching position." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
+    <SupplyConfirmation open={supplyOpen} onOpenChange={setSupplyOpen} review={supplyReview} phase={supplyPhase}
+      busy={mintBusy} message={mintStep} error={mintError} hash={mintHash} saved={mintSaved}
+      onConfirm={() => void mintOnChain()} onRegister={() => void retryPositionRegistration()} />
+    <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Supply liquidity in your selected bid’s range." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
     {error && <div className="mw-message is-error" role="alert">{error}</div>}
     {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre markets yet</h2><p>Create a market proposal to define a pair, range, and launch targets.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
     {!marketId && !!markets.length && <>
@@ -376,7 +418,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
             <div><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(selectedUsdc, 6)).toFixed(2)}</strong><small>At mint</small></div>
           </div>
           <div className="mw-overview-range">
-            <div><span>{bid ? "FUNDED BID RANGE" : "PROPOSED LP RANGE"}</span><strong>{usd(lower)} <em>to</em> {usd(upper)}</strong><small>{bid ? `${coverageDays} days · exact underwriter bins` : "Choose exact bounds before minting"}</small></div>
+            <div><span>{bid ? "FUNDED BID RANGE" : "PROPOSED LP RANGE"}</span><strong>{usd(lower)} <em>to</em> {usd(upper)}</strong><small>{bid ? `${coverageDays} days · exact underwriter bins` : "Choose your supply range"}</small></div>
             <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (referencePrice - lower) / (upper - lower) * 100))}%` }} /></div>
             <Badge variant="outline" className={referencePrice >= lower && referencePrice < upper ? "is-in-range" : "is-out-of-range"}>{referencePrice >= lower && referencePrice < upper ? "LIVE IN RANGE" : "LIVE OUT OF RANGE"}</Badge>
           </div>
@@ -385,6 +427,31 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
       </Card>
       <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
+        {role === "lp" && <Card className="kd-card mw-supply-card">
+          <div className="kd-card-heading"><h2><PiggyBank size={16} /> Supply liquidity</h2><span>BASE SEPOLIA</span></div>
+          <div className="mw-supply-inner">
+            <p>Create an LP position with {wethSymbol} and nUSDC.</p>
+            <fieldset disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>
+              <AmountField label="Position amount (USD equivalent)" value={deposit} onChange={(value) => { setDeposit(value); setFeeTargetInput(""); }} min={100} />
+            </fieldset>
+            <div className="supply-token-grid">
+              <div><span>{wethSymbol}</span><strong>{quote ? quote.split.ethAmount.toLocaleString("en-US", { maximumFractionDigits: 8 }) : "—"}</strong><small>Balance: {wethBalance === null ? "—" : Number(formatUnits(wethBalance, 18)).toLocaleString("en-US", { maximumFractionDigits: 8 })}</small></div>
+              <div><span>nUSDC</span><strong>{quote ? quote.split.usdcAmount.toLocaleString("en-US", { maximumFractionDigits: 6 }) : "—"}</strong><small>Balance: {usdcBalance === null ? "—" : Number(formatUnits(usdcBalance, 6)).toLocaleString("en-US", { maximumFractionDigits: 6 })}</small></div>
+            </div>
+            <div className="supply-range-summary"><span>Price range</span><strong>{usd(lower)} – {usd(upper)}</strong></div>
+            {mintConfirmed && mintHash ? <>
+              <a className="supply-primary" href={basescanTx(mintHash)} target="_blank" rel="noreferrer">Supplied · {mintHash.slice(0, 8)}…{mintHash.slice(-6)} <ExternalLink size={16} /></a>
+              <small>{mintTokenId ? `Position #${mintTokenId} is in your portfolio.` : "Supply confirmed on-chain."}</small>
+              {!mintSaved && <button className="supply-secondary" onClick={() => setSupplyOpen(true)}>View portfolio update</button>}
+            </> : !walletAccount ? <button className="supply-primary" onClick={() => void onConnect()}>Connect wallet</button> : <>
+              <button className="supply-primary" disabled={mintBusy || (!mintHash && (!selected.deployment || !quote || (!!bid && !bidReady) || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)))} onClick={reviewSupply}>{mintHash ? "Check supply status" : "Supply"} <ArrowRight size={16} /></button>
+              {quote && ((wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18)) || (usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6))) && <Link className="supply-secondary" href="/dashboard/faucet">Get test tokens <ArrowRight size={16} /></Link>}
+              {!isTestWeth && quote && wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && <button className="supply-secondary" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap test ETH to WETH</button>}
+              {mintError && !supplyOpen && <p role="alert" className="supply-error">{mintError}</p>}
+            </>}
+          </div>
+        </Card>}
+
         <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={lower} upper={upper} current={poolSlot?.priceUsd ?? selected.priceUsd} stale={liveError} />
         {selected.deployment && <CoverageBoard poolId={selected.deployment.poolId} account={walletAccount} role={role} portfolio={!!bid} onChoose={!bid && role === "lp" ? (offer) => {
           setSelectedRange({ marketId: selectedId, lower: tickPrice(offer.tickLower), upper: tickPrice(offer.tickUpper) });
@@ -415,38 +482,15 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
               upper: Number(Math.min(selected.upperPriceUsd, referencePrice + halfWidth).toFixed(2)) });
           } : undefined} />}
         {role === "lp" ? <Card className="kd-card mw-trade-card">
-          <div className="kd-card-heading"><h2><PiggyBank size={16} /> Create LP position</h2><span>RANGE · {wethSymbol} + nUSDC</span></div>
+          <div className="kd-card-heading"><h2><ShieldCheck size={16} /> Fee protection</h2></div>
           <div className="mw-trade-inner">
-            <p>Choose your position amount. The selected funded bid sets your bins and days; historical data suggests a fee target.</p>
-            <AmountField label="nUSDC to model (USD equivalent)" value={deposit} onChange={(value) => { setDeposit(value); setFeeTargetInput(""); }} min={100} />
-            {quote && <>
-              <div className="mw-split"><div><small>{wethSymbol} required</small><strong>{usd(quote.split.swapUsd)}</strong><span>{quote.split.ethAmount} {wethSymbol}</span></div><div><small>nUSDC required</small><strong>{usd(quote.split.usdcAmount)}</strong><span>{(100 - quote.split.ethPercent).toFixed(1)}% of deposit</span></div></div>
-            </>}
-            <div className="mw-fee-request">
-              <div className="mw-fee-request-head"><strong>Minimum fee target</strong><span>HISTORICAL PREVIEW</span></div>
-              <label className="mw-field"><span>Coverage duration</span><select disabled={!!bid} value={coverageDays} onChange={(event) => { setCoverageDays(Number(event.target.value)); setFeeTargetInput(""); }} aria-label="Coverage duration">{[7, 14, 30, 60, 90].map((days) => <option key={days} value={days}>{days} days</option>)}</select></label>
-              <AmountField label={`Minimum fees to protect over ${coverageDays} days (USD)`} value={feeTargetInput} onChange={setFeeTargetInput} min={0.01} />
-              <small>Leave blank for the historical suggestion, limited to this bid’s available capacity.</small>
-              {feePreview && <><div className="mw-fee-evidence"><div><span>Recent {coverageDays} days</span><strong>{usd(feePreview.recentFeesUsd)}</strong></div><div><span>Best {coverageDays} days</span><strong>{usd(feePreview.bestFeesUsd)}</strong></div><div><span>Maximum target · 90% of best</span><strong>{usd(feePreview.maximumFeeTargetUsd)}</strong></div><div><span>Your minimum target</span><strong>{usd(feeTarget ?? 0)}</strong></div></div><p>Bid premium: <strong>{usd(bid ? Number(formatUnits((feeCap * BigInt(bid.premiumBps) + 9999n) / 10000n, 6)) : feePreview.indicativePremiumUsd)}</strong>. Coverage starts after purchase. Available capital is checked again before each transaction.</p></>}
-              {feeError && <p className="mw-premium-warning" role="alert">{feeError}</p>}
-            </div>
-            <div className="mw-availability"><ShieldCheck size={15} /><span>After minting, request coverage for your position’s bins and chosen duration. A funded offer activates only after you pay its premium.</span></div>
-            {(!walletAccount || (quote && usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6))) && <Button asChild variant="outline" className="mw-faucet-link"><Link href="/dashboard/faucet">Get test nUSDC for liquidity <ArrowRight size={14} /></Link></Button>}
-            <div className="mw-onchain-lp">
-              <div><strong>Mint a real testnet LP position</strong><span>{selected.deployment ? "Uniswap v4 · Base Sepolia" : "Available after admin pool deployment"}</span></div>
-              {walletAccount && quote && <div className="mw-token-balance"><span>Need {quote.split.ethAmount} {wethSymbol} <small>Have {wethBalance === null ? "…" : Number(formatUnits(wethBalance, 18)).toFixed(5)}</small></span><span>Need {usd(quote.split.usdcAmount)} nUSDC <small>Have {usdcBalance === null ? "…" : Number(formatUnits(usdcBalance, 6)).toFixed(2)}</small></span></div>}
-              {selected.deployment && !walletAccount && <Button variant="outline" onClick={() => void onConnect()}>Connect wallet to mint</Button>}
-              {selected.deployment && walletAccount && quote && <>
-                {wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && (isTestWeth ? <Button asChild variant="outline"><Link href="/dashboard/faucet">Claim 1 nWETH from the faucet <ArrowRight size={14} /></Link></Button> : <Button variant="outline" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap required test ETH to WETH</Button>)}
-                <Button className="kd-apply-button" disabled={(!!bid && !bidReady) || mintBusy || mintConfirmed || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)} onClick={() => void mintOnChain()}>{mintBusy ? mintStep || "Confirming…" : mintConfirmed ? "Position minted" : "Mint position on Base Sepolia"} <ArrowRight size={14} /></Button>
-              </>}
-              {mintStep && !mintBusy && <small>{mintStep}</small>}{mintError && <p role="alert" className="mw-premium-warning">{mintError}</p>}
-              {mintHash && <a href={basescanTx(mintHash)} target="_blank" rel="noreferrer">View mint transaction <ExternalLink size={13} /></a>}
-              {mintConfirmed && !mintSaved && <Button variant="outline" disabled={mintBusy} onClick={() => void retryPositionRegistration()}>Retry portfolio registration</Button>}
-              {mintTokenId && <strong>Uniswap position #{mintTokenId}</strong>}
-              <small>{isTestWeth ? "Claim both nWETH and nUSDC from the faucet, then approve and mint. Only network gas requires Base Sepolia ETH." : "This original pool uses ETH-backed WETH. For free test tokens, use the nWETH / nUSDC pool in the directory."}</small>
-              {!isTestWeth && faucetMarket && <Button asChild variant="outline"><Link href={`/dashboard/pools/${faucetMarket.id}`}>Use the free nWETH pool <ArrowRight size={14} /></Link></Button>}
-            </div>
+            <p>After supplying, choose a position and buy coverage from a funded bid.</p>
+            <details className="supply-coverage-settings"><summary>Coverage settings</summary>
+              <label className="mw-field"><span>Duration</span><select disabled={!!bid} value={coverageDays} onChange={(event) => { setCoverageDays(Number(event.target.value)); setFeeTargetInput(""); }}>{[7, 14, 30, 60, 90].map((days) => <option key={days} value={days}>{days} days</option>)}</select></label>
+              <AmountField label="Fee cap (nUSDC)" value={feeTargetInput} onChange={setFeeTargetInput} min={0.01} />
+              <small>{feeTarget ? `Current target: ${feeTarget.toFixed(2)} nUSDC` : "Calculating suggested target…"}. Leave blank to use the suggested target.</small>
+            </details>
+            {feeError && <p role="alert">{feeError}</p>}
             <CoverageRequestForm bidAddress={bid?.address} poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
               feeTarget={feeTarget} maximumTarget={feePreview ? Math.min(feePreview.maximumFeeTargetUsd, bid ? capacity : Infinity) : undefined} refreshKey={tokenRefresh} />
           </div>
