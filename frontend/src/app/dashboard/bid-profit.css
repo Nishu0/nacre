@@ -35,3 +35,12 @@
 @keyframes bps-reveal { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 480px) { .bps-body { padding: 15px; } .bps-row { gap: 12px; grid-template-columns: minmax(0, 1fr) 100px; } .bps-inputs { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .bps-bar, .bps-tile, .bps-profit { animation: none; } }
+.bps-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.bps-presets button { display: grid; gap: 4px; padding: 12px; border: 1px solid #dce6df; border-radius: 8px; text-align: left; color: #35513e; background: #fff; cursor: pointer; }
+.bps-presets button[aria-pressed="true"] { border-color: #679475; background: #eff7f1; }
+.bps-presets button:hover { border-color: #679475; }
+.bps-presets button:focus-visible { outline: 2px solid #478761; outline-offset: 2px; }
+.bps-presets strong { font-size: 13px; }
+.bps-presets span, .bps-inputs small { color: #647769; font-size: 11px; font-weight: 400; line-height: 1.5; }
+.bps-capacity { margin: 0 0 12px; color: #536b5b; font-size: 12px; line-height: 1.6; }
+@media (max-width: 420px) { .bps-presets { grid-template-columns: 1fr; } }

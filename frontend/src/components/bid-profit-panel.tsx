@@ -40,14 +40,22 @@ export function BidProfitPanel({ terms, validRange, inRange, feeTier }: { terms:
     <div className="kd-card-heading"><h2><ChartNoAxesCombined size={16} /> Your profit scenarios</h2><button type="button" className="bps-replay" onClick={() => setReplay((n) => n + 1)} aria-label="Replay scenario animations"><RotateCcw size={14} /> Replay</button></div>
     <div className="bps-body">
       <p className="bps-intro">Premiums earned − claims paid = your net profit</p>
+      <div className="bps-presets" role="group" aria-label="Example LP positions">
+        {[{ principal: "1000", cap: "10" }, { principal: "10000", cap: "100" }].map((example) => <button type="button" key={example.principal}
+          aria-pressed={principal === example.principal && cap === example.cap}
+          onClick={() => { setPrincipal(example.principal); setCap(example.cap); }}>
+          <strong>{amount(Number(example.principal))} nUSDC LP</strong><span>{example.cap} nUSDC payout cap</span>
+        </button>)}
+      </div>
       <details className="bps-assumptions"><summary>Example: {amount(Number(principal) || 0)} nUSDC LP · {amount(Number(cap) || 0)} nUSDC fee cap <span>Edit</span></summary><div className="bps-inputs">
-        <label className="mw-field"><span>Example LP size (nUSDC)</span><Input type="number" min="1" value={principal} onChange={(event) => setPrincipal(event.target.value)} /></label>
-        <label className="mw-field"><span>Fee cap per position (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={cap} onChange={(event) => setCap(event.target.value)} /></label>
+        <label className="mw-field"><span>LP deposit amount (nUSDC)</span><Input type="number" min="1" value={principal} onChange={(event) => setPrincipal(event.target.value)} /><small>Total amount the investor supplies as liquidity.</small></label>
+        <label className="mw-field"><span>Maximum fee payout per LP (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={cap} onChange={(event) => setCap(event.target.value)} /><small>Maximum you would pay for that position’s fee shortfall.</small></label>
       </div><p>These inputs only change the simulation. Each LP chooses its fee cap, subject to its position’s contract limit.</p></details>
       {!result ? <p role="status">Enter valid bid terms, an ordered range, and positive example amounts to see profit scenarios.</p> : <>
-        <div className="bps-summary"><span><strong>{result.count}</strong> example positions</span><span><strong>{terms.days}</strong> days</span><span><strong>{amount(result.premiums)}</strong> nUSDC premiums</span></div>
+        <div className="bps-summary"><span><strong>{result.count}</strong> positions you can cover</span><span><strong>{terms.days}</strong> days</span><span><strong>{amount(result.premiums)}</strong> nUSDC premiums</span></div>
+        <p className="bps-capacity">{amount(Number(terms.capital))} nUSDC backing ÷ {amount(Number(cap))} payout cap = {result.count} whole positions of {amount(Number(principal))} nUSDC each.</p>
         {Number(cap) > Number(principal) * .2 * terms.days / 365 && <p role="status" className="bps-note">This example cap exceeds the indicative position limit for {terms.days} days. Reduce it in the example settings; actual limits depend on the LP position.</p>}
-        {result.count === 0 && <p role="status">Your capital is below one example fee cap. Lower the simulated cap or increase capital.</p>}
+        {result.count === 0 && <p role="status">One position with this payout cap needs {amount(Number(cap))} nUSDC backing. You have entered {amount(Number(terms.capital))} nUSDC backing.</p>}
         {!inRange && <p className="bps-note">The pool price is outside these bins. These scenarios assume purchases become available after it returns inside.</p>}
         <div key={`${terms.capital}:${terms.rate}:${terms.days}:${principal}:${cap}:${replay}:${result.windows}`} className="bps-rows">{rows.map((row) => <section className={`bps-row bps-${row.kind}`} key={row.kind} aria-label={row.title}>
           <div className="bps-result"><h3>{row.title}{row.kind === "median" && <span>HISTORICAL PROXY</span>}</h3>
