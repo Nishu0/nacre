@@ -110,7 +110,7 @@ function approximateSqrtAtTick(tick: number): bigint {
   return BigInt(Math.floor(Math.pow(1.0001, tick / 2) * 2 ** 96));
 }
 
-export function mintParameters(input: {
+export function mintParameters(input: { fee?: number;
   sqrtPriceX96: bigint; lowerPriceUsd: number; upperPriceUsd: number;
   wethAmount: bigint; usdcAmount: bigint; recipient: Address; wethToken?: Address;
 }) {
@@ -140,7 +140,7 @@ export function mintParameters(input: {
   const currency1 = wethFirst ? NACRE_TEST_USDC : wethToken;
   const amount0Max = wethFirst ? input.wethAmount : input.usdcAmount;
   const amount1Max = wethFirst ? input.usdcAmount : input.wethAmount;
-  const poolKey = { currency0, currency1, fee: 500, tickSpacing: 10, hooks: NACRE_HOOK };
+  const poolKey = { currency0, currency1, fee: input.fee ?? 500, tickSpacing: 10, hooks: NACRE_HOOK };
   const mint = encodeAbiParameters([
     { type: "tuple", components: [{ name: "currency0", type: "address" }, { name: "currency1", type: "address" },
       { name: "fee", type: "uint24" }, { name: "tickSpacing", type: "int24" }, { name: "hooks", type: "address" }] },

@@ -1,4 +1,4 @@
-import { testPool } from "../../frontend/src/lib/test-pools";
+import { registeredPool } from "./pool-registry";
 import type { Database } from "bun:sqlite";
 import { getObservations } from "./db";
 import { rollingWindows, roundUsd } from "./backtest";
@@ -55,13 +55,14 @@ export function presentMarket(db: Database, row: MarketRow) {
   const totals = sums(db, row.id);
   const deployment = db.query("SELECT tx_hash, pool_id, deployed_at FROM market_deployments WHERE market_id = ?")
     .get(row.id) as { tx_hash: string; pool_id: string; deployed_at: string } | null;
+  const config = registeredPool(db, deployment?.pool_id);
   const inRange = row.tick >= row.tick_lower && row.tick < row.tick_upper;
   const funded = totals.investedUsd >= row.liquidity_target_usd
     && totals.pledgedUsd >= row.collateral_budget_usd;
   return {
     archived: Boolean(db.query("SELECT 1 FROM market_archives WHERE market_id = ?").get(row.id)),
     id: row.id, creator: row.creator, referencePoolId: row.reference_pool_id,
-    pair: `${testPool(deployment?.pool_id)?.symbol ?? "WETH"} / nUSDC`, feeTier: "0.05%", priceUsd: row.price_usd,
+    pair: `${config?.symbol ?? "WETH"} / nUSDC`, feeTier: `${(config?.fee ?? 500) / 10000}%`, feeBps: config?.fee ?? 500, poolConfig: config, priceUsd: row.price_usd,
     lowerPriceUsd: row.lower_price_usd, upperPriceUsd: row.upper_price_usd,
     currentTick: row.tick, tickLower: row.tick_lower, tickUpper: row.tick_upper,
     liquidityTargetUsd: row.liquidity_target_usd,

@@ -4,7 +4,7 @@ import { COVERAGE_VAULT, COVERAGE_TOKEN, COVERAGE_POSITIONS,
   coverageVaultAbi, rangeFactoryAbi, rangeOfferAbi, coverageNftAbi, unpackTicks,
   type CoverageSnapshot, type CoverageOffer, type CoverageRequest } from "../../frontend/src/lib/coverage-contracts";
 
-import { TEST_WETH_POOL, testPool } from "../../frontend/src/lib/test-pools";
+import { TEST_WETH_POOL, testPool, type TestPoolConfig } from "../../frontend/src/lib/test-pools";
 
 const client = createPublicClient({ chain: baseSepolia,
   transport: http(process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org", { timeout: 10_000 }) });
@@ -13,10 +13,10 @@ const stateAbi = parseAbi(["function getSlot0(bytes32) view returns (uint160,int
 const pending = new Map<string, Promise<CoverageSnapshot>>();
 const cached = new Map<string, { at: number; value: CoverageSnapshot }>();
 
-export async function coverageSnapshot(tokenIds: string[], fresh = false, requestedPool?: string): Promise<CoverageSnapshot> {
+export async function coverageSnapshot(tokenIds: string[], fresh = false, requestedPool?: string, registeredConfig?: TestPoolConfig): Promise<CoverageSnapshot> {
   // Archived pools remain available only through an explicit recovery lookup.
   if (!requestedPool) return coverageSnapshot(tokenIds, fresh, TEST_WETH_POOL);
-  const config = testPool(requestedPool);
+  const config = registeredConfig ?? testPool(requestedPool);
   if (!config) throw new Error("Unknown coverage pool");
   const poolId = config.poolId;
   const RANGE_FACTORY = config.factory;
@@ -71,7 +71,7 @@ export async function coverageSnapshot(tokenIds: string[], fresh = false, reques
       tickUpper: positions.find((position) => position.tokenId === String(row[2]))!.tickUpper,
     }));
     const reserved = requests.filter((row) => row.status === 2).reduce((total, row) => total + BigInt(row.payoutCap), 0n);
-    const value = { poolTicks: { [poolId]: slot[1] }, configured, blockNumber: String(blockNumber), currentTick: slot[1], offers,
+    const value = { poolConfig: config, poolTicks: { [poolId]: slot[1] }, configured, blockNumber: String(blockNumber), currentTick: slot[1], offers,
       requests, positions, reserved: String(reserved) };
     cached.set(cacheKey, { at: Date.now(), value });
     for (const [key, row] of cached) if (Date.now() - row.at > 30_000) cached.delete(key);

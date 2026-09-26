@@ -73,7 +73,7 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
   account: string | null; onConnect: () => Promise<void>; lower: number; upper: number; poolId?: string; initialDays?: number; initialCapital?: string;
 }) {
   const { data, error } = useCoverage(poolId);
-  const RANGE_FACTORY = testPool(poolId)?.factory;
+  const RANGE_FACTORY = data?.poolConfig?.factory ?? testPool(poolId)?.factory;
   const action = useCoverageAction(account);
   const [capital, setCapital] = useState(initialCapital);
   const [days, setDays] = useState(initialDays);
@@ -247,7 +247,7 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled, 
 export function OfferRow({ offer, account, disabled, onChoose, canManage }: { offer: CoverageOffer; account: string | null; disabled: boolean; canManage: boolean; onChoose?: (offer: CoverageOffer) => void }) {
   const action = useCoverageAction(account);
   return <div className="cw-policy"><div className="cw-row"><strong>{offer.duration / 86400} days · {offer.premiumBps / 100}% premium</strong><span>{offer.closed ? "Closed to new coverage" : "Funded offer"}</span></div>
-    <p>{testPool(offer.poolId)?.symbol ?? "WETH"} / nUSDC · {rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>
+    <p>{testPool(offer.poolId)?.symbol ?? "nWETH"} / nUSDC · {rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>
     {offer.poolId === LEGACY_WETH_POOL && !offer.closed && <p className="mw-risk-note">This offer backs the old WETH pool only. To back nWETH positions, withdraw unused funds and fund their exact bins in the nWETH pool.</p>}
     <div className="cw-row"><span>Available <strong>{amount(offer.available)} nUSDC</strong></span><a href={`https://sepolia.basescan.org/address/${offer.address}`} target="_blank" rel="noreferrer">Contract <ExternalLink size={12} /></a></div>
     {onChoose && !offer.closed && BigInt(offer.available) > BigInt(0) && !same(offer.owner, account) && <Button variant="outline" onClick={() => onChoose(offer)}>Use these bins & duration</Button>}
@@ -289,7 +289,7 @@ export function CoverageBoard({ account, role, portfolio = false, onChoose, pool
             const fundedBins = myOffers.some((offer) => offer.poolId === position.poolId && !offer.closed
               && BigInt(offer.available) > BigInt(0) && offer.tickLower === position.tickLower && offer.tickUpper === position.tickUpper);
             return <div className="cw-policy" key={position.tokenId}>
-              <div className="cw-row"><strong>Position #{position.tokenId} · {testPool(position.poolId)?.symbol} / nUSDC</strong><span>{policy ? "Covered" : pending ? "Coverage requested" : "No coverage requested"}</span></div>
+              <div className="cw-row"><strong>Position #{position.tokenId} · {testPool(position.poolId)?.symbol ?? "nWETH"} / nUSDC</strong><span>{policy ? "Covered" : pending ? "Coverage requested" : "No coverage requested"}</span></div>
               <p>{rangeText(position.tickLower, position.tickUpper)} · {(position.tickUpper - position.tickLower) / 10} bins</p>
               {!policy && <small>{ownPosition ? "Owned by your connected wallet. Another wallet must underwrite it; switching dashboard roles does not change your wallet." : fundedBins ? "Your offer covers these bins. The LP must choose matching days and a fee cap within your available capital, then purchase coverage." : "You have no funded offer for this pool and these exact bins."}</small>}
             </div>;

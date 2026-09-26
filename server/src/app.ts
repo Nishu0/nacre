@@ -6,7 +6,9 @@ import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
 import { coverageSnapshot } from "./coverage";
 import { activeCoverage } from "./workspace-state";
-import { TEST_POOLS, TEST_WETH_POOL, testPool } from "../../frontend/src/lib/test-pools";
+import { TEST_POOLS, TEST_WETH_POOL, LEGACY_WETH_POOL } from "../../frontend/src/lib/test-pools";
+import { registeredPool, allPoolConfigs } from "./pool-registry";
+import { registerOpenPool } from "./open-pools";
 import { readAtMintBlock } from "./position-registration";
 import { getHyperliquidHistory, type PriceHistory } from "./hyperliquid";
 import { getLivePrices, type LivePrices } from "./live-prices";
@@ -88,10 +90,15 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
   });
 
   app.get<{ Querystring: { fresh?: string; poolId?: string } }>("/api/coverage", async (request, reply) => {
-    if (request.query.poolId && !testPool(request.query.poolId)) return reply.code(400).send({ error: "Unknown coverage pool" });
+    if (request.query.poolId && !registeredPool(db, request.query.poolId)) return reply.code(400).send({ error: "Unknown coverage pool" });
     try {
       const rows = db.query("SELECT token_id FROM market_chain_positions").all() as { token_id: string }[];
-      return activeCoverage(db, await coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1", request.query.poolId));
+      const configs = request.query.poolId ? [registeredPool(db, request.query.poolId)!] : allPoolConfigs(db).filter((pool) => pool.poolId !== LEGACY_WETH_POOL);
+      const snapshots = await Promise.all(configs.map((config) => coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1", config.poolId, config)));
+      const combined = { ...snapshots[0], offers: snapshots.flatMap((s) => s.offers), requests: snapshots.flatMap((s) => s.requests),
+        positions: snapshots.flatMap((s) => s.positions), poolTicks: Object.assign({}, ...snapshots.map((s) => s.poolTicks)),
+        reserved: String(snapshots.reduce((n, s) => n + BigInt(s.reserved), 0n)) };
+      return activeCoverage(db, combined);
     } catch (error) {
       app.log.error(error, "Coverage chain read failed");
       return reply.code(503).send({ error: "Could not read coverage from Base Sepolia. Please retry." });
@@ -100,11 +107,22 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
 
   // Technical pool configuration remains available after clearing the workspace.
   // Only newly funded bids are listed in the investor marketplace.
-  app.get("/api/bid-market", async (_request, reply) => {
-    const deployment = db.query("SELECT market_id FROM market_deployments WHERE pool_id = ? ORDER BY deployed_at DESC LIMIT 1").get(TEST_WETH_POOL) as { market_id: string } | null;
+  app.get<{ Querystring: { poolId?: string } }>("/api/bid-market", async (request, reply) => {
+    const deployment = db.query("SELECT market_id FROM market_deployments WHERE pool_id = ? ORDER BY deployed_at DESC LIMIT 1").get(request.query.poolId ?? TEST_WETH_POOL) as { market_id: string } | null;
     const market = deployment && getMarket(db, deployment.market_id);
     if (!market) return reply.code(404).send({ error: "The nWETH market is not configured." });
     return { market: presentMarket(db, market) };
+  });
+
+  app.get("/api/bid-markets", async () => {
+    const rows = db.query("SELECT market_id FROM market_deployments WHERE pool_id = ? OR pool_id IN (SELECT pool_id FROM open_pool_configs) ORDER BY deployed_at DESC").all(TEST_WETH_POOL) as { market_id: string }[];
+    return { markets: rows.flatMap((row) => { const market = getMarket(db, row.market_id); return market ? [presentMarket(db, market)] : []; }) };
+  });
+  app.post<{ Body: { txHash?: string } }>("/api/open-pools", async (request, reply) => {
+    const hash = request.body?.txHash;
+    if (typeof hash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(hash)) return reply.code(400).send({ error: "A pool creation transaction hash is required." });
+    try { return { market: await registerOpenPool(db, hash as Hex) }; }
+    catch (reason) { return reply.code(409).send({ error: reason instanceof Error ? reason.message : "Could not verify pool creation." }); }
   });
 
   app.get("/api/live-prices", async (_request, reply) => {
@@ -261,10 +279,10 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
             functionName: "getPoolAndPositionInfo", args: [tokenId], blockNumber }),
         ]));
         if (owner.toLowerCase() !== account.toLowerCase()
-          || key.currency0.toLowerCase() !== (testPool(presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toLowerCase()
+          || key.currency0.toLowerCase() !== (registeredPool(db, presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toLowerCase()
           || key.currency1.toLowerCase() !== TEST_USDC.toLowerCase()
           || key.hooks.toLowerCase() !== HOOK.toLowerCase()
-          || key.fee !== 500 || key.tickSpacing !== 10) {
+          || key.fee !== (registeredPool(db, presentMarket(db, market).deployment?.poolId)?.fee ?? 500) || key.tickSpacing !== 10) {
           throw new Error("This position does not belong to the Nacre WETH/nUSDC pool.");
         }
         const transferred = (token: string) => receipt.logs.reduce((total, log) => {
@@ -279,7 +297,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         db.prepare(`INSERT OR IGNORE INTO market_chain_positions
           (token_id, market_id, owner, tx_hash, weth_raw, usdc_raw, minted_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
           .run(tokenId.toString(), market.id, account.toLowerCase(), txHash,
-            transferred(testPool(presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toString(), transferred(TEST_USDC).toString(), new Date().toISOString());
+            transferred(registeredPool(db, presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toString(), transferred(TEST_USDC).toString(), new Date().toISOString());
         return { tokenId: tokenId.toString(), txHash, marketId: market.id };
       } catch (reason) {
         return reply.code(409).send({ error: reason instanceof Error ? reason.message : "Could not verify position mint." });
@@ -299,14 +317,14 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       FROM market_chain_positions p LEFT JOIN market_deployments d ON d.market_id = p.market_id
       WHERE (? IS NULL OR p.owner = ?) AND (? IS NULL OR p.market_id = ?)
       AND NOT EXISTS (SELECT 1 FROM workspace_archives a WHERE a.kind = 'position' AND a.item_id = p.token_id)
-      AND d.pool_id = '${TEST_WETH_POOL}'
+      AND (d.pool_id = '${TEST_WETH_POOL}' OR d.pool_id IN (SELECT pool_id FROM open_pool_configs))
       ORDER BY p.minted_at DESC`).all(account?.toLowerCase() ?? null, account?.toLowerCase() ?? null,
       marketId ?? null, marketId ?? null) as {
       token_id: string; market_id: string; tx_hash: string; pool_id: string;
       weth_raw: string; usdc_raw: string; minted_at: string;
     }[];
     return { positions: rows.map((row) => ({ tokenId: row.token_id, marketId: row.market_id,
-      wethSymbol: testPool(row.pool_id)?.symbol ?? "WETH", poolId: row.pool_id,
+      wethSymbol: registeredPool(db, row.pool_id)?.symbol ?? "WETH", poolId: row.pool_id,
       txHash: row.tx_hash, wethRaw: row.weth_raw, usdcRaw: row.usdc_raw, mintedAt: row.minted_at })) };
   });
 

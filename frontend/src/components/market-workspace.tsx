@@ -14,7 +14,7 @@ import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
 import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
 import { preparePositionMint, positionMintError } from "@/lib/position-mint";
-import { testPool, TEST_WETH_POOL } from "@/lib/test-pools";
+import { testPool, TEST_WETH_POOL, NACRE_TEST_WETH, type TestPoolConfig } from "@/lib/test-pools";
 import { tickPrice, type CoverageOffer, type CoverageSnapshot } from "@/lib/coverage-contracts";
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
@@ -29,7 +29,7 @@ import { useCoverage } from "@/lib/use-coverage";
 export type WorkspaceRole = "lp" | "underwriter";
 
 export type Market = {
-  archived: boolean;
+  archived: boolean; feeBps?: number; poolConfig?: TestPoolConfig;
   id: string; pair: string; feeTier: string; priceUsd: number; lowerPriceUsd: number;
   upperPriceUsd: number; currentTick: number; tickLower: number; tickUpper: number;
   liquidityTargetUsd: number; collateralBudgetUsd: number; investedUsd: number;
@@ -105,10 +105,10 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const [mintConfirmed, setMintConfirmed] = useState(false);
   const [mintSaved, setMintSaved] = useState(false);
   const selected = markets.find((market) => market.id === selectedId);
-  const poolConfig = testPool(selected?.deployment?.poolId);
+  const poolConfig = selected?.poolConfig ?? testPool(selected?.deployment?.poolId);
   const BASE_WETH = poolConfig?.weth ?? CANONICAL_WETH;
   const wethSymbol = poolConfig?.symbol ?? "WETH";
-  const isTestWeth = selected?.deployment?.poolId === TEST_WETH_POOL;
+  const isTestWeth = poolConfig?.weth === NACRE_TEST_WETH;
   const faucetMarket = markets.find((market) => market.deployment?.poolId === TEST_WETH_POOL);
   const deployedPoolId = selected?.deployment?.poolId;
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
@@ -161,7 +161,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
 
   useEffect(() => {
     const controller = new AbortController();
-    void (bid ? api<{ market: Market }>("bid-market").then(({ market }) => ({ markets: [market] })) : api<{ markets: Market[] }>("markets")).then(({ markets: rows }) => {
+    void (bid ? api<{ market: Market }>(`bid-market?poolId=${bid.poolId}`).then(({ market }) => ({ markets: [market] })) : api<{ markets: Market[] }>("markets")).then(({ markets: rows }) => {
       if (controller.signal.aborted) return;
       setMarkets(rows);
       setSelectedId((current) => marketId || current || rows[0]?.id || "");
@@ -308,7 +308,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
       if (weth < wethAmount) throw new Error(isTestWeth ? "Claim free nWETH from the faucet first." : `Wrap ${formatUnits(wethAmount - weth, 18)} test ETH into WETH first.`);
       if (usdc < usdcAmount) throw new Error(`Claim test nUSDC from the faucet first. Required: ${formatUnits(usdcAmount, 6)}.`);
       if (slot[0] === BigInt(0)) throw new Error("The Uniswap pool has not been initialized.");
-      const params = mintParameters({ sqrtPriceX96: slot[0], lowerPriceUsd: lower,
+      const params = mintParameters({ fee: selected.feeBps ?? 500, sqrtPriceX96: slot[0], lowerPriceUsd: lower,
         upperPriceUsd: upper, wethAmount, usdcAmount, recipient: account, wethToken: BASE_WETH });
       await approveForPosition(BASE_WETH, wethAmount, account);
       await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);

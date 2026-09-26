@@ -57,6 +57,7 @@ export type CoverageRequest = {
 };
 export type CoveragePosition = { poolId: string; tokenId: string; owner: string; tickLower: number; tickUpper: number };
 export type CoverageSnapshot = {
+  poolConfig?: import("./test-pools").TestPoolConfig;
   poolTicks: Record<string, number>;
   configured: boolean; blockNumber: string; currentTick: number; offers: CoverageOffer[];
   requests: CoverageRequest[]; positions: CoveragePosition[]; reserved: string;

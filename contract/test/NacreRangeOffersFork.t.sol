@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
+import {NacreOpenPool} from "../src/NacreOpenPool.sol";
 import {Test} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
@@ -24,6 +25,7 @@ interface IPositions {
 interface IState { function getSlot0(bytes32) external view returns (uint160,int24,uint24,uint24); }
 
 contract NacreRangeOffersForkTest is Test {
+    uint24 tradingFee = 500;
     address lp = address(0x1234);
     address maker = address(0x5678);
     IERC20 token = IERC20(0xfa35D165b03B8eB193934D338Db8de536e84AAC8);
@@ -71,7 +73,9 @@ contract NacreRangeOffersForkTest is Test {
         offer.closeAndWithdraw();
         assertEq(token.balanceOf(maker), 9990.8e6);
     }
-    function testDeployedTestWethFaucetMintAndCoverage() public {
+    function testDeployedTestWethFaucetMintAndCoverage() public { _testTestWethCoverage(false); }
+    function testNewPoolMintAndCoverage() public { _testTestWethCoverage(true); }
+    function _testTestWethCoverage(bool createPool) internal {
         string memory rpc = vm.envOr("BASE_SEPOLIA_RPC_URL", string(""));
         if (bytes(rpc).length == 0) { vm.skip(true); return; }
         vm.createSelectFork(rpc);
@@ -80,6 +84,13 @@ contract NacreRangeOffersForkTest is Test {
         vault = NacrePolicyVault(0x879Ead283E76aFc12865CA43a0A3F10c3626CCe0);
         app = NacreAquaUnderwriter(0x0D2ED632E5A10aB713d183369687720d4e3817Cd);
         NacreRangeOfferFactory factory = NacreRangeOfferFactory(0x815bAcd48995FC5AbE143bC08aFcB40c7306f3B7);
+        if (createPool) {
+            vm.prank(maker);
+            NacreOpenPool created = new NacreOpenPool(3000, TickMath.getSqrtPriceAtTick(-197350));
+            pool = created.poolId();
+            factory = NacreRangeOfferFactory(created.offerFactory());
+            tradingFee = 3000;
+        }
         (uint160 price, int24 tick,,) = IState(0x571291b572ed32ce6751a2Cb2486EbEe8DEfB9B4).getSlot0(pool);
         int24 lower = (tick / 10) * 10 - 1000;
         int24 upper = (tick / 10) * 10 + 1000;
@@ -106,7 +117,7 @@ contract NacreRangeOffersForkTest is Test {
         assertEq(token.balanceOf(address(offer)), 99.08e6);
     }
     function _key() internal view returns (PoolKey memory) {
-        return PoolKey(Currency.wrap(weth), Currency.wrap(address(token)), 500, 10,
+        return PoolKey(Currency.wrap(weth), Currency.wrap(address(token)), tradingFee, 10,
             IHooks(0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00));
     }
     function _mint(uint160 price, int24 lower, int24 upper) internal returns (uint256 tokenId) {

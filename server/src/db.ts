@@ -90,6 +90,9 @@ export function openDb(path = DATABASE_PATH): Database {
       pool_id TEXT NOT NULL,
       deployed_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS open_pool_configs (
+      pool_id TEXT PRIMARY KEY, market_id TEXT NOT NULL UNIQUE, launcher TEXT NOT NULL, factory TEXT NOT NULL, fee INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS market_chain_positions (
       token_id TEXT PRIMARY KEY,
       market_id TEXT NOT NULL REFERENCES market_drafts(id),

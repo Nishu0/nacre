@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CoverageFunding, OfferRow } from "@/components/coverage-workspace";
 import { WorkspacePools, type Market, type WorkspaceRole } from "@/components/market-workspace";
-import { TEST_WETH_POOL } from "@/lib/test-pools";
+
 import { priceToRawTick, priceInputToTick } from "@/lib/nacre-chain";
 import { tickPrice } from "@/lib/coverage-contracts";
 import { availableBid } from "@/lib/funded-bids";
@@ -15,21 +15,31 @@ import { useCoverage } from "@/lib/use-coverage";
 
 const money = (value: number) => value.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
-export function BidWorkspace({ role, walletAccount, onConnect, onRoleChange }: {
-  role: WorkspaceRole; walletAccount: string | null; onConnect: () => Promise<void>; onRoleChange: (role: WorkspaceRole) => void;
-}) {
-  const { data, error, refresh } = useCoverage(TEST_WETH_POOL);
-  const [market, setMarket] = useState<Market | null>(null);
-  const [configError, setConfigError] = useState("");
-  const [chosen, setChosen] = useState<string | null>(null);
+type BidWorkspaceProps = {
+  role: WorkspaceRole; walletAccount: string | null; onConnect: () => Promise<void>; onRoleChange: (role: WorkspaceRole) => void; marketId?: string;
+};
+export function BidWorkspace(props: BidWorkspaceProps) {
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [selection, setSelection] = useState(props.marketId ?? "");
+  const [error, setError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/api/workspace/bid-market", { signal: controller.signal, cache: "no-store" })
+    void fetch("/api/workspace/bid-markets", { signal: controller.signal, cache: "no-store" })
       .then(async (response) => { const value = await response.json(); if (!response.ok) throw new Error(value.error); return value; })
-      .then((value) => { if (!controller.signal.aborted) setMarket(value.market); })
-      .catch((reason) => { if (!controller.signal.aborted) setConfigError(reason.message); });
+      .then((value) => { if (!controller.signal.aborted) setMarkets(value.markets); })
+      .catch((reason) => { if (!controller.signal.aborted) setError(reason.message); });
     return () => controller.abort();
   }, []);
+  const market = markets.find((row) => row.id === selection) ?? markets[0];
+  if (!market) return <p role={error ? "alert" : "status"}>{error || "Loading pools…"}</p>;
+  return <div className="mw-page">
+    {markets.length > 1 && <label className="mw-field"><span>Pool</span><select value={market.id} onChange={(event) => setSelection(event.target.value)}>{markets.map((row) => <option key={row.id} value={row.id}>{row.pair} · {row.feeTier} trading fee</option>)}</select></label>}
+    <PoolBids key={market.id} {...props} market={market} />
+  </div>;
+}
+function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidWorkspaceProps & { market: Market }) {
+  const { data, error, refresh } = useCoverage(market.deployment!.poolId);
+  const [chosen, setChosen] = useState<string | null>(null);
   const bids = data?.offers.filter((bid) => !bid.closed && BigInt(bid.available) > 0n) ?? [];
   const selected = bids.find((bid) => bid.address === chosen);
   if (role === "lp" && chosen && market && selected) return <div className="mw-page">
@@ -37,7 +47,7 @@ export function BidWorkspace({ role, walletAccount, onConnect, onRoleChange }: {
     <WorkspacePools key={selected.address} marketId={market.id} bid={selected} role={role} walletAccount={walletAccount} onConnect={onConnect} onRoleChange={onRoleChange} />
   </div>;
   return <div className="mw-page">
-    {(error || configError) && <p role="alert" className="mw-premium-warning">{error || configError}</p>}
+    {error && <p role="alert" className="mw-premium-warning">{error}</p>}
     {chosen && !selected && data && <p role="status">That bid is no longer available. Choose another funded bid.</p>}
     {role === "underwriter" && market && data && <BidForm key={walletAccount ?? "disconnected"} market={market} current={tickPrice(data.currentTick)} account={walletAccount} onConnect={onConnect} />}
     <Card className="kd-card cw-board"><div className="kd-card-heading"><h2><ShieldCheck size={16} />{role === "underwriter" ? "Funded bids" : "Available coverage bids"}</h2><button type="button" onClick={() => void refresh()}>Refresh</button></div><div className="mw-trade-inner">
@@ -72,5 +82,5 @@ function BidForm({ market, current, account, onConnect }: { market: Market; curr
     <label className="mw-field"><span>Minimum nWETH price (USD)</span><Input type="number" value={lower} onChange={(event) => setLower(event.target.value)} /></label>
     <label className="mw-field"><span>Maximum nWETH price (USD)</span><Input type="number" value={upper} onChange={(event) => setUpper(event.target.value)} /></label>
     {!valid && <p role="status">Enter a range inside {money(minimum)}–{money(maximum)}.</p>}
-  </div></Card>{valid && <CoverageFunding account={account} onConnect={onConnect} poolId={TEST_WETH_POOL} lower={Number(lower)} upper={Number(upper)} />}</div>;
+  </div></Card>{valid && <CoverageFunding account={account} onConnect={onConnect} poolId={market.deployment!.poolId} lower={Number(lower)} upper={Number(upper)} />}</div>;
 }

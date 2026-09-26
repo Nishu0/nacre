@@ -57,7 +57,7 @@ const pageCopy: Record<DashboardView, { title: string; description: string }> = 
   overview: { title: "Build a fee floor market", description: "Explore historical fee yield, then follow the steps to launch a funded v4 protection pool." },
   pools: { title: "Coverage bids", description: "Underwriters fund ranges. Investors choose from available funded bids." },
   "pool-detail": { title: "Coverage bids", description: "Choose a funded range to get started." },
-  "pool-create": { title: "Create pool", description: "Choose your coverage range, set funding terms, and review before creating." },
+  "pool-create": { title: "Create pool", description: "Choose the token pair, starting price and pool configuration." },
   portfolio: { title: "Portfolio", description: "Review verified Base Sepolia liquidity positions." },
   faucet: { title: "Test token faucet", description: "Claim nUSDC and nWETH for your Base Sepolia positions." },
   backtest: { title: "Fee backtest", description: "Compare historical Uniswap fee windows at your chosen capital size." },
@@ -115,7 +115,7 @@ function LaunchPath({ expanded = false }: { expanded?: boolean }) {
   return <Card className={`kd-card kd-launch-panel${expanded ? " kd-launch-expanded" : ""}`}><div className="kd-card-heading"><h2><Layers3 size={17} /> Launch path</h2><span>4 STEPS</span></div><div className="kd-launch-inner"><div className="kd-launch-heading"><Badge variant="outline">TESTNET POOL DEPLOYED</Badge><p>The WETH/nUSDC pool is initialized on Base Sepolia. Liquidity positions and protection must still be funded on-chain.</p></div><ol>{launchSteps.map((step) => <li key={step.number}><span>{step.number}</span><div><strong>{step.title}</strong><p>{step.detail}</p></div></li>)}</ol><Link href="/dashboard/references" className="kd-text-link">Compare reference pairs <ArrowRight size={15} /></Link></div></Card>;
 }
 
-export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-005" }: { view?: DashboardView; initialPoolId?: string; marketId?: string }) {
+export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-005", marketId }: { view?: DashboardView; initialPoolId?: string; marketId?: string }) {
   useEffect(() => {
     try {
       if (!localStorage.getItem("nacre-bid-workspace-v1")) {
@@ -246,7 +246,7 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
       <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><div className="flex flex-wrap items-center gap-3"><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge>{view === "overview" && role === "underwriter" && <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={16} /> Create pool</Link></Button>}</div></div>
         {view === "overview" && <WorkspaceBalances account={walletAccount} onConnect={connectWallet} />}
         {view === "pool-create" && <PoolCreateFlow account={walletAccount} onConnect={connectWallet} />}
-        {["pools", "pool-detail"].includes(view) && <BidWorkspace key={`${role}:${walletAccount}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
+        {["pools", "pool-detail"].includes(view) && <BidWorkspace marketId={marketId} key={`${role}:${walletAccount}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "portfolio" && <WorkspacePortfolio role={role} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "faucet" && <TestUsdcFaucet account={walletAccount} onConnect={connectWallet} />}
         {view === "launch" && <div className="kd-launch-page"><LaunchPath expanded /><Card className="kd-card kd-launch-aside"><div className="kd-card-heading"><h2><ShieldCheck size={17} /> Funding gate</h2><span>MARKET STATUS</span></div><div className="kd-launch-aside-inner"><span className="kd-launch-status">NOT FUNDED</span><h2>Both sides commit before a market opens.</h2><p>LP capital establishes the pool. Underwriter collateral backs the selected fee floor. Once both are committed, coverage can begin.</p><Link href="/dashboard/pools" className="kd-text-link">View pool directory <ArrowRight size={15} /></Link></div></Card></div>}
