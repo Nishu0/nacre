@@ -75,7 +75,7 @@ function AmountField({ label, value, onChange, min = 0 }: {
 
 export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccount, onConnect, rangeChoices, hideHeading = false }: { marketId?: string; bid?: CoverageOffer; role: WorkspaceRole; onRoleChange: (role: WorkspaceRole) => void; walletAccount: string | null; onConnect: () => Promise<void>; rangeChoices?: ReactNode; hideHeading?: boolean }) {
   const router = useRouter();
-  const { data: coverage, error: coverageError } = useCoverage(bid?.poolId);
+  const { data: coverage, error: coverageError, refresh: refreshCoverage } = useCoverage(bid?.poolId);
   const activeBid = coverage?.offers.find((offer) => offer.address.toLowerCase() === bid?.address.toLowerCase());
   const [markets, setMarkets] = useState<Market[]>([]);
   const [chainPositions, setChainPositions] = useState<ChainPosition[]>([]);
@@ -83,6 +83,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const { points: oraclePoints, livePrices, liveError } = useHyperliquidPrice();
   const [selectedId, setSelectedId] = useState(marketId ?? "");
   const [quoteState, setQuoteState] = useState<{ marketId: string; data: Quote } | null>(null);
+  const [quoteError, setQuoteError] = useState("");
   const [feePreviewState, setFeePreviewState] = useState<{ marketId: string; targetInput: string; data: FeePreview } | null>(null);
   const [feeError, setFeeError] = useState("");
   const [riskState, setRiskState] = useState<{ marketId: string; depositUsd: number; lower: number; upper: number; data: RiskReport } | null>(null);
@@ -97,6 +98,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const [premium, setPremium] = useState("");
   const [wethBalance, setWethBalance] = useState<bigint | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<bigint | null>(null);
+  const [balanceError, setBalanceError] = useState("");
   const [tokenRefresh, setTokenRefresh] = useState(0);
   const [mintBusy, setMintBusy] = useState(false);
   const [mintStep, setMintStep] = useState("");
@@ -139,12 +141,29 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const positionInRange = !!coverage && coverage.currentTick >= positionRange.tickLower && coverage.currentTick < positionRange.tickUpper;
   const bidReady = !!activeBid && !!coverage && !coverageError && bidCanProtectPosition(activeBid, positionRange, coverage.currentTick, walletAccount, feeCap);
   const rangeWarning = coverageError || (!bid ? "Choose a funded bid before supplying."
-    : !activeBid ? "Checking funded protection…"
+    : !coverage ? "Checking funded protection…"
+    : !activeBid ? "This bid is no longer available. Choose another funded range."
+    : activeBid.owner.toLowerCase() === walletAccount?.toLowerCase() ? "This wallet owns the bid. Use another wallet to supply against it."
+    : activeBid.closed ? "This bid has closed. Choose another funded range."
+    : activeBid.availableSpots === 0 ? "All spots in this bid are taken. Choose another funded range."
     : !rangeMatchesBid ? activeBid.supportsSubranges
       ? "Supply unavailable: your range extends outside this bid’s funded boundaries. Choose a narrower range or another bid."
       : "This existing bid requires its exact range. Reset to the bid range, or select a bid that supports narrower ranges."
     : !positionInRange ? "Supply unavailable: the current pool price is outside your selected range. Coverage cannot start for this position."
-    : !bidReady ? "Supply unavailable: this bid needs an available spot and enough capital for your fee cap." : "");
+    : !feePreview ? feeError || "Calculating your protected fee target…"
+    : feeCap <= 0n ? "This bid has no available fee protection for this amount. Choose another bid or adjust the amount."
+    : !bidReady ? "This bid does not have enough available protection for your fee cap. Lower the fee target or choose another bid." : "");
+  const requiredWeth = quote ? parseUnits(quote.split.ethAmount.toFixed(8), 18) : 0n;
+  const requiredUsdc = quote ? parseUnits(quote.split.usdcAmount.toFixed(6), 6) : 0n;
+  const supplyBlocker = !selected?.deployment ? "This pool has not been initialized."
+    : !Number.isFinite(Number(deposit)) || Number(deposit) < 100 || Number(deposit) > 1_000_000 ? "Enter a position amount between $100 and $1,000,000."
+    : !quote ? quoteError || "Calculating the tokens needed for this range…"
+    : rangeWarning ? rangeWarning
+    : balanceError ? balanceError
+    : wethBalance === null || usdcBalance === null ? "Loading your wallet’s token balances…"
+    : wethBalance < requiredWeth ? `You need ${formatUnits(requiredWeth - wethBalance, 18)} more ${wethSymbol}. Get test tokens or lower your position amount.`
+    : usdcBalance < requiredUsdc ? `You need ${formatUnits(requiredUsdc - usdcBalance, 6)} more nUSDC. Get test tokens or lower your position amount.`
+    : "";
   async function requireAvailableBid(review: SupplyReview) {
     if (!bid || !review.feeCap || BigInt(review.feeCap) <= 0n) throw new Error("Choose a funded bid and a positive fee target first.");
     const fresh = await api<CoverageSnapshot>(`coverage?fresh=1&poolId=${bid.poolId}`);
@@ -162,18 +181,26 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
 
   useEffect(() => {
     if (!marketId || !walletAccount) {
-      queueMicrotask(() => { setWethBalance(null); setUsdcBalance(null); });
+      queueMicrotask(() => { setWethBalance(null); setUsdcBalance(null); setBalanceError(""); });
       return;
     }
     let active = true;
-    queueMicrotask(() => { if (active) { setWethBalance(null); setUsdcBalance(null); } });
+    queueMicrotask(() => { if (active) { setWethBalance(null); setUsdcBalance(null); setBalanceError(""); } });
     void Promise.all([
       baseClient.readContract({ address: BASE_WETH, abi: erc20Abi, functionName: "balanceOf", args: [walletAccount as Address] }),
       baseClient.readContract({ address: NACRE_TEST_USDC, abi: erc20Abi, functionName: "balanceOf", args: [walletAccount as Address] }),
     ]).then(([weth, usdc]) => { if (active) { setWethBalance(weth); setUsdcBalance(usdc); } })
-      .catch(() => { if (active) { setWethBalance(null); setUsdcBalance(null); } });
+      .catch(() => { if (active) { setWethBalance(null); setUsdcBalance(null); setBalanceError("Could not load your token balances from Base Sepolia. Retry the supply checks."); } });
     return () => { active = false; };
   }, [marketId, walletAccount, tokenRefresh, BASE_WETH]);
+
+  useEffect(() => {
+    if (!walletAccount) return;
+    // Recheck after returning from the faucet or wallet extension.
+    const refresh = () => setTokenRefresh((value) => value + 1);
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, [walletAccount]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -224,12 +251,13 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
     if (!marketId || !selectedId || !Number(deposit) || !lower || !upper || lower >= upper) return;
     const controller = new AbortController();
     const timeout = setTimeout(() => {
+      setQuoteError("");
       void api<{ quote: Quote }>(`markets/${selectedId}/quote?depositUsd=${encodeURIComponent(deposit)}&lowerPriceUsd=${encodeURIComponent(lower)}&upperPriceUsd=${encodeURIComponent(upper)}`)
         .then((data) => { if (!controller.signal.aborted) setQuoteState({ marketId: selectedId, data: data.quote }); })
-        .catch(() => { if (!controller.signal.aborted) setQuoteState(null); });
+        .catch((reason) => { if (!controller.signal.aborted) { setQuoteState(null); setQuoteError(reason instanceof Error ? reason.message : "Could not calculate the token amounts. Retry the supply checks."); } });
     }, 180);
     return () => { controller.abort(); clearTimeout(timeout); };
-  }, [marketId, selectedId, deposit, lower, upper]);
+  }, [marketId, selectedId, deposit, lower, upper, tokenRefresh]);
 
   useEffect(() => {
     if (!marketId || !selectedId || !Number(deposit) || Number(deposit) < 100) return;
@@ -241,7 +269,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
         .catch((reason) => { if (active) { setFeePreviewState(null); setFeeError(reason instanceof Error ? reason.message : "Fee evidence unavailable."); } });
     }, 180);
     return () => { active = false; clearTimeout(timeout); };
-  }, [marketId, selectedId, deposit, coverageDays, feeTargetInput]);
+  }, [marketId, selectedId, deposit, coverageDays, feeTargetInput, tokenRefresh]);
 
   useEffect(() => {
     if (quote && !premium) {
@@ -306,7 +334,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
 
   function reviewSupply() {
     if (mintHash || mintConfirmed) { setSupplyOpen(true); return; }
-    if (!selected?.deployment || !quote || !walletAccount || !bidReady) return;
+    if (!selected?.deployment || !quote || !walletAccount || supplyBlocker) return;
     setSupplyReview({ account: walletAccount, marketId: selected.id, poolId: selected.deployment.poolId,
       token: BASE_WETH, symbol: wethSymbol, fee: selected.feeBps ?? 500, lower, upper,
       wethAmount: quote.split.ethAmount, usdcAmount: quote.split.usdcAmount, total: quote.depositUsd, feeCap: String(feeCap) });
@@ -475,7 +503,9 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
               <small>{mintTokenId ? `Position #${mintTokenId} is in your portfolio.` : "Supply confirmed on-chain."}</small>
               {!mintSaved && <button className="supply-secondary" onClick={() => setSupplyOpen(true)}>View portfolio update</button>}
             </> : !walletAccount ? <button className="supply-primary" onClick={() => void onConnect()}>Connect wallet</button> : <>
-              <button className="supply-primary" disabled={mintBusy || (!mintHash && (!selected.deployment || !quote || !bidReady || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)))} onClick={reviewSupply}>{mintHash ? "Check supply status" : "Supply"} <ArrowRight size={16} /></button>
+              {!mintHash && supplyBlocker && <p id="supply-blocker" className="supply-error" role="status">{supplyBlocker}</p>}
+              <button className="supply-primary" disabled={mintBusy || (!mintHash && !!supplyBlocker)} aria-describedby={!mintHash && supplyBlocker ? "supply-blocker" : undefined} onClick={reviewSupply}>{mintBusy ? "Supply in progress…" : mintHash ? "Check supply status" : "Supply"} <ArrowRight size={16} /></button>
+              {!mintHash && supplyBlocker && <button type="button" className="supply-secondary" disabled={mintBusy} onClick={() => { setTokenRefresh((value) => value + 1); void refreshCoverage(); }}>Retry supply checks</button>}
               {quote && ((wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18)) || (usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6))) && <Link className="supply-secondary" href="/dashboard/faucet">Get test tokens <ArrowRight size={16} /></Link>}
               {!isTestWeth && quote && wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && <button className="supply-secondary" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap test ETH to WETH</button>}
               {mintError && !supplyOpen && <p role="alert" className="supply-error">{mintError}</p>}
