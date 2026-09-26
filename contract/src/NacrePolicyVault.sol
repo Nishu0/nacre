@@ -174,7 +174,7 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
         request.endAt = uint64(block.timestamp + request.duration);
         request.status = Status.Active;
         reservedCollateral += request.payoutCap;
-        feeHook.startCoverage(key, request.tokenId);
+        if (feeHook.controller() == address(this)) feeHook.startCoverage(key, request.tokenId);
         emit Activated(requestId, underwriter, premium, request.endAt);
     }
 
@@ -195,22 +195,27 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
         if (block.timestamp < request.endAt) revert TooEarly();
         PoolKey memory key = requestPoolKeys[requestId];
         (uint256 amount0, uint256 amount1) = _collect(request.tokenId, key);
-        (uint256 recorded0, uint256 recorded1) = feeHook.feeTotals(key, request.tokenId);
-        if (recorded0 != amount0 || recorded1 != amount1) revert InvalidPosition();
+        // NFT custody is authoritative: only this vault can collect or change
+        // its position. A pool with a previously bound hook controller remains
+        // usable; when we control the hook, also check its accounting ledger.
+        if (feeHook.controller() == address(this)) {
+            (uint256 recorded0, uint256 recorded1) = feeHook.feeTotals(key, request.tokenId);
+            if (recorded0 != amount0 || recorded1 != amount1) revert InvalidPosition();
+        }
 
-        uint256 eligibleFees = feeValueOracle.quote(Currency.unwrap(key.currency0), recorded0)
-            + feeValueOracle.quote(Currency.unwrap(key.currency1), recorded1);
+        uint256 eligibleFees = (amount0 == 0 ? 0 : feeValueOracle.quote(Currency.unwrap(key.currency0), amount0))
+            + (amount1 == 0 ? 0 : feeValueOracle.quote(Currency.unwrap(key.currency1), amount1));
         uint256 shortfall = eligibleFees >= request.feeFloor ? 0 : request.feeFloor - eligibleFees;
         payout = shortfall < request.payoutCap ? shortfall : request.payoutCap;
 
         request.status = Status.Settled;
         reservedCollateral -= request.payoutCap;
-        feeHook.stopCoverage(key, request.tokenId);
+        if (feeHook.controller() == address(this)) feeHook.stopCoverage(key, request.tokenId);
         _forwardFees(request.lp, key, amount0, amount1);
         if (payout != 0) settlementToken.safeTransfer(request.lp, payout);
         settlementToken.safeTransfer(request.underwriter, request.payoutCap - payout);
         positionManager.safeTransferFrom(address(this), request.lp, request.tokenId);
-        emit Settled(requestId, eligibleFees, payout, recorded0, recorded1);
+        emit Settled(requestId, eligibleFees, payout, amount0, amount1);
     }
 
     function _collect(uint256 tokenId, PoolKey memory key) internal returns (uint256 amount0, uint256 amount1) {
@@ -221,8 +226,8 @@ contract NacrePolicyVault is IERC721Receiver, ReentrancyGuard {
         bytes[] memory params = new bytes[](2);
         params[0] = abi.encode(tokenId, uint256(0), uint128(0), uint128(0), bytes(""));
         params[1] = abi.encode(key.currency0, key.currency1, address(this));
-        // PositionManager Actions.DECREASE_LIQUIDITY (0x01), TAKE_PAIR (0x0f).
-        positionManager.modifyLiquidities(abi.encode(hex"010f", params), block.timestamp);
+        // PositionManager Actions.DECREASE_LIQUIDITY (0x01), TAKE_PAIR (0x11).
+        positionManager.modifyLiquidities(abi.encode(hex"0111", params), block.timestamp);
         amount0 = IERC20(currency0).balanceOf(address(this)) - before0;
         amount1 = IERC20(currency1).balanceOf(address(this)) - before1;
     }

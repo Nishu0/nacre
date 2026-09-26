@@ -74,7 +74,7 @@ contract MockPositionManager is ERC721 {
 
     function modifyLiquidities(bytes calldata unlockData, uint256) external {
         (bytes memory actions, bytes[] memory params) = abi.decode(unlockData, (bytes, bytes[]));
-        require(keccak256(actions) == keccak256(hex"010f"), "unexpected actions");
+        require(keccak256(actions) == keccak256(hex"0111"), "unexpected actions");
         (uint256 tokenId, uint256 liquidity,,,) = abi.decode(params[0], (uint256, uint256, uint128, uint128, bytes));
         require(liquidity == 0 && ownerOf(tokenId) == msg.sender, "not owner");
         uint256 amount0 = pending0[tokenId];
@@ -114,7 +114,7 @@ contract NacreFlowTest is Test {
     Aqua internal aqua;
     PoolKey internal key;
 
-    function setUp() public {
+    function setUp() public virtual {
         usdc = new MockToken("USD Coin", "USDC");
         weth = new MockToken("Wrapped Ether", "WETH");
         manager = new MockPoolManager();
