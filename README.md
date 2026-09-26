@@ -6,6 +6,8 @@ Nacre is a market for protecting the fee income of a specific concentrated-liqui
 
 The product protects a **fee floor**, not the value of the LP's deposited assets. It does not claim to eliminate impermanent loss, guarantee a profit, or pay merely because the market price leaves the range.
 
+The current contract prototype implements this **original position coverage** flow. A conditional new-asset launch, in which the Uniswap pool opens only after liquidity and protection are both funded, is a separate product direction and is not part of these contracts yet.
+
 ## The problem
 
 Concentrated liquidity can earn more fees by putting capital inside a narrower price range. The same concentration makes fee income unpredictable: trading volume can fall, price can move beyond the selected ticks, or the position can spend a period outside the active range. An LP can still own the position while its expected fee income disappears.
@@ -38,7 +40,7 @@ For example, an LP buys a seven-day **$1,000 fee floor** with a **$500 payout ca
 ## Who participates
 
 - **LP:** selects a v4 position and coverage terms, compares executable quotes, pays the premium, and receives any settlement payout.
-- **Underwriter:** publishes a signed, capacity-limited quote, receives the premium when selected, and escrows the quoted maximum payout.
+- **Underwriter:** publishes a capacity-limited Aqua quote, receives the premium when selected, and escrows the quoted maximum payout.
 - **Settlement caller:** finalizes an expired policy using verifiable position fees and the agreed valuation rule. Anyone can call settlement; a small, bounded reward from the premium can compensate the caller for gas.
 
 Underwriters compete on **the same request**: identical position, window, fee floor, payout cap, and settlement rules. This makes premium comparison meaningful. Capacity, quote expiry, collateral availability, and executable size remain visible alongside price. The best quote is the lowest valid premium for the requested cover, not simply a percentage shown without matching terms.
@@ -57,7 +59,7 @@ Uniswap v4 PositionManager / PoolManager
                  ▲                                  ▲
                  │ accepted terms                   │ locked USDC / premium
                  │                                  │
-      1inch Aqua + Nacre Aqua app ── SwapVM quote checks
+      1inch Aqua + Nacre Aqua app ── future SwapVM quote checks
                  ▲
           Underwriter strategies
                  │
@@ -78,7 +80,7 @@ The position can continue operating as normal inside its original Uniswap pool. 
 
 [Aqua](https://github.com/1inch/aqua) tracks virtual balances for maker strategies while the underlying tokens remain in maker wallets until execution. Nacre uses this for **unfilled** cover offers: an underwriter can advertise capacity across quotes without pre-funding every offer separately. A quote binds the maker, request hash, premium, maximum payout, size, expiry, and nonce.
 
-The Nacre Aqua app validates the offer against the exact LP request. A [SwapVM](https://github.com/1inch/swap-vm) program or custom instruction can enforce the agreed premium curve, capacity, deadline, nonce, and risk-band limits. The maker's pricing inputs may reflect the pool, range width, window length, recent fee yield, and market regime. The quote itself is signed and executable; a later offchain model update cannot rewrite an accepted policy.
+The Nacre Aqua app validates the offer against the exact LP request. The current prototype uses maker-authorized Aqua `ship` and `pull`, with no SwapVM program or separate signature. A future [SwapVM](https://github.com/1inch/swap-vm) instruction could enforce a more complex premium curve or risk-band limit. The maker's pricing inputs may reflect the pool, range width, window length, recent fee yield, and market regime. Once accepted, the quote's terms are fixed in the policy; a later offchain model update cannot rewrite them.
 
 **Acceptance is the collateralization boundary.** In the same transaction that consumes the accepted offer, the maker's maximum payout is moved into the policy vault and the LP's premium is transferred according to the quote. If the maker lacks spendable funds, the quote cannot fill. Aqua's shared virtual balance improves quote availability before a fill; collateral backing a live policy is exclusive and cannot also back another payout.
 
@@ -91,7 +93,7 @@ Requested → Quoted → Active → Settled
                     ↘ Expired / cancelled before fill
 ```
 
-The vault holds the settlement token for the full payout cap. At expiry, settlement computes the shortfall, pays the LP up to the cap, and releases unused collateral to the underwriter. A policy settles once. The contract checks quote signatures and nonces, token transfers, reentrancy, timestamps, coverage ownership, and exact token decimals. A disputed or unavailable reference price pauses settlement under a predefined fallback or timeout rule rather than accepting an arbitrary replacement value.
+The vault holds the settlement token for the full payout cap. At expiry, settlement computes the shortfall, pays the LP up to the cap, and releases unused collateral to the underwriter. A policy settles once. The current contracts check Aqua strategy identity, token transfers, reentrancy, timestamps, and position ownership. An unavailable or stale reference price reverts settlement; a production fallback or timeout rule remains to be designed.
 
 ## Regime-aware underwriting
 
@@ -156,3 +158,5 @@ bun run dev
 Open [http://localhost:3000](http://localhost:3000). The dashboard can be explored without a wallet; connecting an injected browser wallet is optional.
 
 The API runs from `server/` with `bun install && bun run dev` and responds at [http://127.0.0.1:3001/health](http://127.0.0.1:3001/health). Solidity checks run from `contract/` with `forge build && forge test --offline`.
+
+The server also provides a local SQLite-backed [three-pool fee-yield backtest](server/README.md). Seed it with `cd server && bun run db:seed`. Its historical Uniswap v3 pool-level figures are research estimates, not actual earnings for a specified Uniswap v4 position. The [contract README](contract/README.md) describes the custom v4 hook, Aqua underwriting app, escrow flow, deployment requirements, and prototype limitations.
