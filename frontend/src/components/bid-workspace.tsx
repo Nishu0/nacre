@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { TokenPairIcon } from "@/components/token-pair-icon";
+import { BidProfitPanel } from "@/components/bid-profit-panel";
+import type { BidFundingTerms } from "@/lib/bid-profit";
 import { CoverageFunding, OfferRow } from "@/components/coverage-workspace";
 import { WorkspacePools, type Market, type WorkspaceRole } from "@/components/market-workspace";
 
@@ -86,17 +88,18 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
 }
 
 function BidForm({ market, current, account, onConnect }: { market: Market; current: number; account: string | null; onConnect: () => Promise<void> }) {
+  const [terms, setTerms] = useState<BidFundingTerms>({ capital: "100", days: 30, rate: "8" });
   const [lower, setLower] = useState((current * .9).toFixed(2));
   const [upper, setUpper] = useState((current * 1.1).toFixed(2));
   const minimum = tickPrice(priceToRawTick(market.lowerPriceUsd) + 10);
   const maximum = tickPrice(priceToRawTick(market.upperPriceUsd));
   const valid = Number.isFinite(Number(lower)) && Number.isFinite(Number(upper)) && tickPrice(priceInputToTick(lower)) >= minimum
     && tickPrice(priceInputToTick(upper)) <= maximum && Number(lower) < Number(upper);
-  return <div className="bw-form-grid"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
+  return <div className="bw-form-grid"><div className="bw-left-column"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
     <p>Set the price range you want to cover. Investors will use these exact bins and your bid’s duration.</p>
     <div className="cw-terms"><span>On-chain pool price</span><strong>{money(current)}</strong></div>
     <label className="mw-field"><span>Minimum nWETH price (USD)</span><Input type="number" value={lower} onChange={(event) => setLower(event.target.value)} /></label>
     <label className="mw-field"><span>Maximum nWETH price (USD)</span><Input type="number" value={upper} onChange={(event) => setUpper(event.target.value)} /></label>
     {!valid && <p role="status">Enter a range inside {money(minimum)}–{money(maximum)}.</p>}
-  </div></Card>{valid && <CoverageFunding account={account} onConnect={onConnect} poolId={market.deployment!.poolId} lower={Number(lower)} upper={Number(upper)} />}</div>;
+  </div></Card><BidProfitPanel terms={terms} validRange={valid} inRange={current >= tickPrice(priceInputToTick(lower)) && current < tickPrice(priceInputToTick(upper))} feeTier={market.feeTier} /></div>{valid && <CoverageFunding terms={terms} onTermsChange={setTerms} account={account} onConnect={onConnect} poolId={market.deployment!.poolId} lower={Number(lower)} upper={Number(upper)} />}</div>;
 }

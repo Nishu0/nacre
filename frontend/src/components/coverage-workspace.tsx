@@ -11,6 +11,7 @@ import { LEGACY_WETH_POOL, testPool } from "@/lib/test-pools";
 import { COVERAGE_APP, COVERAGE_TOKEN, COVERAGE_VAULT, COVERAGE_POSITIONS,
   coverageVaultAbi, coverageNftAbi, coverageAppAbi, rangeFactoryAbi, rangeOfferAbi,
   tickPrice, type CoverageOffer, type CoverageRequest, type CoverageSnapshot } from "@/lib/coverage-contracts";
+import type { BidFundingTerms } from "@/lib/bid-profit";
 import { availableBid, bidMatchesPosition } from "@/lib/funded-bids";
 import { useCoverage, refreshCoverage } from "@/lib/use-coverage";
 
@@ -69,15 +70,16 @@ export function useCoverageAction(account: string | null) {
       {hash && <a className="mw-evidence-link" href={basescanTx(hash)} target="_blank" rel="noreferrer">View transaction <ExternalLink size={13} /></a>}</> };
 }
 
-export function CoverageFunding({ account, onConnect, lower, upper, poolId, initialDays = 30, initialCapital = "100" }: {
-  account: string | null; onConnect: () => Promise<void>; lower: number; upper: number; poolId?: string; initialDays?: number; initialCapital?: string;
+export function CoverageFunding({ account, onConnect, lower, upper, poolId, initialDays = 30, initialCapital = "100", terms, onTermsChange }: {
+  account: string | null; onConnect: () => Promise<void>; lower: number; upper: number; poolId?: string; initialDays?: number; initialCapital?: string; terms?: BidFundingTerms; onTermsChange?: (terms: BidFundingTerms) => void;
 }) {
   const { data, error } = useCoverage(poolId);
   const RANGE_FACTORY = data?.poolConfig?.factory ?? testPool(poolId)?.factory;
   const action = useCoverageAction(account);
-  const [capital, setCapital] = useState(initialCapital);
-  const [days, setDays] = useState(initialDays);
-  const [rate, setRate] = useState("8");
+  const [localTerms, setLocalTerms] = useState<BidFundingTerms>({ capital: initialCapital, days: initialDays, rate: "8" });
+  const values = terms ?? localTerms;
+  const { capital, days, rate } = values;
+  const changeTerms = (patch: Partial<BidFundingTerms>) => (onTermsChange ?? setLocalTerms)({ ...values, ...patch });
   const [balance, setBalance] = useState<bigint | null>(null);
   useEffect(() => {
     let active = true;
@@ -108,9 +110,9 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
       <div className="cw-terms"><strong>{rangeText(tickLower, tickUpper)}</strong><span>Ticks {tickLower} to {tickUpper} · {(tickUpper - tickLower) / 10} bins</span></div>
       {account && <small>Wallet balance: {balance === null ? "…" : amount(balance)} nUSDC</small>}
       <fieldset disabled={action.busy} className="cw-fields">
-        <label className="mw-field"><span>Coverage capital (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={capital} onChange={(event) => setCapital(event.target.value)} /></label>
-        <label className="mw-field"><span>Coverage duration</span><select value={days} onChange={(event) => setDays(Number(event.target.value))}>{durationOptions.map((value) => <option key={value} value={value}>{value} days</option>)}</select></label>
-        <label className="mw-field"><span>Premium · % of each protected fee cap</span><Input type="number" min="0.01" max="100" step="0.01" value={rate} onChange={(event) => setRate(event.target.value)} /></label>
+        <label className="mw-field"><span>Coverage capital (nUSDC)</span><Input type="number" min="0.000001" step="0.000001" value={capital} onChange={(event) => changeTerms({ capital: event.target.value })} /></label>
+        <label className="mw-field"><span>Coverage duration</span><select value={days} onChange={(event) => changeTerms({ days: Number(event.target.value) })}>{durationOptions.map((value) => <option key={value} value={value}>{value} days</option>)}</select></label>
+        <label className="mw-field"><span>Premium · % of each protected fee cap</span><Input type="number" min="0.01" max="100" step="0.01" value={rate} onChange={(event) => changeTerms({ rate: event.target.value })} /></label>
       </fieldset>
       <div className="cw-terms"><span>For a 10 nUSDC cap over {days} days</span><strong>{Number.isFinite(bps) ? (10 * bps / 10000).toFixed(2) : "—"} nUSDC premium</strong></div>
       {valid && <div className="mw-underwriter-sim"><div><span>Premium if all capacity is purchased once</span><strong>{(Number(capital) * bps / 10000).toFixed(4)} nUSDC</strong></div><div><span>Net loss if those claims use every cap</span><strong>{(Number(capital) * (1 - bps / 10000)).toFixed(4)} nUSDC</strong></div></div>}

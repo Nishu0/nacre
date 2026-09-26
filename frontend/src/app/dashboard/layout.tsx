@@ -2,6 +2,7 @@ import "./dashboard.css";
 import "./dashboard-research.css";
 import "./dashboard-pages.css";
 import "./market-workspace.css";
+import "./bid-profit.css";
 import "./pool-detail.css";
 import "./pool-risk-analysis.css";
 import "./pool-create-flow.css";
