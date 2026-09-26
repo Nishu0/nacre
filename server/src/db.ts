@@ -49,6 +49,13 @@ export function openDb(path = DATABASE_PATH): Database {
       capacity_usd REAL NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS market_price_events (
+      id TEXT PRIMARY KEY,
+      market_id TEXT NOT NULL REFERENCES market_drafts(id),
+      price_usd REAL NOT NULL,
+      tick INTEGER NOT NULL,
+      created_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS market_positions (
       id TEXT PRIMARY KEY,
       market_id TEXT NOT NULL REFERENCES market_drafts(id),

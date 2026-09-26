@@ -102,12 +102,29 @@ export function buildApp(databasePath?: string) {
       .run(id, body.creator, VALID_REFERENCE, body.priceUsd, body.lowerPriceUsd,
         body.upperPriceUsd, tick, tickLower, tickUpper,
         body.liquidityTargetUsd, body.collateralBudgetUsd, new Date().toISOString());
+    db.prepare("INSERT INTO market_price_events VALUES (?, ?, ?, ?, ?)")
+      .run(crypto.randomUUID(), id, body.priceUsd, tick, new Date().toISOString());
     return reply.code(201).send({ market: presentMarket(db, getMarket(db, id)!) });
   });
 
   app.get<{ Params: { marketId: string } }>("/api/markets/:marketId", async (request, reply) => {
     const row = getMarket(db, request.params.marketId);
     return row ? { market: presentMarket(db, row) } : reply.code(404).send({ error: "Unknown market" });
+  });
+
+  app.get<{ Params: { marketId: string } }>("/api/markets/:marketId/price-history", async (request, reply) => {
+    const row = getMarket(db, request.params.marketId);
+    if (!row) return reply.code(404).send({ error: "Unknown market" });
+    const events = db.query(`SELECT price_usd, tick, created_at FROM market_price_events
+      WHERE market_id = ? ORDER BY created_at, rowid`).all(row.id) as {
+      price_usd: number; tick: number; created_at: string;
+    }[];
+    return {
+      mode: "sandbox",
+      events: events.length ? events.map((event) => ({
+        priceUsd: event.price_usd, tick: event.tick, createdAt: event.created_at,
+      })) : [{ priceUsd: row.price_usd, tick: row.tick, createdAt: row.created_at }],
+    };
   });
 
   app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string } }>(
@@ -194,6 +211,8 @@ export function buildApp(databasePath?: string) {
       const tick = priceToTick(request.body.priceUsd);
       db.prepare("UPDATE market_drafts SET price_usd = ?, tick = ? WHERE id = ?")
         .run(request.body.priceUsd, tick, row.id);
+      db.prepare("INSERT INTO market_price_events VALUES (?, ?, ?, ?, ?)")
+        .run(crypto.randomUUID(), row.id, request.body.priceUsd, tick, new Date().toISOString());
       return { market: presentMarket(db, getMarket(db, row.id)!) };
     },
   );
@@ -203,6 +222,20 @@ export function buildApp(databasePath?: string) {
       return reply.code(400).send({ error: "A sandbox participant ID is required." });
     }
     return { mode: "sandbox", positions: listPositions(db, request.query.participant) };
+  });
+
+  app.get<{ Querystring: { participant?: string } }>("/api/underwriting", async (request, reply) => {
+    if (!validParticipant(request.query.participant)) {
+      return reply.code(400).send({ error: "A sandbox participant ID is required." });
+    }
+    const rows = db.query(`SELECT id, market_id, capacity_usd, created_at FROM market_pledges
+      WHERE participant = ? ORDER BY created_at DESC`).all(request.query.participant) as {
+      id: string; market_id: string; capacity_usd: number; created_at: string;
+    }[];
+    return { mode: "sandbox", pledges: rows.map((row) => ({
+      id: row.id, marketId: row.market_id, capacityUsd: row.capacity_usd,
+      createdAt: row.created_at,
+    })) };
   });
 
   app.get<{ Params: { poolId: string }; Querystring: { principalUsd?: string } }>(

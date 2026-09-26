@@ -25,6 +25,12 @@ These pools ranked among GeckoTerminal's highest 24-hour-volume Ethereum Uniswap
 - `GET /api/pools`
 - `GET /api/pools/:poolId/backtest?principalUsd=100000`
 - `GET /api/pools/:poolId/quotes?principalUsd=100000`
+- `GET /api/markets` and `GET /api/markets/:marketId`
+- `GET /api/markets/:marketId/price-history` — recorded manual sandbox price scenarios
+- `GET /api/portfolio?participant=...` — LP deposits for one local participant
+- `GET /api/underwriting?participant=...` — underwriting pledges for one local participant
+
+Market creation, LP deposits, underwriting pledges, coverage checks, and manual price moves are local SQLite sandbox actions. The price chart starts with a single current-price point and grows only when a manual move is recorded. A pledge is recorded interest, not locked collateral; no premiums, payouts, or realized LP fees are produced by these routes.
 
 For each day, gross pool fee proxy = `daily volume × nominal fee tier`; it is before any protocol share and may differ from indexed fee collections. Modeled LP fees = `principalUsd × apyBase / 100 / 365`. [DefiLlama's methodology](https://github.com/DefiLlama/yield-server#apy-methodology) provides context for `apyBase`. A 30-day window sums 30 consecutive daily estimates. The API returns recent, best, worst, and all 151 overlapping windows, plus the last 90 daily volume, gross-fee, TVL, and modeled-LP observations. The dashboard charts the last 90 days but premiums can inspect the full 180-day sample. These numbers **are not actual fees earned by an individual LP**: no ticks, range uptime, changing capital share, gas, token P&L, or position-level fee accounting are modeled. These are v3 references, not v4 hook pools.
 

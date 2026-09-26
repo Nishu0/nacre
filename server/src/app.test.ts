@@ -48,6 +48,8 @@ test("sandbox funding, position coverage, and tick exit remain capacity bounded"
     const pledge = await app.inject({ method: "POST", url: `/api/markets/${marketId}/pledges`,
       payload: { participant: "participant-maker", amountUsd: 200 } });
     expect(pledge.statusCode).toBe(201);
+    const underwriting = await app.inject({ method: "GET", url: "/api/underwriting?participant=participant-maker" });
+    expect(underwriting.json().pledges).toMatchObject([{ marketId, capacityUsd: 200 }]);
     const invested = await app.inject({ method: "POST", url: `/api/markets/${marketId}/positions`,
       payload: { participant, amountUsd: 10000, requestCover: true } });
     expect(invested.statusCode).toBe(201);
@@ -59,6 +61,9 @@ test("sandbox funding, position coverage, and tick exit remain capacity bounded"
     const moved = await app.inject({ method: "PATCH", url: `/api/markets/${marketId}/price`,
       payload: { priceUsd: 2250 } });
     expect(moved.json().market.inRange).toBe(false);
+    const priceHistory = await app.inject({ method: "GET", url: `/api/markets/${marketId}/price-history` });
+    expect(priceHistory.json().events.map((event: { priceUsd: number }) => event.priceUsd))
+      .toEqual([2000, 2250]);
     const after = (await app.inject({ method: "GET", url: quoteUrl })).json().quote;
     expect(after.available).toBe(false);
     expect(after.reasons[0]).toContain("outside");

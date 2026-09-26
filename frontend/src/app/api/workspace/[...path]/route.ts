@@ -3,9 +3,11 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function allowed(path: string[], method: string): boolean {
   if (path.length === 1 && path[0] === "markets") return method === "GET" || method === "POST";
   if (path.length === 1 && path[0] === "portfolio") return method === "GET";
+  if (path.length === 1 && path[0] === "underwriting") return method === "GET";
   if (path[0] !== "markets" || !uuid.test(path[1] ?? "")) return false;
   if (path.length === 2) return method === "GET";
   if (path.length === 3 && path[2] === "quote") return method === "GET";
+  if (path.length === 3 && path[2] === "price-history") return method === "GET";
   if (path.length === 3 && path[2] === "price") return method === "PATCH";
   if (path.length === 3 && (path[2] === "pledges" || path[2] === "positions")) return method === "POST";
   if (path.length === 5 && path[2] === "positions" && uuid.test(path[3]) && path[4] === "cover") {
