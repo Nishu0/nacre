@@ -28,6 +28,38 @@ export function openDb(path = DATABASE_PATH): Database {
       tvl_usd REAL NOT NULL,
       PRIMARY KEY (pool_id, date)
     );
+    CREATE TABLE IF NOT EXISTS market_drafts (
+      id TEXT PRIMARY KEY,
+      creator TEXT NOT NULL,
+      reference_pool_id TEXT NOT NULL,
+      price_usd REAL NOT NULL,
+      lower_price_usd REAL NOT NULL,
+      upper_price_usd REAL NOT NULL,
+      tick INTEGER NOT NULL,
+      tick_lower INTEGER NOT NULL,
+      tick_upper INTEGER NOT NULL,
+      liquidity_target_usd REAL NOT NULL,
+      collateral_budget_usd REAL NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS market_pledges (
+      id TEXT PRIMARY KEY,
+      market_id TEXT NOT NULL REFERENCES market_drafts(id),
+      participant TEXT NOT NULL,
+      capacity_usd REAL NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS market_positions (
+      id TEXT PRIMARY KEY,
+      market_id TEXT NOT NULL REFERENCES market_drafts(id),
+      participant TEXT NOT NULL,
+      deposit_usd REAL NOT NULL,
+      insured INTEGER NOT NULL,
+      floor_usd REAL NOT NULL,
+      premium_usd REAL NOT NULL,
+      payout_cap_usd REAL NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
   return db;
 }
