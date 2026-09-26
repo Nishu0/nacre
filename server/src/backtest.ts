@@ -36,6 +36,37 @@ export function roundUsd(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+export function feeRequestPreview(
+  observations: Observation[], principalUsd: number, windowDays: number,
+  requestedFloorUsd?: number,
+) {
+  const windows = rollingWindows(observations, principalUsd, windowDays);
+  if (!windows.length) throw new Error("Not enough consecutive observations for this duration");
+  const fees = windows.map((window) => window.feesUsd);
+  const recent = fees.at(-1)!;
+  const best = Math.max(...fees);
+  // Keep a requested minimum below the best observed window. This is a
+  // research guardrail, not an offer of insurance or a guarantee of fees.
+  const maximum = roundUsd(best * 0.9);
+  const suggested = roundUsd(Math.min(recent, maximum));
+  const target = requestedFloorUsd === undefined ? suggested : requestedFloorUsd;
+  if (!Number.isFinite(target) || target < 0.01 || target > maximum) {
+    throw new Error(`Minimum fee target must be between $0.01 and $${maximum.toFixed(2)}`);
+  }
+  const shortfalls = fees.map((fee) => Math.max(0, target - fee));
+  const stressed = fees.map((fee) => Math.max(0, target - fee * 0.8));
+  const mean = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const expectedPayout = mean(shortfalls) * 0.75 + mean(stressed) * 0.25;
+  return {
+    principalUsd, windowDays, sampleDays: observations.length, windowCount: windows.length,
+    recentFeesUsd: roundUsd(recent), bestFeesUsd: roundUsd(best),
+    maximumFeeTargetUsd: maximum, suggestedFeeTargetUsd: suggested,
+    feeTargetUsd: roundUsd(target),
+    indicativePremiumUsd: roundUsd(expectedPayout * 1.2 + target * 0.01),
+    method: "Pool-level base APY applied to the modeled deposit. The maximum fee target is 90% of the best observed window. A concentrated position can earn more, less, or zero; no coverage is available until collateral is locked on-chain.",
+  };
+}
+
 export function backtest(observations: Observation[], principalUsd: number) {
   const windows = rollingWindows(observations, principalUsd);
   if (!windows.length) throw new Error("At least 30 consecutive daily observations are required");

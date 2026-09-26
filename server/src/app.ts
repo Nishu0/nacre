@@ -1,7 +1,7 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { readFileSync } from "node:fs";
-import { backtest, indicativeQuotes } from "./backtest";
+import { backtest, feeRequestPreview, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
 import { getLivePrices, type LivePrices } from "./live-prices";
@@ -274,13 +274,19 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     },
   );
 
-  app.get<{ Querystring: { account?: string } }>("/api/chain-positions", async (request, reply) => {
-    const account = request.query.account;
-    if (!account || !/^0x[0-9a-fA-F]{40}$/.test(account)) {
-      return reply.code(400).send({ error: "A wallet address is required." });
+  app.get<{ Querystring: { account?: string; marketId?: string } }>("/api/chain-positions", async (request, reply) => {
+    const { account, marketId } = request.query;
+    if (account && !/^0x[0-9a-fA-F]{40}$/.test(account)) {
+      return reply.code(400).send({ error: "A valid wallet address is required." });
+    }
+    if (marketId && !getMarket(db, marketId)) {
+      return reply.code(404).send({ error: "Unknown market." });
     }
     const rows = db.query(`SELECT token_id, market_id, tx_hash, weth_raw, usdc_raw, minted_at
-      FROM market_chain_positions WHERE owner = ? ORDER BY minted_at DESC`).all(account.toLowerCase()) as {
+      FROM market_chain_positions
+      WHERE (? IS NULL OR owner = ?) AND (? IS NULL OR market_id = ?)
+      ORDER BY minted_at DESC`).all(account?.toLowerCase() ?? null, account?.toLowerCase() ?? null,
+      marketId ?? null, marketId ?? null) as {
       token_id: string; market_id: string; tx_hash: string;
       weth_raw: string; usdc_raw: string; minted_at: string;
     }[];
@@ -315,6 +321,25 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         request.query.upperPriceUsd ? Number(request.query.upperPriceUsd) : undefined);
       if (!range) return reply.code(400).send({ error: "Choose a valid range inside the pool bounds." });
       return { market: presentMarket(db, row), quote: quotePosition(db, row, depositUsd, range.bottom, range.top) };
+    },
+  );
+
+  app.get<{ Params: { marketId: string }; Querystring: { depositUsd?: string; days?: string; feeTargetUsd?: string } }>(
+    "/api/markets/:marketId/fee-request", async (request, reply) => {
+      const row = getMarket(db, request.params.marketId);
+      if (!row) return reply.code(404).send({ error: "Unknown market" });
+      const depositUsd = Number(request.query.depositUsd ?? "1000");
+      const days = Number(request.query.days ?? "30");
+      const target = request.query.feeTargetUsd === undefined ? undefined : Number(request.query.feeTargetUsd);
+      if (!inRange(depositUsd, 100, 1_000_000) || ![7, 14, 30, 60, 90].includes(days)) {
+        return reply.code(400).send({ error: "Enter a deposit between $100 and $1,000,000 and select 7, 14, 30, 60, or 90 days." });
+      }
+      try {
+        return { mode: "research", ...feeRequestPreview(getObservations(db, row.reference_pool_id as PoolId),
+          depositUsd, days, target) };
+      } catch (reason) {
+        return reply.code(400).send({ error: reason instanceof Error ? reason.message : "Invalid fee target." });
+      }
     },
   );
 

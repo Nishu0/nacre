@@ -38,13 +38,9 @@ const monthLabel = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocale
   month: "short", year: "2-digit", timeZone: "UTC",
 });
 
-export function PoolRiskAnalysis({ report, capacityUsd, reservedUsd }: {
-  report: RiskReport; capacityUsd: number; reservedUsd: number;
-}) {
+export function PoolRiskAnalysis({ report }: { report: RiskReport }) {
   const { analysis, quote, referencePool } = report;
   const maxMonthlyFees = Math.max(1, ...analysis.monthly.map((month) => month.modeledFeesUsd));
-  const unreserved = Math.max(0, capacityUsd - reservedUsd);
-  const canBackSample = unreserved >= analysis.payoutCapUsd;
 
   return <section className="mw-risk-section" aria-label="Underwriter pool risk analysis">
     <div className="mw-risk-intro"><div><span>UNDERWRITER RESEARCH</span><h2>Pool risk analysis</h2><p>Fee evidence and capped exposure for a {money(analysis.depositUsd)} example LP position.</p></div><Badge variant="outline">{analysis.sampleDays} DAYS · {analysis.windowCount} WINDOWS</Badge></div>
@@ -75,10 +71,8 @@ export function PoolRiskAnalysis({ report, capacityUsd, reservedUsd }: {
             <div><dt>Avg payout when short</dt><dd>{money(analysis.averagePayoutWhenShortUsd)}</dd></div>
             <div><dt>Stress-adjusted payout model</dt><dd>{money(quote.expectedPayoutUsd)}</dd></div>
             <div><dt>Range edge heuristic</dt><dd>{quote.edgeRiskPct}%</dd></div>
-            <div><dt>Unreserved pool capacity</dt><dd>{money(unreserved)}</dd></div>
           </dl>
-          <div className={`mw-risk-capacity${canBackSample ? " is-sufficient" : ""}`}><ArrowUpRight size={14} />{canBackSample ? "Capacity can back this example cap" : "More backing needed for this example cap"}</div>
-          {!quote.available && <p className="mw-risk-conditions">Current coverage is unavailable: {quote.reasons.join(" ")}</p>}
+          <div className="mw-risk-capacity"><ArrowUpRight size={14} />No live coverage can be bought until its payout cap is locked on-chain.</div>
           <p className="mw-risk-period">Historical sample: {analysis.sampleFrom} to {analysis.sampleThrough}. Monthly rows at the sample edges may contain fewer than a full month.</p>
         </div>
       </Card>

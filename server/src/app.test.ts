@@ -34,6 +34,54 @@ test("first start seeds research data and serves backtests and premium tiers", a
   }
 });
 
+test("live-position feed excludes sandbox LP deposits and underwriting pledges", async () => {
+  const app = buildApp(":memory:");
+  try {
+    const created = await app.inject({ method: "POST", url: "/api/markets", payload: {
+      creator: "participant-model", priceUsd: 2000, lowerPriceUsd: 1800,
+      upperPriceUsd: 2200, liquidityTargetUsd: 1000, collateralBudgetUsd: 100,
+    } });
+    const marketId = created.json().market.id as string;
+    await app.inject({ method: "POST", url: `/api/markets/${marketId}/pledges`,
+      payload: { participant: "participant-maker", amountUsd: 200 } });
+    await app.inject({ method: "POST", url: `/api/markets/${marketId}/positions`,
+      payload: { participant: "participant-model", amountUsd: 1000, requestCover: false } });
+
+    const publicFeed = await app.inject({ method: "GET", url: "/api/chain-positions" });
+    const marketFeed = await app.inject({ method: "GET", url: `/api/chain-positions?marketId=${marketId}` });
+    expect(publicFeed.statusCode).toBe(200);
+    expect(publicFeed.json().positions).toEqual([]);
+    expect(marketFeed.json().positions).toEqual([]);
+    expect((await app.inject({ method: "GET", url: "/api/chain-positions?account=invalid" })).statusCode).toBe(400);
+  } finally { await app.close(); }
+});
+
+test("fee request preview follows duration and caps the target below historical best", async () => {
+  const app = buildApp(":memory:");
+  try {
+    const created = await app.inject({ method: "POST", url: "/api/markets", payload: {
+      creator: "participant-fees", priceUsd: 2000, lowerPriceUsd: 1800,
+      upperPriceUsd: 2200, liquidityTargetUsd: 1000, collateralBudgetUsd: 100,
+    } });
+    const marketId = created.json().market.id as string;
+    const short = await app.inject({ method: "GET", url: `/api/markets/${marketId}/fee-request?depositUsd=1000&days=7` });
+    const long = await app.inject({ method: "GET", url: `/api/markets/${marketId}/fee-request?depositUsd=1000&days=30` });
+    expect(short.statusCode).toBe(200);
+    expect(long.statusCode).toBe(200);
+    expect(short.json().windowDays).toBe(7);
+    expect(long.json().windowDays).toBe(30);
+    expect(short.json().maximumFeeTargetUsd).toBeLessThanOrEqual(short.json().bestFeesUsd);
+    expect(long.json().maximumFeeTargetUsd).toBeGreaterThan(short.json().maximumFeeTargetUsd);
+    const tooHigh = await app.inject({ method: "GET", url:
+      `/api/markets/${marketId}/fee-request?depositUsd=1000&days=7&feeTargetUsd=${short.json().bestFeesUsd}` });
+    expect(tooHigh.statusCode).toBe(400);
+    const custom = await app.inject({ method: "GET", url:
+      `/api/markets/${marketId}/fee-request?depositUsd=1000&days=7&feeTargetUsd=1` });
+    expect(custom.statusCode).toBe(200);
+    expect(custom.json().feeTargetUsd).toBe(1);
+  } finally { await app.close(); }
+});
+
 test("sandbox funding, position coverage, and tick exit remain capacity bounded", async () => {
   const app = buildApp(":memory:");
   const participant = "participant-alice";

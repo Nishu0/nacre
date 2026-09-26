@@ -10,7 +10,7 @@ const usd = (value: number) => new Intl.NumberFormat("en-US", {
   style: "currency", currency: "USD", maximumFractionDigits: 2,
 }).format(value);
 
-export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, upper, current }: {
+export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, upper, current, currentLabel }: {
   points: OraclePoint[];
   livePrice?: number;
   publishedAt?: string;
@@ -18,6 +18,7 @@ export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, 
   lower: number;
   upper: number;
   current: number;
+  currentLabel: string;
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const shown = points.slice(-120);
@@ -74,7 +75,7 @@ export function PoolPriceChart({ points, livePrice, publishedAt, source, lower, 
         <span>{shown.length > 1 ? `Pyth hourly history + live samples · ${shown.length} points` : "Live samples will build the chart over time"}</span>
         {active && <strong>{usd(active.priceUsdc)} · {new Date(active.timestamp).toLocaleString()}</strong>}
       </div>
-      <div className="pc-live-meta"><span>Oracle published {latestTime}</span><span>LP range {usd(lower)}–{usd(upper)} · sandbox tick {usd(current)}</span></div>
+      <div className="pc-live-meta"><span>Oracle published {latestTime}</span><span>LP range {usd(lower)}–{usd(upper)} · {currentLabel} {usd(current)}</span></div>
     </div>
   </Card>;
 }

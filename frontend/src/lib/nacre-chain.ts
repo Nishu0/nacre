@@ -83,6 +83,13 @@ export function wethPriceToSqrtX96(priceUsd: number): bigint {
   return integerSqrt((numerator << BigInt(192)) / denominator);
 }
 
+/** Base Sepolia demo pair has WETH as currency0 and six-decimal nUSDC as currency1. */
+export function sqrtPriceX96ToWethUsd(sqrtPriceX96: bigint): number {
+  if (sqrtPriceX96 <= BigInt(0)) throw new Error("The v4 pool is not initialized.");
+  const ratio = Number(sqrtPriceX96) / 2 ** 96;
+  return ratio * ratio * 1e12;
+}
+
 export function priceToRawTick(priceUsd: number): number {
   if (!Number.isFinite(priceUsd) || priceUsd <= 0) throw new Error("Invalid position bound.");
   const wethFirst = BigInt(BASE_WETH.toLowerCase()) < BigInt(NACRE_TEST_USDC.toLowerCase());

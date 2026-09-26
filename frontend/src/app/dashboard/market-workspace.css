@@ -4,6 +4,10 @@
 .mw-heading{display:flex;align-items:center;justify-content:space-between;gap:15px}
 .mw-heading h2{margin:0;color:#263a2e;font:600 22px/1.2 var(--font-noto-serif),Georgia,serif;letter-spacing:-.04em}
 .mw-heading p{margin:5px 0 0;color:#8c9790;font-size:11px}
+.mw-initialized-link{display:inline-flex;align-items:center;justify-content:center;gap:10px;flex:none;min-height:34px;padding:0 13px;border:1px solid #b9d7c1;border-radius:8px;background:#f5faf6;color:#376d45;font-size:11px;font-weight:650;text-decoration:none;transition:background .18s,border-color .18s}
+.mw-initialized-link:hover{border-color:#75ab83;background:#eaf5ec;color:#245533}
+.mw-initialized-link:focus-visible{outline:2px solid #5f926c;outline-offset:2px}
+.mw-proposal-badge{color:#71887a;text-transform:uppercase}
 .mw-back-link{display:inline-block;margin-bottom:8px;color:#567b60;font-size:11px;font-weight:600;text-decoration:none}
 .mw-back-link:hover{text-decoration:underline}
 .mw-directory-summary{display:flex;gap:10px;flex-wrap:wrap;padding:15px 18px;border:1px solid #dfeae1;border-radius:11px;background:linear-gradient(105deg,#f3f9f3,#fff);color:#84958a}
@@ -75,6 +79,20 @@
 .mw-panel-inner [data-slot=button],.mw-form-inner [data-slot=button]{justify-self:start;min-height:35px;padding-inline:12px;font-size:11px}
 .mw-field{display:grid;gap:5px;min-width:0;color:#6d7b70;font-size:10px;font-weight:600}
 .mw-field input{height:34px;border-color:#e1e9e3;background:#fff;color:#27372c;font-size:11px}
+.mw-field select{width:100%;height:36px;padding:0 10px;border:1px solid #dce7df;border-radius:7px;background:#fff;color:#294b34;font-size:11px}
+.mw-field select:focus-visible{outline:2px solid #78a783;outline-offset:2px}
+.mw-fee-request{display:grid;gap:11px;padding:14px;border:1px solid #dce9df;border-radius:9px;background:#f8fbf8}
+.mw-fee-request-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mw-fee-request-head strong{color:#2f5039;font-size:13px}
+.mw-fee-request-head span{color:#789381;font:9px var(--font-geist-mono),monospace;letter-spacing:.06em}
+.mw-fee-request>small,.mw-fee-request>p{margin:0;color:#809287;font-size:10px;line-height:1.5}
+.mw-fee-request>p strong{color:#315a3e}
+.mw-fee-evidence{display:grid;grid-template-columns:1fr 1fr;gap:1px;overflow:hidden;border:1px solid #e0eae2;border-radius:7px;background:#e0eae2}
+.mw-fee-evidence>div{display:grid;gap:5px;padding:10px;background:#fff}
+.mw-fee-evidence span{color:#839687;font-size:9px}
+.mw-fee-evidence strong{color:#31583d;font-size:13px}
+.dashboard .mw-faucet-link{border:1px solid #bdd5c3;background:#fff;color:#315b3d;font-size:11px}
+.dashboard .mw-faucet-link:hover{border-color:#85ae90;background:#f2f8f3;color:#244b30}
 .mw-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .mw-range{display:flex;align-items:center;gap:12px;color:#728477;font:10px var(--font-geist-mono),monospace;white-space:nowrap}
 .mw-range-track{position:relative;flex:1;height:6px;border-radius:99px;background:linear-gradient(90deg,#c3ddc8,#5a9568,#c3ddc8)}
@@ -106,6 +124,8 @@
 .mw-portfolio-empty>svg{color:#73a17c}.mw-portfolio-empty h2{margin:0;color:#2d4132;font:600 22px var(--font-noto-serif),Georgia,serif}
 .mw-portfolio-empty p{max-width:310px;margin:0;color:#929e95;font-size:11px;line-height:1.5}
 .mw-portfolio-empty [data-slot=button]{height:34px;gap:8px;color:#477052;font-size:11px}
+.dashboard .mw-portfolio-empty a[data-slot=button]{border:1px solid #c9ddce;background:#fff;color:#315a3d}
+.dashboard .mw-portfolio-empty a[data-slot=button]:hover{border-color:#8fb79a;background:#f2f8f3;color:#254b31}
 @media(max-width:1150px){.mw-directory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.mw-actions-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){.mw-actions-grid{grid-template-columns:1fr}.mw-side-actions{grid-template-columns:1fr 1fr}}
 @media(max-width:650px){.mw-heading{align-items:flex-start;flex-direction:column}.mw-directory-grid{grid-template-columns:1fr}.mw-directory-header span{display:none}.mw-stats{grid-template-columns:1fr 1fr}.mw-fields{grid-template-columns:1fr 1fr}.mw-side-actions{grid-template-columns:1fr}.mw-range{gap:6px;font-size:8px}.mw-position{flex-wrap:wrap}.mw-position [data-slot=button]{margin-left:41px}}
