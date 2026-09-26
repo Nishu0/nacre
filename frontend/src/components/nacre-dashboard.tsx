@@ -15,7 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspacePortfolio, type WorkspaceRole } from "@/components/market-workspace";
-import { PoolBidCreateFlow } from "@/components/pool-bid-create-flow";
+import { PoolCreateFlow } from "@/components/pool-create-flow";
 import { BidWorkspace } from "@/components/bid-workspace";
 import { WorkspaceBalances } from "@/components/workspace-balances";
 import { TestUsdcFaucet } from "@/components/test-usdc-faucet";
@@ -245,7 +245,7 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
     <main className="kd-main"><header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} /><span>{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "Workspace" : "Research"}</span><span className="kd-breadcrumb-slash">/</span><strong>{view === "pool-detail" ? "Pools / Detail" : view === "pool-create" ? "Pools / Create" : roleNavLabel(view, role)}</strong></div><div className="kd-topbar-actions"><Badge variant="outline" className="kd-research-badge">{researchView ? "HISTORICAL DATA" : "NACRE WORKSPACE"}</Badge><DropdownMenu.Root><DropdownMenu.Trigger asChild><button type="button" className="kd-notification-button" aria-label="Notifications"><Bell size={17} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu kd-notification-menu" side="bottom" align="end" sideOffset={8}><p>NOTIFICATIONS</p><span>No pool or policy updates yet.</span></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></div></header>
       <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><div className="flex flex-wrap items-center gap-3"><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge>{view === "overview" && role === "underwriter" && <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={16} /> Create pool</Link></Button>}</div></div>
         {view === "overview" && <WorkspaceBalances account={walletAccount} onConnect={connectWallet} />}
-        {view === "pool-create" && <PoolBidCreateFlow account={walletAccount} onConnect={connectWallet} />}
+        {view === "pool-create" && <PoolCreateFlow account={walletAccount} onConnect={connectWallet} />}
         {["pools", "pool-detail"].includes(view) && <BidWorkspace key={`${role}:${walletAccount}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "portfolio" && <WorkspacePortfolio role={role} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "faucet" && <TestUsdcFaucet account={walletAccount} onConnect={connectWallet} />}

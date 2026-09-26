@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { CoverageFunding, OfferRow } from "@/components/coverage-workspace";
 import { WorkspacePools, type Market, type WorkspaceRole } from "@/components/market-workspace";
 import { TEST_WETH_POOL } from "@/lib/test-pools";
-import { priceToRawTick } from "@/lib/nacre-chain";
+import { priceToRawTick, priceInputToTick } from "@/lib/nacre-chain";
 import { tickPrice } from "@/lib/coverage-contracts";
 import { availableBid } from "@/lib/funded-bids";
 import { useCoverage } from "@/lib/use-coverage";
@@ -64,8 +64,8 @@ function BidForm({ market, current, account, onConnect }: { market: Market; curr
   const [upper, setUpper] = useState((current * 1.1).toFixed(2));
   const minimum = tickPrice(priceToRawTick(market.lowerPriceUsd) + 10);
   const maximum = tickPrice(priceToRawTick(market.upperPriceUsd));
-  const valid = Number.isFinite(Number(lower)) && Number.isFinite(Number(upper)) && tickPrice(priceToRawTick(Number(lower))) >= minimum
-    && tickPrice(priceToRawTick(Number(upper))) <= maximum && Number(lower) < Number(upper);
+  const valid = Number.isFinite(Number(lower)) && Number.isFinite(Number(upper)) && tickPrice(priceInputToTick(lower)) >= minimum
+    && tickPrice(priceInputToTick(upper)) <= maximum && Number(lower) < Number(upper);
   return <div className="bw-form-grid"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
     <p>Set the price range you want to cover. Investors will use these exact bins and your bid’s duration.</p>
     <div className="cw-terms"><span>On-chain pool price</span><strong>{money(current)}</strong></div>

@@ -97,6 +97,15 @@ export function priceToRawTick(priceUsd: number): number {
   return Math.floor(Math.log(rawPrice) / Math.log(1.0001) / 10 + 1e-9) * 10;
 }
 
+// Form inputs can be empty or partially edited. Keep those invalid without
+// throwing during render; transaction paths still use strict priceToRawTick.
+export function priceInputToTick(value: string): number {
+  const price = Number(value);
+  if (!value.trim() || !Number.isFinite(price) || price <= 0) return Number.NaN;
+  const tick = priceToRawTick(price);
+  return Number.isFinite(tick) ? tick : Number.NaN;
+}
+
 function approximateSqrtAtTick(tick: number): bigint {
   return BigInt(Math.floor(Math.pow(1.0001, tick / 2) * 2 ** 96));
 }

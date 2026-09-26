@@ -114,3 +114,5 @@
 @media (max-width: 410px) { .pcf-range-preview > div:first-child { align-items: flex-start; flex-direction: column; } .pcf-fixed-pair [data-slot=badge] { display: none; } .pcf-success { padding: 30px 18px; } }
 
 .pcf-field select { width: 100%; padding: 0 12px; border: 1px solid #dde7df; }
+
+.pcf-form-fields { min-width: 0; margin: 0; padding: 0; border: 0; }
