@@ -1,0 +1,39 @@
+.kd-workspace-page{display:grid;gap:16px}
+.kd-workspace-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.kd-portfolio-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kd-workspace-stats .kd-metric{min-height:132px}
+.kd-workspace-stats .kd-metric-inner{min-height:91px}
+.kd-workspace-stats .kd-metric-inner>strong{font-size:clamp(24px,2.2vw,31px)}
+.kd-workspace-stats .kd-metric-inner p{font-size:10px;white-space:normal}
+.kd-empty-panel-inner,.kd-portfolio-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:405px;padding:42px 24px;border:1px solid #e8eaec;border-radius:9px;background:#fff;text-align:center}
+.kd-empty-art{position:relative;display:grid;place-items:center;width:112px;height:112px;margin-bottom:19px;border:1px solid #dce9df;border-radius:50%;background:radial-gradient(circle at 50% 50%,#e7f4ea 0,#f5faf6 68%,#fff 69%);color:#548766}
+.kd-empty-art>svg{position:relative;z-index:1}
+.kd-empty-orbit{position:absolute;border:1px solid #d1e6d6;border-radius:50%}
+.kd-empty-orbit-one{inset:14px}.kd-empty-orbit-two{inset:28px}
+.kd-empty-panel-inner [data-slot=badge]{border-color:#dce9df;background:#f5faf6;color:#5d8367;font:9px var(--font-geist-mono),monospace;letter-spacing:.05em}
+.kd-empty-panel-inner h2,.kd-portfolio-empty h2{margin:12px 0 0;color:#293b31;font:600 27px/1.2 var(--font-noto-serif),Georgia,serif;letter-spacing:-.045em}
+.kd-empty-panel-inner p,.kd-portfolio-empty p{max-width:450px;margin:10px 0 0;color:#8a978e;font-size:12px;line-height:1.6}
+.kd-empty-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:9px;margin-top:20px}
+.kd-empty-actions [data-slot=button]{height:35px;gap:7px;padding:0 13px;font-size:11px}
+.dashboard .kd-empty-actions a.kd-apply-button{color:#fff}
+.kd-empty-actions [data-variant=outline]{border-color:#dfe8e1;background:#fff;color:#436a4e}
+.kd-portfolio-panel .kd-card-heading{min-height:41px}
+.kd-portfolio-empty{min-height:330px}
+.kd-portfolio-empty-icon{display:grid;place-items:center;width:52px;height:52px;border:1px solid #d9e7dc;border-radius:12px;background:#f4f9f5;color:#5c8667}
+.kd-portfolio-empty h2{font-size:23px}
+.kd-launch-page{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(270px,1fr);gap:16px;align-items:start}
+.kd-launch-expanded{min-height:0}
+.kd-launch-expanded .kd-launch-inner{padding:20px}
+.kd-launch-expanded .kd-launch-heading p{font-size:12px}
+.kd-launch-expanded .kd-launch-inner li{grid-template-columns:34px minmax(0,1fr);gap:13px;padding:17px 2px}
+.kd-launch-expanded .kd-launch-inner li>span{width:28px;height:28px;font-size:10px}
+.kd-launch-expanded .kd-launch-inner li strong{font-size:13px}
+.kd-launch-expanded .kd-launch-inner li p{max-width:620px;font-size:11px;line-height:1.5}
+.kd-launch-aside-inner{display:flex;flex-direction:column;min-height:345px;padding:25px 20px;border:1px solid #e8eaec;border-radius:9px;background:#fff}
+.kd-launch-status{align-self:flex-start;padding:5px 7px;border:1px solid #e7dfcb;border-radius:5px;background:#fbf8ef;color:#9a8150;font:9px var(--font-geist-mono),monospace;letter-spacing:.05em}
+.kd-launch-aside-inner h2{margin:19px 0 0;color:#293b31;font:600 23px/1.25 var(--font-noto-serif),Georgia,serif;letter-spacing:-.035em}
+.kd-launch-aside-inner p{margin:11px 0 auto;color:#8b978e;font-size:11px;line-height:1.6}
+.kd-launch-aside-inner .kd-text-link{margin-top:24px}
+.dashboard:has(.kd-trend-panel):not(:has(.kd-launch-panel)) .kd-research-grid{grid-template-columns:1fr}
+@media(max-width:1100px){.kd-portfolio-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.kd-launch-page{grid-template-columns:1fr}.kd-launch-aside-inner{min-height:0}.kd-launch-aside-inner p{margin-bottom:16px}}
+@media(max-width:650px){.kd-workspace-stats,.kd-portfolio-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.kd-workspace-stats .kd-metric{min-height:116px}.kd-workspace-stats .kd-metric-inner{min-height:74px}.kd-workspace-stats .kd-metric-inner>strong{font-size:24px}.kd-workspace-stats .kd-metric-inner p{font-size:9px}.kd-empty-panel-inner{min-height:360px;padding:30px 16px}.kd-empty-panel-inner h2{font-size:24px}.kd-portfolio-empty{padding:30px 16px}.kd-launch-expanded .kd-launch-inner{padding:13px}.kd-launch-expanded .kd-launch-inner ol{display:block}}

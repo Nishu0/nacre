@@ -118,7 +118,7 @@ These signals inform **quote prices**. They do not change the LP's signed floor,
 7. During the window, the dashboard shows eligible fees against the protected floor.
 8. At expiry, anyone can trigger settlement. The LP receives any capped shortfall and the underwriter recovers the unused collateral.
 
-The [local dashboard](http://localhost:3000/dashboard) expresses this flow through fee metrics, position monitoring, activity, and competing quotes. Its sample figures illustrate the product mechanics rather than representing an onchain policy.
+The [local dashboard](http://localhost:3000/dashboard) reads the Bun research API. Its workspace has separate [Pools](http://localhost:3000/dashboard/pools) and [Portfolio](http://localhost:3000/dashboard/portfolio) pages with empty states until Nacre markets and positions exist. Research pages cover the [fee backtest](http://localhost:3000/dashboard/backtest), [reference data](http://localhost:3000/dashboard/references), [launch steps](http://localhost:3000/dashboard/launch), and [premium model](http://localhost:3000/dashboard/pricing). Historical estimates use three Uniswap v3 reference pools; **no live pools, positions, or executable underwriter quotes** are shown as active.
 
 ## Economic boundaries
 
@@ -150,13 +150,13 @@ The [local dashboard](http://localhost:3000/dashboard) expresses this flow throu
 ## Run locally
 
 ```bash
-cd frontend
-bun install
-bun run dev
+# Terminal 1, from the repository root
+cd server && bun install && bun run dev
+
+# Terminal 2, from the repository root
+cd frontend && bun install && bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The dashboard can be explored without a wallet; connecting an injected browser wallet is optional.
+Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard). The API serves at [http://127.0.0.1:3001/health](http://127.0.0.1:3001/health) and seeds its checked-in snapshot into local SQLite on first start. The dashboard works without a wallet. For a remote backend, set `NACRE_API_URL` in the frontend environment to its server-side base URL. Solidity checks run from `contract/` with `forge build && forge test --offline`.
 
-The API runs from `server/` with `bun install && bun run dev` and responds at [http://127.0.0.1:3001/health](http://127.0.0.1:3001/health). Solidity checks run from `contract/` with `forge build && forge test --offline`.
-
-The server also provides a local SQLite-backed [three-pool fee-yield backtest](server/README.md). Seed it with `cd server && bun run db:seed`. Its historical Uniswap v3 pool-level figures are research estimates, not actual earnings for a specified Uniswap v4 position. The [contract README](contract/README.md) describes the custom v4 hook, Aqua underwriting app, escrow flow, deployment requirements, and prototype limitations.
+The server provides a local SQLite-backed [three-pool fee-yield backtest](server/README.md). Its historical Uniswap v3 pool-level figures are research estimates, not actual earnings for a specified Uniswap v4 position. The [contract README](contract/README.md) describes the custom v4 hook, Aqua underwriting app, escrow flow, deployment requirements, and prototype limitations.

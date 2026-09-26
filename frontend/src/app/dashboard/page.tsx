@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
 import { NacreDashboard } from "@/components/nacre-dashboard";
-import "./dashboard.css";
-import "./dashboard-research.css";
 
 export const metadata: Metadata = {
   title: "Dashboard — Nacre",
