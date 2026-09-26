@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "start": "bun src/index.ts",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "db:seed": "bun src/seed.ts",
+    "data:refresh": "bun src/refresh.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",

@@ -1,0 +1,1403 @@
+{
+  "source": "DefiLlama Yields API",
+  "capturedAt": "2026-09-26T06:37:34.626135Z",
+  "from": "2026-06-26",
+  "through": "2026-09-25",
+  "pools": [
+    {
+      "id": "usdc-weth-005",
+      "observations": [
+        {
+          "date": "2026-06-26",
+          "apyBasePct": 16.93152,
+          "tvlUsd": 80627062
+        },
+        {
+          "date": "2026-06-27",
+          "apyBasePct": 5.60069,
+          "tvlUsd": 80629824
+        },
+        {
+          "date": "2026-06-28",
+          "apyBasePct": 7.02314,
+          "tvlUsd": 79961345
+        },
+        {
+          "date": "2026-06-29",
+          "apyBasePct": 15.4977,
+          "tvlUsd": 82058373
+        },
+        {
+          "date": "2026-06-30",
+          "apyBasePct": 8.88182,
+          "tvlUsd": 80464424
+        },
+        {
+          "date": "2026-07-01",
+          "apyBasePct": 8.42529,
+          "tvlUsd": 82576365
+        },
+        {
+          "date": "2026-07-02",
+          "apyBasePct": 13.53036,
+          "tvlUsd": 85111623
+        },
+        {
+          "date": "2026-07-03",
+          "apyBasePct": 10.54183,
+          "tvlUsd": 86875101
+        },
+        {
+          "date": "2026-07-04",
+          "apyBasePct": 10.15493,
+          "tvlUsd": 87545486
+        },
+        {
+          "date": "2026-07-05",
+          "apyBasePct": 5.46937,
+          "tvlUsd": 87813847
+        },
+        {
+          "date": "2026-07-06",
+          "apyBasePct": 16.15158,
+          "tvlUsd": 88384524
+        },
+        {
+          "date": "2026-07-07",
+          "apyBasePct": 14.91301,
+          "tvlUsd": 86562712
+        },
+        {
+          "date": "2026-07-08",
+          "apyBasePct": 13.43518,
+          "tvlUsd": 85319985
+        },
+        {
+          "date": "2026-07-09",
+          "apyBasePct": 11.51833,
+          "tvlUsd": 85848379
+        },
+        {
+          "date": "2026-07-10",
+          "apyBasePct": 10.76804,
+          "tvlUsd": 87687440
+        },
+        {
+          "date": "2026-07-11",
+          "apyBasePct": 7.74874,
+          "tvlUsd": 88132022
+        },
+        {
+          "date": "2026-07-12",
+          "apyBasePct": 9.98751,
+          "tvlUsd": 87854547
+        },
+        {
+          "date": "2026-07-13",
+          "apyBasePct": 17.53516,
+          "tvlUsd": 86350961
+        },
+        {
+          "date": "2026-07-14",
+          "apyBasePct": 15.88485,
+          "tvlUsd": 91739441
+        },
+        {
+          "date": "2026-07-15",
+          "apyBasePct": 28.08418,
+          "tvlUsd": 95158089
+        },
+        {
+          "date": "2026-07-16",
+          "apyBasePct": 18.44422,
+          "tvlUsd": 93444616
+        },
+        {
+          "date": "2026-07-17",
+          "apyBasePct": 11.75343,
+          "tvlUsd": 92459624
+        },
+        {
+          "date": "2026-07-18",
+          "apyBasePct": 1.39144,
+          "tvlUsd": 93206101
+        },
+        {
+          "date": "2026-07-19",
+          "apyBasePct": 3.27905,
+          "tvlUsd": 93336054
+        },
+        {
+          "date": "2026-07-20",
+          "apyBasePct": 21.5207,
+          "tvlUsd": 94636884
+        },
+        {
+          "date": "2026-07-21",
+          "apyBasePct": 24.25637,
+          "tvlUsd": 95572533
+        },
+        {
+          "date": "2026-07-22",
+          "apyBasePct": 26.24891,
+          "tvlUsd": 96317130
+        },
+        {
+          "date": "2026-07-23",
+          "apyBasePct": 20.62003,
+          "tvlUsd": 94621774
+        },
+        {
+          "date": "2026-07-24",
+          "apyBasePct": 12.33116,
+          "tvlUsd": 94030706
+        },
+        {
+          "date": "2026-07-25",
+          "apyBasePct": 3.97272,
+          "tvlUsd": 95806904
+        },
+        {
+          "date": "2026-07-26",
+          "apyBasePct": 8.76242,
+          "tvlUsd": 97487063
+        },
+        {
+          "date": "2026-07-27",
+          "apyBasePct": 32.05462,
+          "tvlUsd": 94907051
+        },
+        {
+          "date": "2026-07-28",
+          "apyBasePct": 21.63884,
+          "tvlUsd": 99660351
+        },
+        {
+          "date": "2026-07-29",
+          "apyBasePct": 31.85807,
+          "tvlUsd": 99956135
+        },
+        {
+          "date": "2026-07-30",
+          "apyBasePct": 21.51847,
+          "tvlUsd": 100794624
+        },
+        {
+          "date": "2026-07-31",
+          "apyBasePct": 15.66674,
+          "tvlUsd": 98673906
+        },
+        {
+          "date": "2026-08-01",
+          "apyBasePct": 5.53062,
+          "tvlUsd": 97981626
+        },
+        {
+          "date": "2026-08-02",
+          "apyBasePct": 7.29134,
+          "tvlUsd": 99435186
+        },
+        {
+          "date": "2026-08-03",
+          "apyBasePct": 9.99931,
+          "tvlUsd": 98768452
+        },
+        {
+          "date": "2026-08-04",
+          "apyBasePct": 10.41717,
+          "tvlUsd": 99329437
+        },
+        {
+          "date": "2026-08-05",
+          "apyBasePct": 14.9809,
+          "tvlUsd": 95328311
+        },
+        {
+          "date": "2026-08-06",
+          "apyBasePct": 17.45176,
+          "tvlUsd": 95088000
+        },
+        {
+          "date": "2026-08-07",
+          "apyBasePct": 20.05701,
+          "tvlUsd": 95268753
+        },
+        {
+          "date": "2026-08-08",
+          "apyBasePct": 7.89571,
+          "tvlUsd": 95641323
+        },
+        {
+          "date": "2026-08-09",
+          "apyBasePct": 5.55272,
+          "tvlUsd": 95495827
+        },
+        {
+          "date": "2026-08-10",
+          "apyBasePct": 16.77799,
+          "tvlUsd": 94319730
+        },
+        {
+          "date": "2026-08-11",
+          "apyBasePct": 8.32826,
+          "tvlUsd": 97261863
+        },
+        {
+          "date": "2026-08-12",
+          "apyBasePct": 14.7961,
+          "tvlUsd": 97154795
+        },
+        {
+          "date": "2026-08-13",
+          "apyBasePct": 10.67495,
+          "tvlUsd": 97801746
+        },
+        {
+          "date": "2026-08-14",
+          "apyBasePct": 8.37759,
+          "tvlUsd": 97530219
+        },
+        {
+          "date": "2026-08-15",
+          "apyBasePct": 3.08358,
+          "tvlUsd": 97839087
+        },
+        {
+          "date": "2026-08-16",
+          "apyBasePct": 3.06172,
+          "tvlUsd": 97784552
+        },
+        {
+          "date": "2026-08-17",
+          "apyBasePct": 14.22962,
+          "tvlUsd": 98773631
+        },
+        {
+          "date": "2026-08-18",
+          "apyBasePct": 13.61426,
+          "tvlUsd": 99005395
+        },
+        {
+          "date": "2026-08-19",
+          "apyBasePct": 52.97023,
+          "tvlUsd": 103600944
+        },
+        {
+          "date": "2026-08-20",
+          "apyBasePct": 21.49797,
+          "tvlUsd": 104327876
+        },
+        {
+          "date": "2026-08-21",
+          "apyBasePct": 32.57572,
+          "tvlUsd": 104648052
+        },
+        {
+          "date": "2026-08-22",
+          "apyBasePct": 21.04406,
+          "tvlUsd": 103581710
+        },
+        {
+          "date": "2026-08-23",
+          "apyBasePct": 16.75192,
+          "tvlUsd": 103471415
+        },
+        {
+          "date": "2026-08-24",
+          "apyBasePct": 20.00535,
+          "tvlUsd": 104459011
+        },
+        {
+          "date": "2026-08-25",
+          "apyBasePct": 15.28083,
+          "tvlUsd": 106377173
+        },
+        {
+          "date": "2026-08-26",
+          "apyBasePct": 11.27483,
+          "tvlUsd": 106873112
+        },
+        {
+          "date": "2026-08-27",
+          "apyBasePct": 14.59339,
+          "tvlUsd": 107062757
+        },
+        {
+          "date": "2026-08-28",
+          "apyBasePct": 13.65903,
+          "tvlUsd": 105480132
+        },
+        {
+          "date": "2026-08-29",
+          "apyBasePct": 4.44211,
+          "tvlUsd": 106600440
+        },
+        {
+          "date": "2026-08-30",
+          "apyBasePct": 10.32912,
+          "tvlUsd": 106941653
+        },
+        {
+          "date": "2026-08-31",
+          "apyBasePct": 13.42936,
+          "tvlUsd": 105473892
+        },
+        {
+          "date": "2026-09-01",
+          "apyBasePct": 11.60348,
+          "tvlUsd": 104468437
+        },
+        {
+          "date": "2026-09-02",
+          "apyBasePct": 12.92937,
+          "tvlUsd": 104022634
+        },
+        {
+          "date": "2026-09-03",
+          "apyBasePct": 17.05667,
+          "tvlUsd": 105522049
+        },
+        {
+          "date": "2026-09-04",
+          "apyBasePct": 15.2326,
+          "tvlUsd": 105053039
+        },
+        {
+          "date": "2026-09-05",
+          "apyBasePct": 4.37548,
+          "tvlUsd": 105240439
+        },
+        {
+          "date": "2026-09-06",
+          "apyBasePct": 9.0526,
+          "tvlUsd": 105632861
+        },
+        {
+          "date": "2026-09-07",
+          "apyBasePct": 9.87448,
+          "tvlUsd": 105401153
+        },
+        {
+          "date": "2026-09-08",
+          "apyBasePct": 10.45944,
+          "tvlUsd": 105598151
+        },
+        {
+          "date": "2026-09-09",
+          "apyBasePct": 14.10639,
+          "tvlUsd": 105560702
+        },
+        {
+          "date": "2026-09-10",
+          "apyBasePct": 11.67988,
+          "tvlUsd": 105458697
+        },
+        {
+          "date": "2026-09-11",
+          "apyBasePct": 26.79085,
+          "tvlUsd": 106064269
+        },
+        {
+          "date": "2026-09-12",
+          "apyBasePct": 3.84859,
+          "tvlUsd": 106610594
+        },
+        {
+          "date": "2026-09-13",
+          "apyBasePct": 6.77478,
+          "tvlUsd": 105846630
+        },
+        {
+          "date": "2026-09-14",
+          "apyBasePct": 17.23404,
+          "tvlUsd": 106033949
+        },
+        {
+          "date": "2026-09-15",
+          "apyBasePct": 19.11381,
+          "tvlUsd": 104359151
+        },
+        {
+          "date": "2026-09-16",
+          "apyBasePct": 18.93281,
+          "tvlUsd": 104451666
+        },
+        {
+          "date": "2026-09-17",
+          "apyBasePct": 12.24419,
+          "tvlUsd": 103959461
+        },
+        {
+          "date": "2026-09-18",
+          "apyBasePct": 18.90297,
+          "tvlUsd": 105849031
+        },
+        {
+          "date": "2026-09-19",
+          "apyBasePct": 9.94244,
+          "tvlUsd": 105468759
+        },
+        {
+          "date": "2026-09-20",
+          "apyBasePct": 13.17475,
+          "tvlUsd": 105542256
+        },
+        {
+          "date": "2026-09-21",
+          "apyBasePct": 18.72794,
+          "tvlUsd": 100904955
+        },
+        {
+          "date": "2026-09-22",
+          "apyBasePct": 11.61916,
+          "tvlUsd": 100681005
+        },
+        {
+          "date": "2026-09-23",
+          "apyBasePct": 10.35411,
+          "tvlUsd": 100056624
+        },
+        {
+          "date": "2026-09-24",
+          "apyBasePct": 10.99048,
+          "tvlUsd": 99279819
+        },
+        {
+          "date": "2026-09-25",
+          "apyBasePct": 7.77015,
+          "tvlUsd": 99417045
+        }
+      ]
+    },
+    {
+      "id": "wbtc-weth-005",
+      "observations": [
+        {
+          "date": "2026-06-26",
+          "apyBasePct": 19.12788,
+          "tvlUsd": 39604662
+        },
+        {
+          "date": "2026-06-27",
+          "apyBasePct": 3.98682,
+          "tvlUsd": 39579990
+        },
+        {
+          "date": "2026-06-28",
+          "apyBasePct": 5.5386,
+          "tvlUsd": 39261295
+        },
+        {
+          "date": "2026-06-29",
+          "apyBasePct": 11.30888,
+          "tvlUsd": 40782477
+        },
+        {
+          "date": "2026-06-30",
+          "apyBasePct": 8.66169,
+          "tvlUsd": 39720627
+        },
+        {
+          "date": "2026-07-01",
+          "apyBasePct": 7.4977,
+          "tvlUsd": 41066392
+        },
+        {
+          "date": "2026-07-02",
+          "apyBasePct": 13.89174,
+          "tvlUsd": 42501823
+        },
+        {
+          "date": "2026-07-03",
+          "apyBasePct": 5.58656,
+          "tvlUsd": 41983734
+        },
+        {
+          "date": "2026-07-04",
+          "apyBasePct": 8.18757,
+          "tvlUsd": 40358385
+        },
+        {
+          "date": "2026-07-05",
+          "apyBasePct": 4.20998,
+          "tvlUsd": 40656749
+        },
+        {
+          "date": "2026-07-06",
+          "apyBasePct": 6.00868,
+          "tvlUsd": 41016763
+        },
+        {
+          "date": "2026-07-07",
+          "apyBasePct": 3.91487,
+          "tvlUsd": 40493953
+        },
+        {
+          "date": "2026-07-08",
+          "apyBasePct": 3.27393,
+          "tvlUsd": 39634807
+        },
+        {
+          "date": "2026-07-09",
+          "apyBasePct": 4.55595,
+          "tvlUsd": 43942028
+        },
+        {
+          "date": "2026-07-10",
+          "apyBasePct": 5.40375,
+          "tvlUsd": 41701236
+        },
+        {
+          "date": "2026-07-11",
+          "apyBasePct": 4.73701,
+          "tvlUsd": 41959500
+        },
+        {
+          "date": "2026-07-12",
+          "apyBasePct": 4.96895,
+          "tvlUsd": 41673766
+        },
+        {
+          "date": "2026-07-13",
+          "apyBasePct": 6.78586,
+          "tvlUsd": 38505040
+        },
+        {
+          "date": "2026-07-14",
+          "apyBasePct": 11.47461,
+          "tvlUsd": 39856552
+        },
+        {
+          "date": "2026-07-15",
+          "apyBasePct": 7.13249,
+          "tvlUsd": 41157501
+        },
+        {
+          "date": "2026-07-16",
+          "apyBasePct": 5.11037,
+          "tvlUsd": 43989265
+        },
+        {
+          "date": "2026-07-17",
+          "apyBasePct": 3.42801,
+          "tvlUsd": 40560538
+        },
+        {
+          "date": "2026-07-18",
+          "apyBasePct": 2.18029,
+          "tvlUsd": 40403079
+        },
+        {
+          "date": "2026-07-19",
+          "apyBasePct": 7.18807,
+          "tvlUsd": 43641836
+        },
+        {
+          "date": "2026-07-20",
+          "apyBasePct": 8.87547,
+          "tvlUsd": 40796195
+        },
+        {
+          "date": "2026-07-21",
+          "apyBasePct": 5.45095,
+          "tvlUsd": 40360672
+        },
+        {
+          "date": "2026-07-22",
+          "apyBasePct": 6.72772,
+          "tvlUsd": 41346171
+        },
+        {
+          "date": "2026-07-23",
+          "apyBasePct": 5.62058,
+          "tvlUsd": 40460944
+        },
+        {
+          "date": "2026-07-24",
+          "apyBasePct": 6.75682,
+          "tvlUsd": 39916690
+        },
+        {
+          "date": "2026-07-25",
+          "apyBasePct": 1.65382,
+          "tvlUsd": 40080025
+        },
+        {
+          "date": "2026-07-26",
+          "apyBasePct": 2.65836,
+          "tvlUsd": 40764147
+        },
+        {
+          "date": "2026-07-27",
+          "apyBasePct": 6.95279,
+          "tvlUsd": 39889162
+        },
+        {
+          "date": "2026-07-28",
+          "apyBasePct": 6.63647,
+          "tvlUsd": 40290151
+        },
+        {
+          "date": "2026-07-29",
+          "apyBasePct": 6.75308,
+          "tvlUsd": 40222680
+        },
+        {
+          "date": "2026-07-30",
+          "apyBasePct": 4.00538,
+          "tvlUsd": 40716152
+        },
+        {
+          "date": "2026-07-31",
+          "apyBasePct": 7.49372,
+          "tvlUsd": 40596307
+        },
+        {
+          "date": "2026-08-01",
+          "apyBasePct": 4.24328,
+          "tvlUsd": 40392078
+        },
+        {
+          "date": "2026-08-02",
+          "apyBasePct": 3.80087,
+          "tvlUsd": 42981866
+        },
+        {
+          "date": "2026-08-03",
+          "apyBasePct": 3.62134,
+          "tvlUsd": 42700089
+        },
+        {
+          "date": "2026-08-04",
+          "apyBasePct": 3.92268,
+          "tvlUsd": 42573211
+        },
+        {
+          "date": "2026-08-05",
+          "apyBasePct": 7.45807,
+          "tvlUsd": 43114813
+        },
+        {
+          "date": "2026-08-06",
+          "apyBasePct": 3.46803,
+          "tvlUsd": 42993450
+        },
+        {
+          "date": "2026-08-07",
+          "apyBasePct": 5.38534,
+          "tvlUsd": 43333399
+        },
+        {
+          "date": "2026-08-08",
+          "apyBasePct": 4.32405,
+          "tvlUsd": 43362254
+        },
+        {
+          "date": "2026-08-09",
+          "apyBasePct": 2.38027,
+          "tvlUsd": 42890630
+        },
+        {
+          "date": "2026-08-10",
+          "apyBasePct": 4.79363,
+          "tvlUsd": 42087977
+        },
+        {
+          "date": "2026-08-11",
+          "apyBasePct": 4.24909,
+          "tvlUsd": 42045103
+        },
+        {
+          "date": "2026-08-12",
+          "apyBasePct": 9.08988,
+          "tvlUsd": 42131821
+        },
+        {
+          "date": "2026-08-13",
+          "apyBasePct": 5.61691,
+          "tvlUsd": 42330482
+        },
+        {
+          "date": "2026-08-14",
+          "apyBasePct": 3.94213,
+          "tvlUsd": 42081785
+        },
+        {
+          "date": "2026-08-15",
+          "apyBasePct": 1.15255,
+          "tvlUsd": 42153670
+        },
+        {
+          "date": "2026-08-16",
+          "apyBasePct": 2.15036,
+          "tvlUsd": 41985412
+        },
+        {
+          "date": "2026-08-17",
+          "apyBasePct": 4.98558,
+          "tvlUsd": 43865453
+        },
+        {
+          "date": "2026-08-18",
+          "apyBasePct": 3.53621,
+          "tvlUsd": 44083455
+        },
+        {
+          "date": "2026-08-19",
+          "apyBasePct": 26.16359,
+          "tvlUsd": 52028165
+        },
+        {
+          "date": "2026-08-20",
+          "apyBasePct": 18.84951,
+          "tvlUsd": 35263584
+        },
+        {
+          "date": "2026-08-21",
+          "apyBasePct": 25.03214,
+          "tvlUsd": 38321338
+        },
+        {
+          "date": "2026-08-22",
+          "apyBasePct": 13.83745,
+          "tvlUsd": 37612784
+        },
+        {
+          "date": "2026-08-23",
+          "apyBasePct": 13.30824,
+          "tvlUsd": 37554949
+        },
+        {
+          "date": "2026-08-24",
+          "apyBasePct": 10.75372,
+          "tvlUsd": 37586720
+        },
+        {
+          "date": "2026-08-25",
+          "apyBasePct": 9.71287,
+          "tvlUsd": 37259671
+        },
+        {
+          "date": "2026-08-26",
+          "apyBasePct": 5.64139,
+          "tvlUsd": 37526513
+        },
+        {
+          "date": "2026-08-27",
+          "apyBasePct": 7.79631,
+          "tvlUsd": 38837789
+        },
+        {
+          "date": "2026-08-28",
+          "apyBasePct": 7.29857,
+          "tvlUsd": 36217496
+        },
+        {
+          "date": "2026-08-29",
+          "apyBasePct": 1.58887,
+          "tvlUsd": 36459139
+        },
+        {
+          "date": "2026-08-30",
+          "apyBasePct": 5.01262,
+          "tvlUsd": 35277777
+        },
+        {
+          "date": "2026-08-31",
+          "apyBasePct": 5.73095,
+          "tvlUsd": 35316193
+        },
+        {
+          "date": "2026-09-01",
+          "apyBasePct": 4.08124,
+          "tvlUsd": 34549346
+        },
+        {
+          "date": "2026-09-02",
+          "apyBasePct": 6.49959,
+          "tvlUsd": 34179860
+        },
+        {
+          "date": "2026-09-03",
+          "apyBasePct": 8.12311,
+          "tvlUsd": 35990812
+        },
+        {
+          "date": "2026-09-04",
+          "apyBasePct": 8.91778,
+          "tvlUsd": 35250758
+        },
+        {
+          "date": "2026-09-05",
+          "apyBasePct": 2.44403,
+          "tvlUsd": 35432720
+        },
+        {
+          "date": "2026-09-06",
+          "apyBasePct": 5.21309,
+          "tvlUsd": 35691501
+        },
+        {
+          "date": "2026-09-07",
+          "apyBasePct": 5.14785,
+          "tvlUsd": 35227217
+        },
+        {
+          "date": "2026-09-08",
+          "apyBasePct": 5.79548,
+          "tvlUsd": 35182654
+        },
+        {
+          "date": "2026-09-09",
+          "apyBasePct": 5.59271,
+          "tvlUsd": 34870604
+        },
+        {
+          "date": "2026-09-10",
+          "apyBasePct": 4.91854,
+          "tvlUsd": 34584850
+        },
+        {
+          "date": "2026-09-11",
+          "apyBasePct": 12.5475,
+          "tvlUsd": 35083689
+        },
+        {
+          "date": "2026-09-12",
+          "apyBasePct": 2.00428,
+          "tvlUsd": 35201467
+        },
+        {
+          "date": "2026-09-13",
+          "apyBasePct": 3.89315,
+          "tvlUsd": 33057819
+        },
+        {
+          "date": "2026-09-14",
+          "apyBasePct": 9.5791,
+          "tvlUsd": 33828298
+        },
+        {
+          "date": "2026-09-15",
+          "apyBasePct": 15.54622,
+          "tvlUsd": 32176875
+        },
+        {
+          "date": "2026-09-16",
+          "apyBasePct": 8.2414,
+          "tvlUsd": 33084441
+        },
+        {
+          "date": "2026-09-17",
+          "apyBasePct": 6.21032,
+          "tvlUsd": 33725056
+        },
+        {
+          "date": "2026-09-18",
+          "apyBasePct": 12.18266,
+          "tvlUsd": 36370333
+        },
+        {
+          "date": "2026-09-19",
+          "apyBasePct": 6.82275,
+          "tvlUsd": 37827269
+        },
+        {
+          "date": "2026-09-20",
+          "apyBasePct": 10.61463,
+          "tvlUsd": 37690616
+        },
+        {
+          "date": "2026-09-21",
+          "apyBasePct": 22.68948,
+          "tvlUsd": 48369674
+        },
+        {
+          "date": "2026-09-22",
+          "apyBasePct": 10.8744,
+          "tvlUsd": 39464455
+        },
+        {
+          "date": "2026-09-23",
+          "apyBasePct": 8.09999,
+          "tvlUsd": 41356251
+        },
+        {
+          "date": "2026-09-24",
+          "apyBasePct": 6.36587,
+          "tvlUsd": 58269771
+        },
+        {
+          "date": "2026-09-25",
+          "apyBasePct": 29.8469,
+          "tvlUsd": 41448820
+        }
+      ]
+    },
+    {
+      "id": "usdc-usdt-001",
+      "observations": [
+        {
+          "date": "2026-06-26",
+          "apyBasePct": 0.97719,
+          "tvlUsd": 22716604
+        },
+        {
+          "date": "2026-06-27",
+          "apyBasePct": 0.72528,
+          "tvlUsd": 22739242
+        },
+        {
+          "date": "2026-06-28",
+          "apyBasePct": 0.25209,
+          "tvlUsd": 22419234
+        },
+        {
+          "date": "2026-06-29",
+          "apyBasePct": 8.97765,
+          "tvlUsd": 22426274
+        },
+        {
+          "date": "2026-06-30",
+          "apyBasePct": 1.63245,
+          "tvlUsd": 32245435
+        },
+        {
+          "date": "2026-07-01",
+          "apyBasePct": 0.63387,
+          "tvlUsd": 32323365
+        },
+        {
+          "date": "2026-07-02",
+          "apyBasePct": 1.8986,
+          "tvlUsd": 32154963
+        },
+        {
+          "date": "2026-07-03",
+          "apyBasePct": 0.38756,
+          "tvlUsd": 34285500
+        },
+        {
+          "date": "2026-07-04",
+          "apyBasePct": 0.40256,
+          "tvlUsd": 33065762
+        },
+        {
+          "date": "2026-07-05",
+          "apyBasePct": 0.09265,
+          "tvlUsd": 33013144
+        },
+        {
+          "date": "2026-07-06",
+          "apyBasePct": 0.84618,
+          "tvlUsd": 36062904
+        },
+        {
+          "date": "2026-07-07",
+          "apyBasePct": 1.89011,
+          "tvlUsd": 35556393
+        },
+        {
+          "date": "2026-07-08",
+          "apyBasePct": 0.88663,
+          "tvlUsd": 35569423
+        },
+        {
+          "date": "2026-07-09",
+          "apyBasePct": 0.70851,
+          "tvlUsd": 35530842
+        },
+        {
+          "date": "2026-07-10",
+          "apyBasePct": 0.63865,
+          "tvlUsd": 35498016
+        },
+        {
+          "date": "2026-07-11",
+          "apyBasePct": 0.89232,
+          "tvlUsd": 35480791
+        },
+        {
+          "date": "2026-07-12",
+          "apyBasePct": 0.57373,
+          "tvlUsd": 35484391
+        },
+        {
+          "date": "2026-07-13",
+          "apyBasePct": 0.90913,
+          "tvlUsd": 36445392
+        },
+        {
+          "date": "2026-07-14",
+          "apyBasePct": 1.05571,
+          "tvlUsd": 36855487
+        },
+        {
+          "date": "2026-07-15",
+          "apyBasePct": 1.14655,
+          "tvlUsd": 36840704
+        },
+        {
+          "date": "2026-07-16",
+          "apyBasePct": 0.69392,
+          "tvlUsd": 37012626
+        },
+        {
+          "date": "2026-07-17",
+          "apyBasePct": 0.5872,
+          "tvlUsd": 36986336
+        },
+        {
+          "date": "2026-07-18",
+          "apyBasePct": 0.05069,
+          "tvlUsd": 36986701
+        },
+        {
+          "date": "2026-07-19",
+          "apyBasePct": 0.13174,
+          "tvlUsd": 34654678
+        },
+        {
+          "date": "2026-07-20",
+          "apyBasePct": 0.88496,
+          "tvlUsd": 34658088
+        },
+        {
+          "date": "2026-07-21",
+          "apyBasePct": 2.14027,
+          "tvlUsd": 34721846
+        },
+        {
+          "date": "2026-07-22",
+          "apyBasePct": 0.91186,
+          "tvlUsd": 34725507
+        },
+        {
+          "date": "2026-07-23",
+          "apyBasePct": 1.06573,
+          "tvlUsd": 34720150
+        },
+        {
+          "date": "2026-07-24",
+          "apyBasePct": 0.76368,
+          "tvlUsd": 34719384
+        },
+        {
+          "date": "2026-07-25",
+          "apyBasePct": 0.1772,
+          "tvlUsd": 34784765
+        },
+        {
+          "date": "2026-07-26",
+          "apyBasePct": 0.17909,
+          "tvlUsd": 34822529
+        },
+        {
+          "date": "2026-07-27",
+          "apyBasePct": 1.13384,
+          "tvlUsd": 34700277
+        },
+        {
+          "date": "2026-07-28",
+          "apyBasePct": 1.73348,
+          "tvlUsd": 34597482
+        },
+        {
+          "date": "2026-07-29",
+          "apyBasePct": 1.37833,
+          "tvlUsd": 34578773
+        },
+        {
+          "date": "2026-07-30",
+          "apyBasePct": 1.41295,
+          "tvlUsd": 34591221
+        },
+        {
+          "date": "2026-07-31",
+          "apyBasePct": 1.09921,
+          "tvlUsd": 35373093
+        },
+        {
+          "date": "2026-08-01",
+          "apyBasePct": 0.62378,
+          "tvlUsd": 35459058
+        },
+        {
+          "date": "2026-08-02",
+          "apyBasePct": 0.34657,
+          "tvlUsd": 35437697
+        },
+        {
+          "date": "2026-08-03",
+          "apyBasePct": 0.769,
+          "tvlUsd": 35438229
+        },
+        {
+          "date": "2026-08-04",
+          "apyBasePct": 1.97447,
+          "tvlUsd": 35426342
+        },
+        {
+          "date": "2026-08-05",
+          "apyBasePct": 2.96216,
+          "tvlUsd": 35901310
+        },
+        {
+          "date": "2026-08-06",
+          "apyBasePct": 1.3608,
+          "tvlUsd": 35720164
+        },
+        {
+          "date": "2026-08-07",
+          "apyBasePct": 0.92292,
+          "tvlUsd": 35445716
+        },
+        {
+          "date": "2026-08-08",
+          "apyBasePct": 0.95706,
+          "tvlUsd": 35436491
+        },
+        {
+          "date": "2026-08-09",
+          "apyBasePct": 0.51297,
+          "tvlUsd": 33226413
+        },
+        {
+          "date": "2026-08-10",
+          "apyBasePct": 1.82146,
+          "tvlUsd": 33236125
+        },
+        {
+          "date": "2026-08-11",
+          "apyBasePct": 1.00491,
+          "tvlUsd": 33246299
+        },
+        {
+          "date": "2026-08-12",
+          "apyBasePct": 1.11162,
+          "tvlUsd": 33250273
+        },
+        {
+          "date": "2026-08-13",
+          "apyBasePct": 0.32439,
+          "tvlUsd": 33248781
+        },
+        {
+          "date": "2026-08-14",
+          "apyBasePct": 0.77273,
+          "tvlUsd": 33245690
+        },
+        {
+          "date": "2026-08-15",
+          "apyBasePct": 0.17011,
+          "tvlUsd": 33379119
+        },
+        {
+          "date": "2026-08-16",
+          "apyBasePct": 0.43308,
+          "tvlUsd": 33379557
+        },
+        {
+          "date": "2026-08-17",
+          "apyBasePct": 0.65148,
+          "tvlUsd": 33680016
+        },
+        {
+          "date": "2026-08-18",
+          "apyBasePct": 0.72529,
+          "tvlUsd": 33705281
+        },
+        {
+          "date": "2026-08-19",
+          "apyBasePct": 2.67891,
+          "tvlUsd": 33709187
+        },
+        {
+          "date": "2026-08-20",
+          "apyBasePct": 2.8423,
+          "tvlUsd": 33853147
+        },
+        {
+          "date": "2026-08-21",
+          "apyBasePct": 2.55462,
+          "tvlUsd": 34388210
+        },
+        {
+          "date": "2026-08-22",
+          "apyBasePct": 0.78918,
+          "tvlUsd": 34387708
+        },
+        {
+          "date": "2026-08-23",
+          "apyBasePct": 0.5986,
+          "tvlUsd": 34096911
+        },
+        {
+          "date": "2026-08-24",
+          "apyBasePct": 1.38092,
+          "tvlUsd": 34457689
+        },
+        {
+          "date": "2026-08-25",
+          "apyBasePct": 1.83823,
+          "tvlUsd": 34383627
+        },
+        {
+          "date": "2026-08-26",
+          "apyBasePct": 0.6707,
+          "tvlUsd": 34381888
+        },
+        {
+          "date": "2026-08-27",
+          "apyBasePct": 0.89218,
+          "tvlUsd": 34549685
+        },
+        {
+          "date": "2026-08-28",
+          "apyBasePct": 0.76588,
+          "tvlUsd": 34536207
+        },
+        {
+          "date": "2026-08-29",
+          "apyBasePct": 1.28035,
+          "tvlUsd": 34512872
+        },
+        {
+          "date": "2026-08-30",
+          "apyBasePct": 0.27911,
+          "tvlUsd": 34512605
+        },
+        {
+          "date": "2026-08-31",
+          "apyBasePct": 1.20175,
+          "tvlUsd": 34075353
+        },
+        {
+          "date": "2026-09-01",
+          "apyBasePct": 3.12534,
+          "tvlUsd": 34072708
+        },
+        {
+          "date": "2026-09-02",
+          "apyBasePct": 1.28223,
+          "tvlUsd": 34098305
+        },
+        {
+          "date": "2026-09-03",
+          "apyBasePct": 8.35838,
+          "tvlUsd": 34116722
+        },
+        {
+          "date": "2026-09-04",
+          "apyBasePct": 0.76429,
+          "tvlUsd": 34272197
+        },
+        {
+          "date": "2026-09-05",
+          "apyBasePct": 0.68237,
+          "tvlUsd": 34239014
+        },
+        {
+          "date": "2026-09-06",
+          "apyBasePct": 0.41328,
+          "tvlUsd": 34264213
+        },
+        {
+          "date": "2026-09-07",
+          "apyBasePct": 0.5198,
+          "tvlUsd": 34209009
+        },
+        {
+          "date": "2026-09-08",
+          "apyBasePct": 1.20366,
+          "tvlUsd": 34165606
+        },
+        {
+          "date": "2026-09-09",
+          "apyBasePct": 1.14035,
+          "tvlUsd": 34143921
+        },
+        {
+          "date": "2026-09-10",
+          "apyBasePct": 1.49861,
+          "tvlUsd": 34096539
+        },
+        {
+          "date": "2026-09-11",
+          "apyBasePct": 1.05351,
+          "tvlUsd": 33384574
+        },
+        {
+          "date": "2026-09-12",
+          "apyBasePct": 0.30757,
+          "tvlUsd": 33414871
+        },
+        {
+          "date": "2026-09-13",
+          "apyBasePct": 0.59056,
+          "tvlUsd": 33267688
+        },
+        {
+          "date": "2026-09-14",
+          "apyBasePct": 1.21496,
+          "tvlUsd": 34247357
+        },
+        {
+          "date": "2026-09-15",
+          "apyBasePct": 3.98878,
+          "tvlUsd": 34197173
+        },
+        {
+          "date": "2026-09-16",
+          "apyBasePct": 1.16332,
+          "tvlUsd": 34198774
+        },
+        {
+          "date": "2026-09-17",
+          "apyBasePct": 0.71801,
+          "tvlUsd": 34127079
+        },
+        {
+          "date": "2026-09-18",
+          "apyBasePct": 2.00851,
+          "tvlUsd": 34273182
+        },
+        {
+          "date": "2026-09-19",
+          "apyBasePct": 0.42695,
+          "tvlUsd": 34367460
+        },
+        {
+          "date": "2026-09-20",
+          "apyBasePct": 0.42319,
+          "tvlUsd": 34327619
+        },
+        {
+          "date": "2026-09-21",
+          "apyBasePct": 2.96707,
+          "tvlUsd": 34320810
+        },
+        {
+          "date": "2026-09-22",
+          "apyBasePct": 2.83258,
+          "tvlUsd": 34242197
+        },
+        {
+          "date": "2026-09-23",
+          "apyBasePct": 0.73733,
+          "tvlUsd": 34290196
+        },
+        {
+          "date": "2026-09-24",
+          "apyBasePct": 0.89123,
+          "tvlUsd": 34319485
+        },
+        {
+          "date": "2026-09-25",
+          "apyBasePct": 1.28498,
+          "tvlUsd": 34324711
+        }
+      ]
+    }
+  ]
+}
