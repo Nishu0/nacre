@@ -9,7 +9,7 @@ bun run db:seed
 bun run dev
 ```
 
-The checked-in `data/pool-history.json` contains daily [DefiLlama Yields API](https://yields.llama.fi/pools) `apyBase` and TVL observations for 2026-06-26 through 2026-09-25. `bun run db:seed` loads them into `data/nacre.sqlite` (ignored by Git). `bun run data:refresh` fetches the latest 92 full UTC days and replaces the snapshot and SQLite tables.
+The checked-in `data/pool-history.json` contains daily [DefiLlama Yields API](https://yields.llama.fi/pools) `apyBase` and TVL observations for 2026-06-26 through 2026-09-25. `bun run dev` seeds them into `data/nacre.sqlite` automatically on first start if the database is empty. `bun run db:seed` reloads them manually; the SQLite file is ignored by Git. `bun run data:refresh` fetches the latest 92 full UTC days and replaces the snapshot and SQLite tables.
 
 | Pool | Historical series |
 | --- | --- |

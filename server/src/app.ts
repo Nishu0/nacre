@@ -1,12 +1,20 @@
 import cors from "@fastify/cors";
 import Fastify from "fastify";
+import { readFileSync } from "node:fs";
 import { backtest, indicativeQuotes } from "./backtest";
-import { getObservations, openDb } from "./db";
-import { POOLS, type PoolId } from "./market-data";
+import { getObservations, openDb, seedDb } from "./db";
+import { POOLS, type PoolId, type Snapshot } from "./market-data";
 
-export function buildApp() {
+export function buildApp(databasePath?: string) {
   const app = Fastify({ logger: true });
-  const db = openDb();
+  const db = openDb(databasePath);
+  const existingObservations = db.query("SELECT COUNT(*) AS count FROM observations").get() as { count: number };
+  if (existingObservations.count === 0) {
+    const snapshot = JSON.parse(
+      readFileSync(new URL("../data/pool-history.json", import.meta.url), "utf8"),
+    ) as Snapshot;
+    seedDb(db, snapshot);
+  }
 
   app.addHook("onClose", async () => db.close());
 
