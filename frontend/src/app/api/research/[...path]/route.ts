@@ -1,4 +1,4 @@
-const allowedPoolIds = new Set(["usdc-weth-005", "wbtc-weth-005", "usdc-usdt-001"]);
+const allowedPoolIds = new Set(["usdc-weth-001", "usdc-weth-005", "weth-usdt-03"]);
 
 export async function GET(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
