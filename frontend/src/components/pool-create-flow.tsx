@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Hex } from "viem";
 import { openPoolAbi, openPoolBytecode, openPoolDeploymentData, openPoolId, startingSqrtPrice, OPEN_POOL_FEES } from "@/lib/open-pool";
 import { Activity, ArrowLeft, ArrowRight, Check, CheckCircle2, CircleAlert, CircleHelp, Database, Droplets, RefreshCw, Save, ShieldCheck } from "lucide-react";
@@ -23,6 +24,7 @@ const steps = [
 const money = (n: number) => Number.isFinite(n) && n > 0 ? n.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "—";
 
 export function PoolCreateFlow({ account, onConnect }: { account: string | null; onConnect: () => Promise<void> }) {
+  const router = useRouter();
   const lock = useRef(false);
   const [fee, setFee] = useState(3000);
   const [busy, setBusy] = useState("");
@@ -42,6 +44,10 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
   const [priceError, setPriceError] = useState("");
   const price = Number(priceInput);
   const validPrice = priceInput.trim() !== "" && Number.isFinite(price) && price >= .01 && price <= 1_000_000;
+
+  useEffect(() => {
+    if (created) router.replace(`/dashboard/pools/${created.id}`);
+  }, [created, router]);
 
   useEffect(() => {
     let storedPrice = "";
@@ -169,7 +175,7 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
 
   if (created) return <div className="pcf-page"><Card className="pcf-success" role="status">
     <div className="pcf-success-mark"><CheckCircle2 size={32} /></div><Badge variant="outline">INITIALIZED</Badge>
-    <h2>Your pool is created.</h2><p>Your nWETH / nUSDC pool is initialized on Base Sepolia. You can now choose a range and fund a bid.</p>
+    <h2>Your pool is created.</h2><p>Opening your pool…</p>
     <Button asChild className="pcf-primary"><Link href={`/dashboard/pools/${created.id}`}>Open pool & fund a bid <ArrowRight size={16} /></Link></Button>
     <Button asChild variant="outline"><a href={basescanTx(created.hash)} target="_blank" rel="noreferrer">View transaction</a></Button>
   </Card></div>;
