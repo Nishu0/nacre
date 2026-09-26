@@ -1,13 +1,15 @@
 .nf-page { display: grid; gap: 20px; max-width: 1100px; }
 .nf-intro { display: flex; align-items: center; gap: 20px; padding: 18px 2px 8px; }
-.nf-icon { display: grid; flex: none; place-items: center; width: 62px; height: 62px; border: 1px solid #cee2d2; border-radius: 16px; background: #edf6ee; color: #457a51; }
+.nf-icon { display: grid; flex: none; place-items: center; width: 62px; height: 62px; border: 1px solid #cee2d2; border-radius: 16px; background: #edf6ee; color: #fff; }
+.nf-icon .nf-token-mark { width: 42px; height: 42px; }
 .nf-intro [data-slot=badge] { color: #52835d; border-color: #cfdfd1; background: #f6faf6; font: 10px var(--font-geist-mono), monospace; }
 .nf-intro h2 { margin: 6px 0 3px; color: #294a34; font: 600 clamp(27px, 3vw, 38px) var(--font-noto-serif), Georgia, serif; letter-spacing: -.04em; }
 .nf-intro p { max-width: 620px; margin: 0; color: #84978a; font-size: 13px; line-height: 1.6; }
 .nf-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr); gap: 14px; align-items: start; }
 .nf-inner { display: grid; gap: 18px; padding: 24px; border: 1px solid #e8eee9; border-radius: 10px; background: white; }
 .nf-token { display: flex; align-items: center; gap: 13px; padding-bottom: 19px; border-bottom: 1px solid #e9eee9; }
-.nf-token-mark { display: grid; place-items: center; width: 43px; height: 43px; border-radius: 50%; background: #2879cf; color: #fff; font-size: 25px; font-weight: 650; }
+.nf-token-mark { display: grid; flex: none; place-items: center; width: 43px; height: 43px; border: 2px solid #fff; border-radius: 50%; background: #438b57; color: #fff; box-shadow: 0 2px 7px #234b3030; }
+.nf-token-mark svg { width: 75%; height: 75%; color: #fff; }
 .nf-token div { display: grid; gap: 2px; }
 .nf-token div strong { color: #304d38; font-size: 15px; }
 .nf-token small { color: #91a295; font-size: 11px; }
@@ -24,6 +26,7 @@
 .nf-guide li strong { margin-bottom: 3px; color: #31543c; font-size: 13px; }
 .nf-guide li span { font-size: 11px; line-height: 1.5; }
 .nf-guide .nf-inner > a { display: inline-flex; align-items: center; gap: 7px; color: #42764d; font-size: 12px; font-weight: 650; }
-.nf-contract { color: #91a396; font-size: 11px; overflow-wrap: anywhere; }
-.nf-contract a { color: #507c59; }
+.nf-contract-link { display: inline-flex; align-items: center; gap: 5px; color: #507c59; font: 10px var(--font-geist-mono), monospace; text-decoration: none; }
+.nf-contract-link:hover { color: #2d643d; text-decoration: underline; }
+.nf-contract-link:focus-visible { outline: 2px solid #568667; outline-offset: 3px; }
 @media (max-width: 760px) { .nf-grid { grid-template-columns: 1fr; } .nf-inner { padding: 17px; } }

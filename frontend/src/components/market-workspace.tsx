@@ -148,10 +148,10 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
         if (!active) return;
         setLivePrices(value);
         setLiveError(false);
-      }).catch(() => { if (active) { setLivePrices(null); setLiveError(true); } });
+      }).catch(() => { if (active) setLiveError(true); });
     };
     refresh();
-    const timer = setInterval(refresh, 30_000);
+    const timer = setInterval(refresh, 15_000);
     return () => { active = false; clearInterval(timer); };
   }, []);
 
@@ -335,7 +335,6 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   }
 
   return <div className="mw-page">
-    <div className="mw-banner"><CircleHelp size={16} /><p><strong>Base Sepolia workspace</strong> · Position counts and token amounts come from verified testnet mints. Fee floors and premiums are research estimates; no coverage policy is active.</p></div>
     <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review the live pool and choose a range before minting a position." : "Explore market proposals and deployed pools."}</p></div>{marketId && selected?.deployment ? <a className="mw-initialized-link" href={basescanTx(selected.deployment.txHash)} target="_blank" rel="noreferrer" aria-label="Initialized on Base Sepolia, view deployment transaction">Initialized <ExternalLink size={16} /></a> : marketId && selected ? <Badge variant="outline" className="mw-proposal-badge">Proposal</Badge> : <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume pool draft" : "Create pool"}</Link></Button>}</div>
     {error && <div className="mw-message is-error" role="alert">{error}</div>}
     {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre markets yet</h2><p>Create a market proposal to define a pair, range, and launch targets.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
@@ -375,20 +374,14 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       </Card>
       <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
-        <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={selected.lowerPriceUsd} upper={selected.upperPriceUsd} current={poolSlot?.priceUsd ?? selected.priceUsd} currentLabel={poolSlot ? "on-chain pool price" : "proposed starting price"} />
-        <Card className="kd-card mw-funding-card">
-          <div className="kd-card-heading"><h2><Rocket size={16} /> Pool deployment</h2><Badge variant="outline">{selected.deployment ? "BASE SEPOLIA" : "PROPOSAL"}</Badge></div>
+        <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={selected.lowerPriceUsd} upper={selected.upperPriceUsd} current={poolSlot?.priceUsd ?? selected.priceUsd} currentLabel={poolSlot ? "on-chain pool price" : "proposed starting price"} stale={liveError} />
+        {!selected.deployment && <Card className="kd-card mw-funding-card">
+          <div className="kd-card-heading"><h2><Rocket size={16} /> Pool deployment</h2><Badge variant="outline">PROPOSAL</Badge></div>
           <div className="mw-funding-inner">
-            {selected.deployment ? <>
-              <div><span>Uniswap v4 pool</span><strong>Initialized</strong><small>WETH / nUSDC · {selected.feeTier} fee</small></div>
-              <div><span>Verified liquidity positions</span><strong>{selectedChainPositions.length}</strong><small>Minted through PositionManager</small></div>
-              <p>Pool initialization does not move LP tokens or lock underwriting collateral. The position totals above count verified testnet mints only.</p>
-            </> : <>
-              <div><span>Uniswap v4 pool</span><strong>Not deployed</strong><small>No on-chain liquidity or protection</small></div>
-              <p>This proposal does not count as a live pool. New launches require an on-chain funding flow before they can be shown as deployed.</p>
-            </>}
+            <div><span>Uniswap v4 pool</span><strong>Not deployed</strong><small>No on-chain liquidity or protection</small></div>
+            <p>This proposal does not count as a live pool. New launches require an on-chain funding flow before they can be shown as deployed.</p>
           </div>
-        </Card>
+        </Card>}
       </section>
       <aside className="mw-market-actions" aria-label="Pool actions">
         <div className="mw-action-tabs" role="group" aria-label="Pool role">

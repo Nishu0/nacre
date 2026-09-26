@@ -6,7 +6,7 @@ import { Dialog, DropdownMenu } from "radix-ui";
 import {
   Activity, ArrowRight, ArrowUpRight, Bell, ChevronDown, CircleHelp,
   Compass, Database, ExternalLink, Layers3, LayoutGrid, LogOut, Menu,
-  PiggyBank, Droplets, Coins,
+  PiggyBank, Droplets, DollarSign,
   PanelLeftClose, PanelLeftOpen, RefreshCw, Search, ShieldCheck, Wallet, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +37,7 @@ const navigation = [
   { href: "/dashboard", view: "overview", label: "Overview", icon: LayoutGrid, group: "workspace" },
   { href: "/dashboard/pools", view: "pools", label: "Pools", icon: Droplets, group: "workspace" },
   { href: "/dashboard/portfolio", view: "portfolio", label: "Portfolio", icon: PiggyBank, group: "workspace" },
-  { href: "/dashboard/faucet", view: "faucet", label: "Test USDC faucet", icon: Coins, group: "workspace" },
+  { href: "/dashboard/faucet", view: "faucet", label: "Test USDC faucet", icon: DollarSign, group: "workspace" },
   { href: "/dashboard/backtest", view: "backtest", label: "Fee backtest", icon: Activity, group: "research" },
   { href: "/dashboard/references", view: "references", label: "Reference data", icon: Database, group: "research" },
   { href: "/dashboard/launch", view: "launch", label: "Launch steps", icon: Layers3, group: "research" },

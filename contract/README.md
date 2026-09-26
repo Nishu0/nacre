@@ -67,6 +67,7 @@ The fixed WETH / nUSDC pool was initialized on Base Sepolia with the Nacre hook.
 | Contract | Address |
 | --- | --- |
 | Nacre Test USDC faucet | [`0xfa35…AAC8`](https://sepolia.basescan.org/address/0xfa35D165b03B8eB193934D338Db8de536e84AAC8#code) |
+| Repeatable nUSDC claim helper | [`0x2EB1…C425B`](https://sepolia.basescan.org/address/0x2EB148c4E526524E930a22788faa7e7c00eC425B#code) |
 | Nacre v4 fee hook | [`0x4851…4f00`](https://sepolia.basescan.org/address/0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00#code) |
 | Policy vault | [`0x5Dc6…8FdA`](https://sepolia.basescan.org/address/0x5Dc6026219bbB88998A8BA61a4490001EC998FdA#code) |
 | Aqua underwriting app | [`0xFCF4…DEFc`](https://sepolia.basescan.org/address/0xFCF408B807D8a188B6FEfD8666799F1C9684DEFc#code) |
@@ -74,7 +75,7 @@ The fixed WETH / nUSDC pool was initialized on Base Sepolia with the Nacre hook.
 | Chainlink fee-value oracle | [`0x5c7B…8504`](https://sepolia.basescan.org/address/0x5c7Bb75ae16bF790e73C8A92f3041EeF01778504#code) |
 | Admin pool launcher | [`0x49Fc…05a6`](https://sepolia.basescan.org/address/0x49FcA731F70DaF38d828E34204F2437E75a605a6#code) |
 
-The launcher has immutable admin `0xeC5660E8912DC26FC0e5eC700bf05b9f326D6288`. Its [confirmed launch transaction](https://sepolia.basescan.org/tx/0x01554e3f1760acafa7e53f0c0647d5e469ade26474bba4b67e7e883a4aae54a8) initialized pool ID `0xbd5de3746823c61672498c78534510c625648ad7db69af5a3777de02c9e5ba56`. PoolManager initialization itself is permissionless; the admin restriction applies to Nacre's launcher, while the dashboard's two-sided funding check is offchain. The faucet mints 10,000 nUSDC once per address. A deployed pool starts empty; users must mint liquidity separately. No coverage policy is active.
+The launcher has immutable admin `0xeC5660E8912DC26FC0e5eC700bf05b9f326D6288`. Its [confirmed launch transaction](https://sepolia.basescan.org/tx/0x01554e3f1760acafa7e53f0c0647d5e469ade26474bba4b67e7e883a4aae54a8) initialized pool ID `0xbd5de3746823c61672498c78534510c625648ad7db69af5a3777de02c9e5ba56`. PoolManager initialization itself is permissionless; the admin restriction applies to Nacre's launcher, while the dashboard's two-sided funding check is offchain. The original token still mints once per caller; `NacreRepeatFaucet` creates a fresh one-use caller on each request and forwards 10,000 nUSDC to the requesting wallet. This keeps the token used by the pool unchanged. A deployed pool starts empty; users must mint liquidity separately. No coverage policy is active.
 
 ## Safety boundaries
 

@@ -3,6 +3,7 @@ import { baseSepolia } from "viem/chains";
 
 export const NACRE_ADMIN = "0xeC5660E8912DC26FC0e5eC700bf05b9f326D6288" as Address;
 export const NACRE_TEST_USDC = "0xfa35D165b03B8eB193934D338Db8de536e84AAC8" as Address;
+export const NACRE_REPEAT_FAUCET = "0x2EB148c4E526524E930a22788faa7e7c00eC425B" as Address;
 export const NACRE_LAUNCHER = "0x49FcA731F70DaF38d828E34204F2437E75a605a6" as Address;
 export const NACRE_HOOK = "0x4851960CCcdb2c1d4Db6a91E65a09800C0664f00" as Address;
 export const NACRE_VAULT = "0x5Dc6026219bbB88998A8BA61a4490001EC998FdA" as Address;
@@ -12,12 +13,11 @@ export const UNISWAP_STATE_VIEW = "0x571291b572ed32ce6751a2cb2486ebee8defb9b4" a
 export const UNISWAP_PERMIT2 = "0x000000000022D473030F116dDEE9F6B43aC78BA3" as Address;
 
 export const faucetAbi = parseAbi([
-  "function claim()",
-  "function claimed(address) view returns (bool)",
   "function balanceOf(address) view returns (uint256)",
   "function allowance(address,address) view returns (uint256)",
   "function approve(address,uint256) returns (bool)",
 ]);
+export const repeatFaucetAbi = parseAbi(["function claim()"]);
 export const launcherAbi = parseAbi([
   "function initialize(uint160 sqrtPriceX96) returns (int24)",
   "function launched() view returns (bool)",
