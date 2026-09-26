@@ -6,7 +6,7 @@ import { basescanTx } from "@/lib/nacre-chain";
 
 export type SupplyReview = {
   account: string; marketId: string; poolId: string; token: `0x${string}`;
-  symbol: string; fee: number; lower: number; upper: number;
+  symbol: string; fee: number; feeCap?: string; lower: number; upper: number;
   wethAmount: number; usdcAmount: number; total: number;
 };
 export type SupplyPhase = "review" | "approval" | "supply" | "done";

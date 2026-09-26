@@ -63,7 +63,10 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
   const bids = data?.offers.filter((bid) => !bid.closed).sort((a, b) => a.premiumBps - b.premiumBps) ?? [];
   const selected = bids.find((bid) => bid.address === chosen);
   if (role === "lp" && chosen && market && selected) return <div className="mw-page">
-    <Button variant="outline" onClick={() => setChosen(null)}><ArrowLeft size={14} /> All funded bids</Button>
+    <div className="bid-investor-navigation">
+      <Button variant="outline" onClick={() => setChosen(null)}><ArrowLeft size={14} /> All funded bids</Button>
+      <label className="mw-field"><span>Choose coverage bid</span><select value={selected.address} onChange={(event) => setChosen(event.target.value)}>{bids.map((offer) => <option key={offer.address} value={offer.address} disabled={!!error || !availableBid(offer, data!.currentTick, walletAccount)}>{money(tickPrice(offer.tickLower))} – {money(tickPrice(offer.tickUpper))} · {offer.premiumBps / 100}% premium · {offer.duration / 86400} days · {offer.supportsSubranges ? "Flexible range" : "Exact range"} · {offer.owner.slice(0, 6)}…{offer.owner.slice(-4)}</option>)}</select></label>
+    </div>
     <WorkspacePools key={selected.address} marketId={market.id} bid={selected} role={role} walletAccount={walletAccount} onConnect={onConnect} onRoleChange={onRoleChange} />
   </div>;
   return <div className="mw-page">
@@ -78,7 +81,7 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
           : <div className="cw-policy" key={bid.address}>
             <div className="cw-row"><strong>nWETH / nUSDC</strong><span>{bid.duration / 86400} days</span></div>
             <h3>{money(tickPrice(bid.tickLower))} – {money(tickPrice(bid.tickUpper))}</h3>
-            <div className="cw-terms"><span>{(bid.tickUpper - bid.tickLower) / 10} bins · fixed range</span><span>Available cover: {formatUnits(BigInt(bid.available), 6)} nUSDC</span><strong>Premium: {bid.premiumBps / 100}% of your fee cap</strong></div>
+            <div className="cw-terms"><span>{(bid.tickUpper - bid.tickLower) / 10} bins · {bid.supportsSubranges ? "Choose a narrower range within these bounds" : "Existing bid · exact range only"}</span><span>Available cover: {formatUnits(BigInt(bid.available), 6)} nUSDC</span><strong>Premium: {bid.premiumBps / 100}% of your fee cap</strong></div>
             {bid.maxSpots !== undefined && <strong>{bid.availableSpots} of {bid.maxSpots} spots remaining · max {formatUnits(BigInt(bid.capPerPosition!), 6)} nUSDC cap per position</strong>}
             <small>Underwriter {bid.owner.slice(0, 6)}…{bid.owner.slice(-4)}</small>
             {mine && <p>This is your bid. Another wallet can buy it.</p>}
@@ -99,7 +102,7 @@ function BidForm({ market, current, account, onConnect, compete }: { compete?: C
   const valid = Number.isFinite(Number(lower)) && Number.isFinite(Number(upper)) && tickPrice(priceInputToTick(lower)) >= minimum
     && tickPrice(priceInputToTick(upper)) <= maximum && priceInputToTick(lower) < priceInputToTick(upper);
   return <div className="bw-form-grid"><div className="bw-left-column"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
-    <p>Set the price range you want to cover. Investors will use these exact bins and your bid’s duration.</p>
+    <p>Set the price range you want to cover. Investors can choose a narrower range within these boundaries, with your bid’s duration. Capital and spots are shared across all those ranges.</p>
     <div className="cw-terms"><span>On-chain pool price</span><strong>{money(current)}</strong></div>
     <div className="bw-spread-presets" role="group" aria-label="Quick price ranges">{[2, 5, 10].map((pct) => {
       const nextLower = Math.max(minimum, current * (1 - pct / 100)).toFixed(2);

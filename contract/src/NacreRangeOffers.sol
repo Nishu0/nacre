@@ -75,6 +75,10 @@ contract NacreRangeOffer is ReentrancyGuard {
         return principal * MAX_FEE_APR_BPS * duration / (10000 * 365 days);
     }
 
+    function _matchesRange(int24 lower, int24 upper) internal view virtual returns (bool) {
+        return lower == tickLower && upper == tickUpper;
+    }
+
     function quoteFor(uint256 requestId) public view virtual returns (NacreAquaUnderwriter.Quote memory q) {
         require(!closed, "Offer closed");
         (bool ok, bytes memory data) = address(vault).staticcall(
@@ -86,7 +90,7 @@ contract NacreRangeOffer is ReentrancyGuard {
         require(PoolId.unwrap(PoolIdLibrary.toId(vault.poolKey(requestId))) == poolId, "Wrong pool");
         (, uint256 packed) = vault.positionManager().getPoolAndPositionInfo(r.tokenId);
         PositionInfo info = PositionInfo.wrap(packed);
-        require(info.tickLower() == tickLower && info.tickUpper() == tickUpper, "Different bins");
+        require(_matchesRange(info.tickLower(), info.tickUpper()), "Different bins");
         require(vault.isInRange(requestId), "Position out of range");
         require(r.feeFloor == r.payoutCap && r.payoutCap <= maximumCap(r.tokenId), "Fee target exceeds position limit");
         require(token.balanceOf(address(this)) >= r.payoutCap, "Capacity exhausted");

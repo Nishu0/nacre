@@ -8,7 +8,7 @@ import { TEST_WETH_POOL, testPool, type TestPoolConfig } from "../../frontend/sr
 
 const client = createPublicClient({ chain: baseSepolia,
   transport: http(process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org", { timeout: 10_000 }) });
-import { LIMITED_FACTORY, limitedFactoryAbi, limitedOfferAbi } from "../../frontend/src/lib/limited-bids";
+import { LIMITED_FACTORIES, limitedFactoryAbi, limitedOfferAbi } from "../../frontend/src/lib/limited-bids";
 const balanceAbi = parseAbi(["function balanceOf(address) view returns (uint256)"]);
 const stateAbi = parseAbi(["function getSlot0(bytes32) view returns (uint160,int24,uint24,uint24)"]);
 const pending = new Map<string, Promise<CoverageSnapshot>>();
@@ -38,9 +38,11 @@ export async function coverageSnapshot(tokenIds: string[], fresh = false, reques
     const addresses = count ? await client.multicall({ allowFailure: false, blockNumber,
       contracts: Array.from({ length: Number(count) }, (_, i) => ({ address: RANGE_FACTORY,
         abi: rangeFactoryAbi, functionName: "offers" as const, args: [BigInt(i)] as const })) }) : [];
-    const limitedCount = BigInt(LIMITED_FACTORY) ? await client.readContract({ address: LIMITED_FACTORY, abi: limitedFactoryAbi, functionName: "offerCount", args: [poolId], blockNumber }) : 0n;
-    if (limitedCount > 1000n) throw new Error("Bid index requires pagination");
-    const limitedAddresses = limitedCount ? await client.multicall({ allowFailure: false, blockNumber, contracts: Array.from({ length: Number(limitedCount) }, (_, i) => ({ address: LIMITED_FACTORY, abi: limitedFactoryAbi, functionName: "offers" as const, args: [poolId, BigInt(i)] as const })) }) : [];
+    const limitedAddresses = (await Promise.all(LIMITED_FACTORIES.filter((factory) => BigInt(factory)).map(async (factory) => {
+      const count = await client.readContract({ address: factory, abi: limitedFactoryAbi, functionName: "offerCount", args: [poolId], blockNumber });
+      if (count > 1000n) throw new Error("Bid index requires pagination");
+      return count ? client.multicall({ allowFailure: false, blockNumber, contracts: Array.from({ length: Number(count) }, (_, i) => ({ address: factory, abi: limitedFactoryAbi, functionName: "offers" as const, args: [poolId, BigInt(i)] as const })) }) : [];
+    }))).flat();
     addresses.push(...limitedAddresses);
     const offers: CoverageOffer[] = await Promise.all(addresses.map(async (address) => {
       const values = await client.multicall({ allowFailure: false, blockNumber, contracts: [
@@ -55,7 +57,8 @@ export async function coverageSnapshot(tokenIds: string[], fresh = false, reques
         const ids = slots.filter((id) => id > 0n);
         const expiries = await client.multicall({ allowFailure: false, blockNumber, contracts: ids.map((id) => ({ address, abi: limitedOfferAbi, functionName: "reservationExpiry" as const, args: [id] as const })) });
         const premiums = await client.multicall({ allowFailure: false, blockNumber, contracts: ids.map((id) => ({ address, abi: limitedOfferAbi, functionName: "lockedPremium" as const, args: [id] as const })) });
-        limits = { lockedPremiums: Object.fromEntries(ids.map((id, i) => [String(id), String(premiums[i])])), capPerPosition: String(cap), maxSpots: Number(max), availableSpots: Number(remaining), unreservedCapital: String(free), premiumBps: Number(rate), deposited: String(BigInt(values[5] as bigint) + BigInt(added)), reservations: Object.fromEntries(ids.map((id, i) => [String(id), Number(expiries[i])])) };
+        const [subranges] = await client.multicall({ blockNumber, contracts: [{ address, abi: limitedOfferAbi, functionName: "supportsSubranges" }] });
+        limits = { supportsSubranges: subranges.status === "success" && subranges.result === true, lockedPremiums: Object.fromEntries(ids.map((id, i) => [String(id), String(premiums[i])])), capPerPosition: String(cap), maxSpots: Number(max), availableSpots: Number(remaining), unreservedCapital: String(free), premiumBps: Number(rate), deposited: String(BigInt(values[5] as bigint) + BigInt(added)), reservations: Object.fromEntries(ids.map((id, i) => [String(id), Number(expiries[i])])) };
       }
       return { poolId, address, owner: String(values[0]), tickLower: Number(values[1]), tickUpper: Number(values[2]),
         duration: Number(values[3]), premiumBps: Number(values[4]), deposited: String(values[5]),

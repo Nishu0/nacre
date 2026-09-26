@@ -1,7 +1,10 @@
 {
   "chainId": 84532,
-  "limitedFactory": "0xeaf7909e6a9cadeb3d406ea6954ee63a900fc5f5",
+  "limitedFactory": "0x8f039cd6db76298ff2d4cce2d0d7748b2ba7a4da",
   "swapBatch": "0x9806e96a09bb4fbad3e76e7bb3378ae0cb152107",
-  "limitedFactoryTx": "0x50683cbde52f752ae00b45f01f370114852570ed01ec7582e63301ae909eeb8c",
-  "swapBatchTx": "0xd0b39c6e25e6dfe46c7d14bd17a31cdaffaa700dc59fa3ae80349646a817e5a8"
+  "limitedFactoryTx": "0x20862a9659256c42b1af6f90a8ba87fa2993d4638b6a27f7cacda124fb454d26",
+  "swapBatchTx": "0xd0b39c6e25e6dfe46c7d14bd17a31cdaffaa700dc59fa3ae80349646a817e5a8",
+  "legacyLimitedFactories": [
+    "0xeaf7909e6a9cadeb3d406ea6954ee63a900fc5f5"
+  ]
 }

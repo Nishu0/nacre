@@ -48,6 +48,7 @@ export type CoverageOffer = {
   address: `0x${string}`; owner: string; tickLower: number; tickUpper: number;
   duration: number; premiumBps: number; deposited: string; withdrawn: string;
   available: string; closed: boolean;
+  supportsSubranges?: boolean;
   maxSpots?: number; availableSpots?: number; capPerPosition?: string; unreservedCapital?: string; reservations?: Record<string, number>; lockedPremiums?: Record<string, string>;
 };
 export type CoverageRequest = {

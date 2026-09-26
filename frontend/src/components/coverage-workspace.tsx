@@ -28,7 +28,7 @@ function displayedPremium(offer: CoverageOffer, request: CoverageRequest) {
     ? BigInt(offer.lockedPremiums[request.id]) : (BigInt(request.payoutCap) * BigInt(offer.premiumBps) + 9999n) / 10000n;
 }
 function matches(offer: CoverageOffer, request: CoverageRequest) {
-  return offer.poolId === request.poolId && !offer.closed && offer.tickLower === request.tickLower && offer.tickUpper === request.tickUpper
+  return bidMatchesPosition(offer, request) && !offer.closed
     && offer.duration === request.duration && BigInt(offer.available) >= BigInt(request.payoutCap)
     && (!offer.capPerPosition || BigInt(request.payoutCap) <= BigInt(offer.capPerPosition))
     && (offer.availableSpots === undefined || (offer.reservations?.[request.id] ?? 0) >= Date.now() / 1000 || (offer.availableSpots > 0 && BigInt(offer.unreservedCapital ?? offer.available) >= BigInt(request.payoutCap)))
@@ -122,7 +122,7 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
   });
   return <Card className="kd-card mw-trade-card"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Post a funded bid</h2><span>FUNDED ON-CHAIN</span></div>
     <div className="mw-trade-inner">
-      <p>Fund the selected bins. Each matching LP purchases cover for the duration and premium you set.</p>
+      <p>Fund this price range. Investors can select a narrower range inside it. All positions share your capital and spot limit; your duration and premium apply to each purchase.</p>
       <div className="cw-terms"><strong>{Number.isFinite(tickLower) && Number.isFinite(tickUpper) ? rangeText(tickLower, tickUpper) : "Choose a valid range"}</strong><span>Ticks {tickLower} to {tickUpper} · {(tickUpper - tickLower) / 10} bins</span></div>
       {account && <small>Wallet balance: {balance === null ? "…" : amount(balance)} nUSDC</small>}
       <fieldset disabled={action.busy} className="cw-fields">
@@ -156,10 +156,10 @@ export function CoverageRequestForm({ poolId, bidAddress, account, days, feeTarg
   const selected = owned.find((position) => position.tokenId === chosen) ?? owned.at(-1);
   const inRange = !!selected && !!data && data.currentTick >= selected.tickLower && data.currentTick < selected.tickUpper;
   const availableOffers = selected && feeTarget ? data?.offers.filter((offer) => offer.poolId === selected.poolId && !offer.closed && (!bidAddress || same(offer.address, bidAddress))
-    && !same(offer.owner, account) && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper
+    && !same(offer.owner, account) && bidMatchesPosition(offer, selected)
     && offer.duration === days * 86400 && availableBid(offer, data!.currentTick, account, parseUnits(feeTarget.toFixed(6), 6))) ?? [] : [];
   const ownRangeOffer = !!selected && !!data?.offers.some((offer) => offer.poolId === selected.poolId
-    && same(offer.owner, account) && !offer.closed && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper);
+    && same(offer.owner, account) && !offer.closed && bidMatchesPosition(offer, selected));
   const valid = !!account && !!data?.configured && !!feeTarget && Number.isFinite(feeTarget)
     && !!maximumTarget && feeTarget > 0 && feeTarget <= maximumTarget && inRange && durationOptions.includes(days) && availableOffers.length > 0;
   // refreshKey changes after the parent registers a newly confirmed mint.
@@ -204,7 +204,7 @@ export function CoverageRequestForm({ poolId, bidAddress, account, days, feeTarg
       args: [info[0], id, cap, cap, days * 86400, BigInt(Math.floor(Date.now() / 1000) + 3600)] }));
   });
   return <div id="protect-lp-fees" className="mw-onchain-lp"><strong>Protect your LP fees</strong>
-    {!owned.length ? <p>Mint a position above first. Its actual bins are used for coverage.</p> : <>
+    {!owned.length ? <p>Supply liquidity above first. Your selected range is used for coverage.</p> : <>
       <label className="mw-field"><span>Position to protect</span><select disabled={action.busy} value={selected?.tokenId ?? ""} onChange={(event) => setChosen(event.target.value)}>{owned.map((position) => <option key={position.tokenId} value={position.tokenId}>Position #{position.tokenId}</option>)}</select></label>
       {selected && <div className="cw-terms"><span>{rangeText(selected.tickLower, selected.tickUpper)}</span><strong>{feeTarget?.toFixed(4) ?? "—"} nUSDC fee target · {days} days</strong><span>{(selected.tickUpper - selected.tickLower) / 10} bins · ticks {selected.tickLower} to {selected.tickUpper}</span></div>}
       {inRange && !availableOffers.length && <p className="mw-premium-warning">{ownRangeOffer ? "Your wallet funded this range. The contract requires a different wallet to underwrite your position." : "No funded bid is available for these terms. Choose a bid with enough available cover."}</p>}
@@ -276,6 +276,9 @@ export function OfferRow({ offer, account, disabled, onChoose, canManage }: { of
   const topValid = /^\d+(\.\d{1,6})?$/.test(topUp) && Number(topUp) > 0 && Number.isInteger(Number(extraSpots)) && Number(extraSpots) >= 0 && (offer.maxSpots ?? 0) + Number(extraSpots) <= 100 && Number(topUp) >= Number(extraSpots) * Number(offer.capPerPosition ?? 0) / 1e6;
   return <div className="cw-policy"><div className="cw-row"><strong>{offer.duration / 86400} days · {offer.premiumBps / 100}% premium</strong><span>{offer.closed ? "Closed to new coverage" : "Funded offer"}</span></div>
     <p>{testPool(offer.poolId)?.symbol ?? "nWETH"} / nUSDC · {rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>
+    <small>{offer.supportsSubranges ? "Investors may use narrower ranges inside these bounds. All ranges share the capital and spots below." : "Existing fixed-range offer: investors must use these exact bins."}</small>
+    {!offer.supportsSubranges && canManage && same(offer.owner, account) && <p className="mw-risk-note">For narrower investor ranges, fund a new flexible bid. You can close this offer and withdraw its unused funds; existing active policies keep their collateral.</p>}
+    {!offer.supportsSubranges && onChoose && canManage && same(offer.owner, account) && <Button variant="outline" disabled={disabled || action.busy} onClick={() => onChoose(offer)}>Create a flexible bid for this range</Button>}
     {offer.poolId === LEGACY_WETH_POOL && !offer.closed && <p className="mw-risk-note">This offer backs the old WETH pool only. To back nWETH positions, withdraw unused funds and fund their exact bins in the nWETH pool.</p>}
     <div className="cw-row"><span>Available <strong>{amount(offer.available)} nUSDC</strong></span><a href={`https://sepolia.basescan.org/address/${offer.address}`} target="_blank" rel="noreferrer">Contract <ExternalLink size={12} /></a></div>
     {offer.maxSpots !== undefined && <div className="cw-terms"><strong>{offer.availableSpots} / {offer.maxSpots} spots free</strong><span>Up to {amount(offer.capPerPosition!)} nUSDC per position · {amount(offer.unreservedCapital!)} nUSDC unreserved</span></div>}
@@ -318,11 +321,11 @@ export function CoverageBoard({ account, role, portfolio = false, onChoose, pool
             const pending = data.requests.find((request) => request.tokenId === position.tokenId && request.status === 1 && request.quoteDeadline > now);
             const ownPosition = same(policy?.lp ?? pending?.lp ?? position.owner, account);
             const fundedBins = myOffers.some((offer) => offer.poolId === position.poolId && !offer.closed
-              && BigInt(offer.available) > BigInt(0) && offer.tickLower === position.tickLower && offer.tickUpper === position.tickUpper);
+              && BigInt(offer.available) > BigInt(0) && bidMatchesPosition(offer, position));
             return <div className="cw-policy" key={position.tokenId}>
               <div className="cw-row"><strong>Position #{position.tokenId} · {testPool(position.poolId)?.symbol ?? "nWETH"} / nUSDC</strong><span>{policy ? "Covered" : pending ? "Coverage requested" : "No coverage requested"}</span></div>
               <p>{rangeText(position.tickLower, position.tickUpper)} · {(position.tickUpper - position.tickLower) / 10} bins</p>
-              {!policy && <small>{ownPosition ? "Owned by your connected wallet. Another wallet must underwrite it; switching dashboard roles does not change your wallet." : fundedBins ? "Your offer covers these bins. The LP must choose matching days and a fee cap within your available capital, then purchase coverage." : "You have no funded offer for this pool and these exact bins."}</small>}
+              {!policy && <small>{ownPosition ? "Owned by your connected wallet. Another wallet must underwrite it; switching dashboard roles does not change your wallet." : fundedBins ? "Your offer covers these bins. The LP must choose matching days and a fee cap within your available capital, then purchase coverage." : "You have no funded offer for this pool and these bins."}</small>}
             </div>;
           })}
           {!data.positions.length && <p>No registered LP positions in this pool yet.</p>}

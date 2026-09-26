@@ -66,6 +66,6 @@ export function PoolRangeEditor({ minimum, maximum, current, currentLabel, onCha
       onChange={(e) => change(side, Number(e.target.value))} /></label>)}</div>
     <div className="pre-fields"><PriceField side="lower" value={shownLower} current={current} onCommit={(value) => change("lower", priceToRawTick(value))} /><PriceField side="upper" value={shownUpper} current={current} onCommit={(value) => change("upper", priceToRawTick(value))} /></div>
     <div className="pre-bin-count"><span>Total bins</span><strong>{totalBins}</strong></div>
-    <p>Drag to update immediately. Bounds snap to pool ticks with at least one bin between them. {onChainPrice ? `Minting uses the on-chain pool price, ${format(onChainPrice)}.` : "The price view follows the current pool price; your selected bounds stay fixed."}</p>
+    <p>Drag to update immediately. Bounds snap to pool ticks with at least one bin between them. {onChainPrice ? `Supply uses the on-chain pool price, ${format(onChainPrice)}.` : "The price view follows the current pool price; your selected bounds stay fixed."}</p>
   </div>;
 }

@@ -30,6 +30,12 @@ contract NacreLimitedOffer is NacreRangeOffer {
         capPerPosition = cap_; maxSpots = spots_; currentPremiumBps = rate_;
         slotRequests = new uint256[](spots_);
     }
+    /// Investors may concentrate their position inside the maker's funded envelope.
+    /// All subranges share this offer's capital, fee ceiling, and spot limit.
+    function supportsSubranges() external pure returns (bool) { return true; }
+    function _matchesRange(int24 lower, int24 upper) internal view override returns (bool) {
+        return lower >= tickLower && upper <= tickUpper && lower < upper;
+    }
     function _terms(uint256 id) internal view returns (NacrePolicyVault.Request memory r) {
         (bool ok, bytes memory data) = address(vault).staticcall(abi.encodeWithSelector(vault.requests.selector, id));
         require(ok, "Request unavailable"); return abi.decode(data, (NacrePolicyVault.Request));
@@ -115,6 +121,7 @@ contract NacreLimitedOfferFactory is ReentrancyGuard {
     struct Bid { uint24 fee; uint256 amount; int24 lower; int24 upper; uint32 duration; uint16 premiumBps; uint256 cap; uint16 spots; }
     event LimitedOfferCreated(bytes32 indexed poolId, address indexed offer, address indexed owner, uint256 amount, uint256 cap, uint16 spots);
     constructor(NacreAquaUnderwriter app_) { require(address(app_).code.length > 0, "Invalid app"); app = app_; }
+    function supportsSubranges() external pure returns (bool) { return true; }
     function offerCount(bytes32 poolId) external view returns (uint256) { return offers[poolId].length; }
     function createOffers(Bid[] calldata bids) external nonReentrant returns (address[] memory created) {
         require(bids.length > 0 && bids.length <= 4, "One to four bids");

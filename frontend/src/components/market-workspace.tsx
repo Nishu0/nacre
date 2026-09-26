@@ -19,12 +19,12 @@ import { tickPrice, type CoverageOffer, type CoverageSnapshot } from "@/lib/cove
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
 import { SupplyConfirmation, type SupplyReview, type SupplyPhase } from "@/components/supply-confirmation";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
-import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
+import { baseClient, priceToRawTick, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
   NACRE_TEST_USDC, BASE_WETH as CANONICAL_WETH, UNISWAP_PERMIT2,
   UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi,
   stateViewAbi, wethAbi, sqrtPriceX96ToWethUsd } from "@/lib/nacre-chain";
 
-import { availableBid } from "@/lib/funded-bids";
+import { bidCanProtectPosition, bidMatchesPosition } from "@/lib/funded-bids";
 import { useCoverage } from "@/lib/use-coverage";
 
 export type WorkspaceRole = "lp" | "underwriter";
@@ -118,8 +118,8 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
   const selectedWeth = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const selectedUsdc = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
-  const lower = bid ? tickPrice(bid.tickLower) : selectedRange?.marketId === selectedId ? selectedRange.lower : selected?.lowerPriceUsd ?? 0;
-  const upper = bid ? tickPrice(bid.tickUpper) : selectedRange?.marketId === selectedId ? selectedRange.upper : selected?.upperPriceUsd ?? 0;
+  const lower = selectedRange?.marketId === selectedId ? selectedRange.lower : bid ? tickPrice(bid.tickLower) : selected?.lowerPriceUsd ?? 0;
+  const upper = selectedRange?.marketId === selectedId ? selectedRange.upper : bid ? tickPrice(bid.tickUpper) : selected?.upperPriceUsd ?? 0;
   const referencePrice = livePrices?.wethUsdc ?? poolSlot?.priceUsd ?? selected?.priceUsd ?? 0;
   const referenceSource = livePrices ? liveError ? "LAST ETH PRICE" : "LIVE ETH PRICE"
     : poolSlot ? "ON-CHAIN POOL PRICE" : "PROPOSED PRICE";
@@ -133,12 +133,23 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const capacity = activeBid ? Math.min(Number(formatUnits(BigInt(activeBid.unreservedCapital ?? activeBid.available), 6)), activeBid.capPerPosition ? Number(formatUnits(BigInt(activeBid.capPerPosition), 6)) : Infinity) : 0;
   const feeTarget = feePreview ? (bid && !feeTargetInput.trim() ? Math.min(feePreview.feeTargetUsd, capacity) : feePreview.feeTargetUsd) : undefined;
   const feeCap = feeTarget && Number.isFinite(feeTarget) && feeTarget > 0 ? parseUnits(feeTarget.toFixed(6), 6) : 0n;
-  const bidReady = !!activeBid && !!coverage && !coverageError && availableBid(activeBid, coverage.currentTick, walletAccount, feeCap);
-  async function requireAvailableBid() {
-    if (!bid || !feeCap) throw new Error("Choose a funded bid and a positive fee target first.");
+  const positionRange = { poolId: bid?.poolId ?? deployedPoolId ?? "", tickLower: lower > 0 ? priceToRawTick(lower) : 0, tickUpper: upper > 0 ? priceToRawTick(upper) : 0 };
+  const rangeMatchesBid = !!activeBid && bidMatchesPosition(activeBid, positionRange);
+  const positionInRange = !!coverage && coverage.currentTick >= positionRange.tickLower && coverage.currentTick < positionRange.tickUpper;
+  const bidReady = !!activeBid && !!coverage && !coverageError && bidCanProtectPosition(activeBid, positionRange, coverage.currentTick, walletAccount, feeCap);
+  const rangeWarning = coverageError || (!bid ? "Choose a funded bid before supplying."
+    : !activeBid ? "Checking funded protection…"
+    : !rangeMatchesBid ? activeBid.supportsSubranges
+      ? "Supply unavailable: your range extends outside this bid’s funded boundaries. Choose a narrower range or another bid."
+      : "This existing bid requires its exact range. Reset to the bid range, or select a bid that supports narrower ranges."
+    : !positionInRange ? "Supply unavailable: the current pool price is outside your selected range. Coverage cannot start for this position."
+    : !bidReady ? "Supply unavailable: this bid needs an available spot and enough capital for your fee cap." : "");
+  async function requireAvailableBid(review: SupplyReview) {
+    if (!bid || !review.feeCap || BigInt(review.feeCap) <= 0n) throw new Error("Choose a funded bid and a positive fee target first.");
     const fresh = await api<CoverageSnapshot>(`coverage?fresh=1&poolId=${bid.poolId}`);
     const offer = fresh.offers.find((row) => row.address.toLowerCase() === bid.address.toLowerCase());
-    if (!offer || !availableBid(offer, fresh.currentTick, walletAccount, feeCap)) throw new Error("This bid no longer has enough available cover for these terms. Return to funded bids.");
+    const range = { poolId: review.poolId, tickLower: priceToRawTick(review.lower), tickUpper: priceToRawTick(review.upper) };
+    if (!offer || !bidCanProtectPosition(offer, range, fresh.currentTick, review.account, BigInt(review.feeCap))) throw new Error("This range no longer has available protection. Check its bounds, current price, and funded bid capacity before supplying.");
   }
   const risk = riskState?.marketId === selectedId && riskState.depositUsd === Number(deposit)
     && riskState.lower === lower && riskState.upper === upper
@@ -294,10 +305,10 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
 
   function reviewSupply() {
     if (mintHash || mintConfirmed) { setSupplyOpen(true); return; }
-    if (!selected?.deployment || !quote || !walletAccount) return;
+    if (!selected?.deployment || !quote || !walletAccount || !bidReady) return;
     setSupplyReview({ account: walletAccount, marketId: selected.id, poolId: selected.deployment.poolId,
       token: BASE_WETH, symbol: wethSymbol, fee: selected.feeBps ?? 500, lower, upper,
-      wethAmount: quote.split.ethAmount, usdcAmount: quote.split.usdcAmount, total: quote.depositUsd });
+      wethAmount: quote.split.ethAmount, usdcAmount: quote.split.usdcAmount, total: quote.depositUsd, feeCap: String(feeCap) });
     setSupplyPhase("review"); setMintError(""); setMintStep("");
     setSupplyOpen(true);
   }
@@ -336,7 +347,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
       const review = supplyReview;
       setSupplyPhase("approval"); setMintStep("Checking your wallet and token balances…");
       await ensureBaseSepolia();
-      if (bid) await requireAvailableBid();
+      await requireAvailableBid(review);
       const account = review.account as Address;
       const [connected] = await injectedClient().getAddresses();
       if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Switch back to the wallet used to review this supply.");
@@ -354,7 +365,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
         upperPriceUsd: review.upper, wethAmount, usdcAmount, recipient: account, wethToken: review.token });
       await approveForPosition(review.token, wethAmount, account);
       await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);
-      if (bid) await requireAvailableBid();
+      await requireAvailableBid(review);
       setSupplyPhase("supply"); setMintStep("Checking the transaction and estimating gas…");
       const request = await preparePositionMint(account, params.unlockData);
       setMintStep("Confirm supply in your wallet…");
@@ -418,7 +429,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
             <div><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(selectedUsdc, 6)).toFixed(2)}</strong><small>At mint</small></div>
           </div>
           <div className="mw-overview-range">
-            <div><span>{bid ? "FUNDED BID RANGE" : "PROPOSED LP RANGE"}</span><strong>{usd(lower)} <em>to</em> {usd(upper)}</strong><small>{bid ? `${coverageDays} days · exact underwriter bins` : "Choose your supply range"}</small></div>
+            <div><span>{bid ? "SELECTED LP RANGE" : "PROPOSED LP RANGE"}</span><strong>{usd(lower)} <em>to</em> {usd(upper)}</strong><small>{bid ? `${coverageDays} days · investor-selected bins` : "Choose your supply range"}</small></div>
             <div className="mw-overview-range-track"><i style={{ left: `${Math.max(0, Math.min(100, (referencePrice - lower) / (upper - lower) * 100))}%` }} /></div>
             <Badge variant="outline" className={referencePrice >= lower && referencePrice < upper ? "is-in-range" : "is-out-of-range"}>{referencePrice >= lower && referencePrice < upper ? "LIVE IN RANGE" : "LIVE OUT OF RANGE"}</Badge>
           </div>
@@ -430,7 +441,23 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
         {role === "lp" && <Card className="kd-card mw-supply-card">
           <div className="kd-card-heading"><h2><PiggyBank size={16} /> Supply liquidity</h2><span>BASE SEPOLIA</span></div>
           <div className="mw-supply-inner">
-            <p>Create an LP position with {wethSymbol} and nUSDC.</p>
+            <p>Create an LP position with {wethSymbol} and nUSDC. Choose your range before supplying.</p>
+            {bid && <fieldset className="supply-range-picker" disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>
+              <div className="supply-range-summary"><span>Funded boundaries</span><strong>{usd(tickPrice(bid.tickLower))} – {usd(tickPrice(bid.tickUpper))}</strong></div>
+              <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
+                current={poolSlot?.priceUsd ?? referencePrice} currentLabel="POOL PRICE" onChainPrice={poolSlot?.priceUsd}
+                lower={lower} upper={upper}
+                onLower={(value) => setSelectedRange({ marketId: selectedId, lower: value, upper })}
+                onUpper={(value) => setSelectedRange({ marketId: selectedId, lower, upper: value })}
+                onCenter={() => {
+                  const center = poolSlot?.priceUsd ?? referencePrice;
+                  const low = Math.max(bid.tickLower, priceToRawTick(center * .98));
+                  const high = Math.min(bid.tickUpper, priceToRawTick(center * 1.02));
+                  if (low < high) setSelectedRange({ marketId: selectedId, lower: tickPrice(low), upper: tickPrice(high) });
+                }} />
+              <button type="button" className="supply-secondary" onClick={() => setSelectedRange({ marketId: selectedId, lower: tickPrice(bid.tickLower), upper: tickPrice(bid.tickUpper) })}>Use full bid range</button>
+            </fieldset>}
+            {!mintConfirmed && <p className={rangeWarning ? "supply-error" : "supply-range-eligible"} role="status">{rangeWarning || "This range is eligible for the selected bid. Protection starts after you purchase coverage."}</p>}
             <fieldset disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>
               <AmountField label="Position amount (USD equivalent)" value={deposit} onChange={(value) => { setDeposit(value); setFeeTargetInput(""); }} min={100} />
             </fieldset>
@@ -444,7 +471,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
               <small>{mintTokenId ? `Position #${mintTokenId} is in your portfolio.` : "Supply confirmed on-chain."}</small>
               {!mintSaved && <button className="supply-secondary" onClick={() => setSupplyOpen(true)}>View portfolio update</button>}
             </> : !walletAccount ? <button className="supply-primary" onClick={() => void onConnect()}>Connect wallet</button> : <>
-              <button className="supply-primary" disabled={mintBusy || (!mintHash && (!selected.deployment || !quote || (!!bid && !bidReady) || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)))} onClick={reviewSupply}>{mintHash ? "Check supply status" : "Supply"} <ArrowRight size={16} /></button>
+              <button className="supply-primary" disabled={mintBusy || (!mintHash && (!selected.deployment || !quote || !bidReady || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)))} onClick={reviewSupply}>{mintHash ? "Check supply status" : "Supply"} <ArrowRight size={16} /></button>
               {quote && ((wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18)) || (usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6))) && <Link className="supply-secondary" href="/dashboard/faucet">Get test tokens <ArrowRight size={16} /></Link>}
               {!isTestWeth && quote && wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && <button className="supply-secondary" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap test ETH to WETH</button>}
               {mintError && !supplyOpen && <p role="alert" className="supply-error">{mintError}</p>}
@@ -470,7 +497,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
           <button type="button" aria-pressed={role === "lp"} className={role === "lp" ? "is-active" : ""} onClick={() => onRoleChange("lp")}>Provide liquidity</button>
           <button type="button" aria-pressed={role === "underwriter"} className={role === "underwriter" ? "is-active" : ""} onClick={() => onRoleChange("underwriter")}>Underwrite</button>
         </div>
-        {bid ? <div className="mw-onchain-lp"><strong>Selected funded bid</strong><div className="cw-terms"><strong>{usd(lower)} – {usd(upper)}</strong><span>{(bid.tickUpper - bid.tickLower) / 10} bins · {coverageDays} days</span><span>Available cover: {capacity.toFixed(4)} nUSDC</span><span>Premium: {bid.premiumBps / 100}% of your protected fee cap</span></div><small>The underwriter sets these bins and days.</small>{!bidReady && <p role="status">{coverageError || "Waiting for an available bid and a fee target within its capacity."}</p>}</div> : <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
+        {bid ? <div className="mw-onchain-lp"><strong>Selected funded bid</strong><div className="cw-terms"><strong>{usd(tickPrice(bid.tickLower))} – {usd(tickPrice(bid.tickUpper))}</strong><span>{(bid.tickUpper - bid.tickLower) / 10} funded bins · {coverageDays} days</span><span>Available cover: {capacity.toFixed(4)} nUSDC</span><span>Premium: {bid.premiumBps / 100}% of your protected fee cap</span></div><small>{bid.supportsSubranges ? "Select any narrower range inside these boundaries. All ranges share this bid’s spots and capital." : "Existing fixed-range bid. Only its exact boundaries can be protected."}</small>{!bidReady && <p role="status">{coverageError || "Waiting for an available bid and a fee target within its capacity."}</p>}</div> : <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
           current={referencePrice} currentLabel={referenceSource} onChainPrice={poolSlot?.priceUsd}
           lower={lower} upper={upper}
           onLower={(value) => setSelectedRange({ marketId: selectedId, lower: Math.max(selected.lowerPriceUsd, Math.min(value, upper - .01)), upper })}
