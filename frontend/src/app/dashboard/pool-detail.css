@@ -163,3 +163,22 @@
 .dashboard .cw-policy .kd-apply-button { background: #294b34; color: #fff; }
 .dashboard .cw-policy button[data-variant=outline] { background: #fff; border: 1px solid #bed7c4; color: #315b3d; }
 .dashboard .cw-policy button[data-variant=outline]:hover { background: #eef7f0; }
+
+/* Keep secondary trading actions readable in the dashboard's light panels. */
+.dashboard .mw-trade-inner [data-slot="button"][data-variant="outline"] {
+  background: #fff;
+  color: #294b34;
+  border-color: #b8cec0;
+  font-weight: 600;
+}
+.dashboard .mw-trade-inner [data-slot="button"][data-variant="outline"]:hover:not(:disabled) {
+  background: #edf5ef;
+  color: #203e2a;
+  border-color: #86aa90;
+}
+.dashboard .mw-trade-inner [data-slot="button"][data-variant="outline"]:disabled {
+  background: #f0f3f1;
+  color: #58665e;
+  border-color: #d8e2db;
+  opacity: 1;
+}
