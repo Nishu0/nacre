@@ -24,7 +24,7 @@ import { baseClient, priceToRawTick, basescanTx, ensureBaseSepolia, erc20Abi, in
   UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi,
   stateViewAbi, wethAbi, sqrtPriceX96ToWethUsd } from "@/lib/nacre-chain";
 
-import { bidCanProtectPosition, bidMatchesPosition } from "@/lib/funded-bids";
+import { availableBid, bidCanProtectPosition, bidMatchesPosition } from "@/lib/funded-bids";
 import { useCoverage } from "@/lib/use-coverage";
 
 export type WorkspaceRole = "lp" | "underwriter";
@@ -118,8 +118,9 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
   const selectedWeth = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const selectedUsdc = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
-  const lower = selectedRange?.marketId === selectedId ? selectedRange.lower : bid ? tickPrice(bid.tickLower) : selected?.lowerPriceUsd ?? 0;
-  const upper = selectedRange?.marketId === selectedId ? selectedRange.upper : bid ? tickPrice(bid.tickUpper) : selected?.upperPriceUsd ?? 0;
+  const exactBid = !!bid && !bid.supportsSubranges;
+  const lower = exactBid ? tickPrice(bid.tickLower) : selectedRange?.marketId === selectedId ? selectedRange.lower : bid ? tickPrice(bid.tickLower) : selected?.lowerPriceUsd ?? 0;
+  const upper = exactBid ? tickPrice(bid.tickUpper) : selectedRange?.marketId === selectedId ? selectedRange.upper : bid ? tickPrice(bid.tickUpper) : selected?.upperPriceUsd ?? 0;
   const referencePrice = livePrices?.wethUsdc ?? poolSlot?.priceUsd ?? selected?.priceUsd ?? 0;
   const referenceSource = livePrices ? liveError ? "LAST ETH PRICE" : "LIVE ETH PRICE"
     : poolSlot ? "ON-CHAIN POOL PRICE" : "PROPOSED PRICE";
@@ -447,6 +448,8 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
               <PoolRangeEditor minimum={selected.lowerPriceUsd} maximum={selected.upperPriceUsd}
                 current={poolSlot?.priceUsd ?? referencePrice} currentLabel="POOL PRICE" onChainPrice={poolSlot?.priceUsd}
                 lower={lower} upper={upper}
+                fundedRange={{ tickLower: bid.tickLower, tickUpper: bid.tickUpper, exact: exactBid }}
+                locked={!activeBid || !coverage || !!coverageError || !availableBid(activeBid, coverage.currentTick, walletAccount)}
                 onLower={(value) => setSelectedRange({ marketId: selectedId, lower: value, upper })}
                 onUpper={(value) => setSelectedRange({ marketId: selectedId, lower, upper: value })}
                 onCenter={() => {
@@ -455,7 +458,7 @@ export function WorkspacePools({ marketId, bid, role, onRoleChange, walletAccoun
                   const high = Math.min(bid.tickUpper, priceToRawTick(center * 1.02));
                   if (low < high) setSelectedRange({ marketId: selectedId, lower: tickPrice(low), upper: tickPrice(high) });
                 }} />
-              <button type="button" className="supply-secondary" onClick={() => setSelectedRange({ marketId: selectedId, lower: tickPrice(bid.tickLower), upper: tickPrice(bid.tickUpper) })}>Use full bid range</button>
+              {!exactBid && <button type="button" className="supply-secondary" disabled={!activeBid || !coverage || !!coverageError || !availableBid(activeBid, coverage.currentTick, walletAccount)} onClick={() => setSelectedRange({ marketId: selectedId, lower: tickPrice(bid.tickLower), upper: tickPrice(bid.tickUpper) })}>Use full bid range</button>}
             </fieldset>}
             {!mintConfirmed && <p className={rangeWarning ? "supply-error" : "supply-range-eligible"} role="status">{rangeWarning || "This range is eligible for the selected bid. Protection starts after you purchase coverage."}</p>}
             <fieldset disabled={mintBusy || supplyOpen || mintConfirmed || !!mintHash}>

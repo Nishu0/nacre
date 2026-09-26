@@ -26,3 +26,20 @@ test("view follows price changes and respects restricted pool limits", () => {
   expect(narrow.start).toBeGreaterThanOrEqual(narrow.minTick);
   expect(narrow.end).toBeGreaterThan(narrow.start);
 });
+
+test("investor bounds stop at the selected bid even when the pool view is wider", () => {
+  const minTick = -198410, maxTick = -196400;
+  const view = rangeSliderDomain(.01, 999201.68, 2689.5, rangeTickPrice(minTick), rangeTickPrice(maxTick));
+  expect(view.start).toBeLessThan(minTick);
+  expect(view.end).toBeGreaterThan(maxTick);
+  for (const attempted of [view.start, view.end, priceToRawTick(1), priceToRawTick(100000), minTick + 45]) {
+    const lower = moveRangeBound("lower", attempted, maxTick, minTick, maxTick);
+    const upper = moveRangeBound("upper", attempted, minTick, minTick, maxTick);
+    expect(lower).toBeGreaterThanOrEqual(minTick);
+    expect(lower).toBeLessThanOrEqual(maxTick - 10);
+    expect(upper).toBeGreaterThanOrEqual(minTick + 10);
+    expect(upper).toBeLessThanOrEqual(maxTick);
+    expect(priceToRawTick(rangeTickPrice(lower))).toBe(lower);
+    expect(priceToRawTick(rangeTickPrice(upper))).toBe(upper);
+  }
+});
