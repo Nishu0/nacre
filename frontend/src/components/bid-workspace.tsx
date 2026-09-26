@@ -60,9 +60,12 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
   const { data, error, refresh } = useCoverage(market.deployment!.poolId);
   const [compete, setCompete] = useState<CoverageOffer | null>(null);
   const [chosen, setChosen] = useState<string | null>(null);
-  const bids = data?.offers.filter((bid) => !bid.closed).sort((a, b) => a.premiumBps - b.premiumBps) ?? [];
-  const selected = bids.find((bid) => bid.address === chosen);
-  if (role === "lp" && chosen && selected) return <WorkspacePools key={selected.address} marketId={market.id} bid={selected} role={role} walletAccount={walletAccount} onConnect={onConnect} onRoleChange={onRoleChange} hideHeading
+  // New investor positions need flexible ranges. Legacy bids remain manageable
+  // by their owners and continue backing existing policies in the portfolio.
+  const bids = data?.offers.filter((bid) => !bid.closed && (role !== "lp" || bid.supportsSubranges === true)).sort((a, b) => a.premiumBps - b.premiumBps) ?? [];
+  const selected = bids.find((bid) => bid.address === chosen)
+    ?? (role === "lp" && !error && data ? bids.find((bid) => availableBid(bid, data.currentTick, walletAccount)) : undefined);
+  if (role === "lp" && selected) return <WorkspacePools key={selected.address} marketId={market.id} bid={selected} role={role} walletAccount={walletAccount} onConnect={onConnect} onRoleChange={onRoleChange} hideHeading
     rangeChoices={bids.length > 1 ? <fieldset className="investor-range-choices"><legend>Available ranges</legend><div>{bids.map((offer) => {
       const unavailable = !!error || !data || !availableBid(offer, data.currentTick, walletAccount);
       return <label className="investor-range-option" key={offer.address}>
@@ -72,7 +75,7 @@ function PoolBids({ role, walletAccount, onConnect, onRoleChange, market }: BidW
     })}</div></fieldset> : undefined} />;
   return <div className="mw-page">
     {error && <p role="alert" className="mw-premium-warning">{error}</p>}
-    {chosen && !selected && data && <p role="status">That bid is no longer available. Choose another funded bid.</p>}
+    {chosen && !selected && data && <p role="status">That range is no longer available. Choose another funded range.</p>}
     {role === "underwriter" && market && data && <BidForm compete={compete} key={`${walletAccount}:${compete?.address}`} market={market} current={tickPrice(data.currentTick)} account={walletAccount} onConnect={onConnect} />}
     <Card className="kd-card cw-board"><div className="kd-card-heading"><h2><ShieldCheck size={16} />{role === "underwriter" ? "Funded bids" : "Available coverage bids"}</h2><button type="button" onClick={() => void refresh()}>Refresh</button></div><div className="mw-trade-inner">
       {!data ? <p>Loading funded bids…</p> : !bids.length ? <div className="mw-portfolio-empty"><h3>No funded bids yet</h3><p>{role === "underwriter" ? "Choose your range and fund the first bid above." : "An underwriter must fund a range before you can provide liquidity and buy coverage."}</p></div> : bids.map((bid) => {
