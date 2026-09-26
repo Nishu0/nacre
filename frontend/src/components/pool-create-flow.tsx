@@ -28,7 +28,8 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
   const [busy, setBusy] = useState("");
   const [pendingHash, setPendingHash] = useState<Hex | null>(null);
   const [created, setCreated] = useState<{ id: string; hash: Hex } | null>(null);
-  const [availability, setAvailability] = useState<{ fee: number; exists: boolean } | null>(null);
+  const [availability, setAvailability] = useState<Partial<Record<number, boolean>>>({});
+  const [checkVersion, setCheckVersion] = useState(0);
   const [poolCheckError, setPoolCheckError] = useState("");
   const [priceInput, setPriceInput] = useState("");
   const [step, setStep] = useState(0);
@@ -71,12 +72,24 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
 
   useEffect(() => {
     let active = true;
-    void baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi, functionName: "getSlot0", args: [openPoolId(fee)] })
-      .then(([sqrt]) => { if (active) { setAvailability({ fee, exists: sqrt > 0n }); setPoolCheckError(""); } })
-      .catch(() => { if (active) setPoolCheckError("Could not check this pool. Creation will check again before asking you to sign."); });
+    void baseClient.multicall({ contracts: OPEN_POOL_FEES.map((value) => ({ address: UNISWAP_STATE_VIEW,
+      abi: stateViewAbi, functionName: "getSlot0" as const, args: [openPoolId(value)] as const })) })
+      .then((results) => {
+        if (!active) return;
+        const checked: Partial<Record<number, boolean>> = {};
+        results.forEach((result, index) => { if (result.status === "success") checked[OPEN_POOL_FEES[index]] = result.result[0] > 0n; });
+        setAvailability(checked);
+        setPoolCheckError(results.some((result) => result.status === "failure") ? "Some fee tiers could not be checked. Retry the availability check." : "");
+      })
+      .catch(() => { if (active) setPoolCheckError("Could not check available fee tiers. Retry the availability check."); });
     return () => { active = false; };
-  }, [fee]);
-  const exists = availability?.fee === fee && availability.exists;
+  }, [checkVersion]);
+  const exists = availability[fee] === true;
+  const availableFees = OPEN_POOL_FEES.filter((value) => availability[value] === false);
+  const allExist = OPEN_POOL_FEES.every((value) => availability[value] === true);
+  const feeOptions = OPEN_POOL_FEES.map((value) => <option key={value} value={value} disabled={availability[value] === true}>
+    {value / 10000}%{availability[value] === true ? " · Already exists" : availability[value] === false ? " · Available" : " · Not checked"}
+  </option>);
   async function createPool() {
     if (lock.current) return;
     if (!account && !pendingHash) { await onConnect(); return; }
@@ -89,7 +102,10 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
         const [owner] = await injectedClient().getAddresses();
         if (!owner || owner.toLowerCase() !== account?.toLowerCase()) throw new Error("Wallet changed. Reconnect before creating the pool.");
         const [existing] = await baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi, functionName: "getSlot0", args: [openPoolId(fee)] });
-        if (existing > 0n) throw new Error("This token pair and fee tier already has a pool. Choose an unused trading fee tier.");
+        if (existing > 0n) {
+          setAvailability((previous) => ({ ...previous, [fee]: true }));
+          throw new Error("This token pair and fee tier already has a pool. Choose an available trading fee below.");
+        }
         const estimate = await baseClient.estimateGas({ account: owner, data: openPoolDeploymentData(fee, sqrt) });
         const gas = estimate * 120n / 100n;
         if (gas > 15_000_000n) throw new Error("Estimated gas exceeds the network transaction limit.");
@@ -147,7 +163,7 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
   const checks = [
     { label: "Token pair selected", ok: true },
     { label: "Base Sepolia network", ok: true },
-    { label: "Fee tier and hook configured", ok: true },
+    { label: exists ? "Selected fee tier already exists" : availability[fee] === false ? "Fee tier available for creation" : "Fee tier availability not confirmed", ok: availability[fee] === false },
     { label: "Valid starting price", ok: validPrice },
   ];
 
@@ -178,19 +194,24 @@ export function PoolCreateFlow({ account, onConnect }: { account: string | null;
           <dl className="pcf-review-list"><div><dt>Network</dt><dd>Base Sepolia</dd></div><div><dt>Base token</dt><dd>nWETH · 18 decimals</dd></div><div><dt>Quote token</dt><dd>nUSDC · 6 decimals</dd></div><div><dt>Protocol</dt><dd>Uniswap v4</dd></div></dl>
         </div>}
         {step === 1 && <div className="pcf-card-body">
-          <div className="pcf-field-grid"><label className="pcf-field"><span>Starting nWETH price (USD)</span><Input type="number" inputMode="decimal" min="0.01" max="1000000" step="any" value={priceInput} onChange={(event) => { setPriceInput(event.target.value); setIssue(""); }} placeholder="0.00" /><small>Price of one nWETH in nUSDC.</small></label><label className="pcf-field"><span>Trading fee</span><select value={fee} onChange={(event) => { setFee(Number(event.target.value)); setIssue(""); }}>{OPEN_POOL_FEES.map((value) => <option key={value} value={value}>{value / 10000}%</option>)}</select><small>Each token pair, fee tier and hook identifies one pool.</small></label></div>
+          <div className="pcf-field-grid"><label className="pcf-field"><span>Starting nWETH price (USD)</span><Input type="number" inputMode="decimal" min="0.01" max="1000000" step="any" value={priceInput} onChange={(event) => { setPriceInput(event.target.value); setIssue(""); }} placeholder="0.00" /><small>Price of one nWETH in nUSDC.</small></label><label className="pcf-field"><span>Trading fee</span><select value={fee} onChange={(event) => { setFee(Number(event.target.value)); setIssue(""); }}>{feeOptions}</select><small>Each token pair, fee tier and hook identifies one pool.</small></label></div>
           <div className="pcf-oracle-row"><div><Activity size={16} /><span>{currentPrice ? `Current nWETH / nUSDC pool price · ${money(currentPrice)}` : priceError || "Loading current pool price…"}</span></div>{currentPrice && <Button type="button" variant="outline" onClick={() => { setPriceInput(currentPrice.toFixed(2)); setIssue(""); }}><RefreshCw size={14} /> Use current price</Button>}</div>
           <dl className="pcf-review-list"><div><dt>Protocol</dt><dd>Uniswap v4</dd></div><div><dt>Hook</dt><dd>Nacre fee hook</dd></div></dl>
         </div>}
         {step === 2 && <div className="pcf-card-body">
           <div className="pcf-review-pair"><TokenPairIcon pair="nWETH / nUSDC" size="large" /><div><strong>nWETH / nUSDC</strong><span>Uniswap v4 · Base Sepolia</span></div></div>
-          <dl className="pcf-review-list"><div><dt>Network</dt><dd>Base Sepolia</dd></div><div><dt>Starting price</dt><dd>{money(price)}</dd></div><div><dt>Trading fee</dt><dd>{fee / 10000}%</dd></div><div><dt>Hook</dt><dd>Nacre fee hook</dd></div></dl>
+          <dl className="pcf-review-list"><div><dt>Network</dt><dd>Base Sepolia</dd></div><div><dt>Starting price</dt><dd>{money(price)}</dd></div><div><dt>Trading fee</dt><dd className="pcf-field"><select aria-label="Trading fee" value={fee} onChange={(event) => { setFee(Number(event.target.value)); setIssue(""); }}>{feeOptions}</select></dd></div><div><dt>Hook</dt><dd>Nacre fee hook</dd></div></dl>
           <div className="pcf-review-note"><CircleHelp size={17} /><p><strong>Create on Base Sepolia</strong> Confirm one wallet transaction to initialize the pool. You pay network gas. Funding a coverage bid is a separate step after creation.</p></div>
         </div>}
         </fieldset>
       </Card>
-      {exists && !pendingHash && <p className="pcf-error" role="status">This pool already exists. Select an unused trading fee tier.</p>}
-      {poolCheckError && <p role="status">{poolCheckError}</p>}
+      {exists && !pendingHash && <div className="pcf-error" role="status"><CircleAlert size={18} /><div>
+        <strong>The {fee / 10000}% pool is already initialized.</strong>
+        <p>{allExist ? "All supported fee tiers already have a pool. Open Pools to fund a bid in an existing pool." : "Choose an available trading fee to create a new pool. Your starting price will be kept."}</p>
+        <div className="flex flex-wrap gap-2 mt-3">{availableFees.map((value) => <Button key={value} type="button" className="pcf-primary" disabled={!!busy} onClick={() => { setFee(value); setIssue(""); }}>Use {value / 10000}% fee</Button>)}
+          <Button asChild variant="outline"><Link href="/dashboard/pools">Open existing pools</Link></Button></div>
+      </div></div>}
+      {poolCheckError && <div role="status"><p>{poolCheckError}</p><Button type="button" variant="outline" onClick={() => setCheckVersion((value) => value + 1)}>Retry availability check</Button></div>}
       {busy && <p role="status">{busy}</p>}
       {pendingHash && <p>Creation transaction submitted. <a href={basescanTx(pendingHash)} target="_blank" rel="noreferrer">View transaction</a>. Retry checks this transaction without creating another pool.</p>}
       {issue && <div className="pcf-error" role="alert"><CircleAlert size={18} /><div><strong>Check before continuing</strong><p>{issue}</p></div></div>}
