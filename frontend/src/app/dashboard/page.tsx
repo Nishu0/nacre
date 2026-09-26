@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 
 import { NacreDashboard } from "@/components/nacre-dashboard";
 import "./dashboard.css";
+import "./dashboard-research.css";
 
 export const metadata: Metadata = {
   title: "Dashboard — Nacre",
-  description: "Explore fee income, protection, positions, and competing cover quotes in the Nacre dashboard.",
+  description: "Explore historical fee backtests and the steps to launch a Nacre protection market.",
 };
 
 export default function DashboardPage() {

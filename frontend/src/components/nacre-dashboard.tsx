@@ -4,143 +4,92 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DropdownMenu } from "radix-ui";
 import {
-  Activity,
-  ArrowDownRight,
-  ArrowRight,
-  ArrowUpRight,
-  Bell,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  CircleHelp,
-  Compass,
-  LayoutGrid,
-  Layers3,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Search,
-  ShieldCheck,
-  Sparkles,
-  Wallet,
-  X,
+  Activity, ArrowRight, ArrowUpRight, Bell, Check, ChevronDown, CircleHelp,
+  Compass, Database, ExternalLink, Layers3, LayoutGrid, LogOut, Menu,
+  PanelLeftClose, PanelLeftOpen, RefreshCw, Search, ShieldCheck, Wallet, X,
 } from "lucide-react";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-type Period = "7D" | "30D" | "90D";
-type ActivityRange = "Today" | "Yesterday" | "This week";
+type Pool = { id: string; symbol: string; feeTier: string; chain: string; protocol: string; dataSource: string; capturedAt: string | null };
+type FeeWindow = { start: string; end: string; feesUsd: number };
+type Backtest = { pool: Pool; principalUsd: number; sampleDays: number; windowCount: number; recent: FeeWindow; best: FeeWindow; worst: FeeWindow; windows: FeeWindow[] };
+type QuoteTier = { id: string; label: string; feeFloorUsd: number; payoutCapUsd: number; indicativePremiumUsd: number; minimumNetFeesAfterPremiumUsd: number; payoutWindowCount: number };
+type QuoteResearch = Backtest & { quotes: QuoteTier[]; pricingMethod: string };
 type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] | Record<string, unknown> }) => Promise<unknown>;
   on?: (event: "accountsChanged", listener: (accounts: string[]) => void) => void;
   removeListener?: (event: "accountsChanged", listener: (accounts: string[]) => void) => void;
 };
+declare global { interface Window { ethereum?: EthereumProvider } }
 
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
-
-const chartSeries: Record<Period, { bars: number[]; labels: string[]; floor: number; total: string; change: string }> = {
-  "7D": { bars: [310, 510, 590, 385, 470, 584, 435, 505, 610, 565, 540, 585, 360, 620], labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], floor: 500, total: "$2,482", change: "+12.8%" },
-  "30D": { bars: [390, 480, 565, 430, 605, 545, 685, 610, 560, 690, 625, 725], labels: ["W1", "W2", "W3", "W4", "W5", "W6"], floor: 535, total: "$9,614", change: "+8.4%" },
-  "90D": { bars: [365, 420, 495, 570, 530, 615, 665, 630, 735], labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep"], floor: 520, total: "$28,406", change: "+18.2%" },
-};
-
-const positions = [
-  { pair: "ETH / USDC", pool: "Uniswap v4 · 0.05%", range: "$2,420 – $3,180", fees: "$1,284.20", floor: "$1,500", status: "Protected", mark: "ETH" },
-  { pair: "WBTC / ETH", pool: "Uniswap v4 · 0.30%", range: "23.8 – 29.6 ETH", fees: "$742.80", floor: "$1,000", status: "Near edge", mark: "BTC" },
-  { pair: "USDC / DAI", pool: "Uniswap v4 · 0.01%", range: "$0.998 – $1.002", fees: "$455.40", floor: "$600", status: "Protected", mark: "USD" },
-];
-
-const updates = [
-  { day: "Today", title: "New quote received", detail: "ETH / USDC · 2.4% premium", time: "11:42 AM", icon: Sparkles, tone: "green" },
-  { day: "Today", title: "Fee floor holding", detail: "USDC / DAI · 7 day window", time: "09:18 AM", icon: ShieldCheck, tone: "green" },
-  { day: "Today", title: "Fees checkpoint", detail: "ETH / USDC · $1,284 eligible", time: "08:50 AM", icon: Activity, tone: "blue" },
-  { day: "Yesterday", title: "Position near range edge", detail: "WBTC / ETH · review cover", time: "04:32 PM", icon: ArrowDownRight, tone: "amber" },
-  { day: "Yesterday", title: "Quote window updated", detail: "ETH / USDC · 3 offers", time: "01:10 PM", icon: Compass, tone: "blue" },
-  { day: "Yesterday", title: "Protection renewed", detail: "USDC / DAI · new 7 day window", time: "10:24 AM", icon: ShieldCheck, tone: "green" },
-] as const;
-
-const quotes = [
-  { name: "Verdant", initials: "VE", premium: "2.4%", capacity: "$4,000", note: "Best price" },
-  { name: "Cove", initials: "CO", premium: "2.7%", capacity: "$7,500", note: "Most capacity" },
-  { name: "Delta House", initials: "DH", premium: "3.1%", capacity: "$12,000", note: "Flexible size" },
-];
-
-const mainNavigation = [
+const navigation = [
   { href: "#overview", label: "Overview", icon: LayoutGrid },
-  { href: "#positions", label: "Positions", icon: Layers3 },
-  { href: "#market", label: "Cover market", icon: Compass },
-  { href: "#activity", label: "Activity", icon: Activity },
+  { href: "#backtest", label: "Fee backtest", icon: Activity },
+  { href: "#reference-pools", label: "Reference data", icon: Database },
+  { href: "#launch", label: "Launch steps", icon: Layers3 },
+  { href: "#pricing", label: "Premium model", icon: ShieldCheck },
 ];
-
-const insightNavigation = [
-  { href: "#analytics", label: "Fee performance", icon: Activity },
-  { href: "#market", label: "Underwriter quotes", icon: ShieldCheck },
+const launchSteps = [
+  { number: "01", title: "Create a v4 pool", detail: "Deploy a new Uniswap v4 pool with the Nacre fee hook. The v3 series on this page are pricing references." },
+  { number: "02", title: "Fund an LP position", detail: "Mint the position NFT, choose a 30-day fee floor and cap, then escrow the NFT with the request." },
+  { number: "03", title: "Invite underwriters", detail: "Makers publish competing Aqua quotes for the same request and approve enough USDC for the cap." },
+  { number: "04", title: "Activate together", detail: "The LP accepts one quote. Aqua pulls the full cap into the vault as the premium moves to the maker." },
 ];
+const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+const exactMoney = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+const shortDate = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const shortAddress = (account: string) => `${account.slice(0, 6)}…${account.slice(-4)}`;
 
-function NacreMark({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" aria-hidden="true">
-      <path d="M5 32.5C7.8 17.2 15.5 9.5 24 7c8.5 2.5 16.2 10.2 19 25.5-5 6.2-11.5 9.3-19 9.3S10 38.7 5 32.5Z" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M24 8v31M13 16l8 22M35 16l-8 22M7.5 26l11.7 12M40.5 26 28.8 38" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-      <path d="M10 32c9 3.3 19 3.3 28 0" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
-    </svg>
-  );
+async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { signal, cache: "no-store" });
+  const data = await response.json() as T & { error?: string };
+  if (!response.ok) throw new Error(data.error ?? "Could not load research data");
+  return data;
 }
 
-function Sparkline({ values, muted = false }: { values: number[]; muted?: boolean }) {
-  const min = Math.min(...values) - 6;
-  const max = Math.max(...values) + 6;
-  const points = values.map((value, index) => `${index * (104 / (values.length - 1))},${36 - ((value - min) / (max - min)) * 28}`).join(" ");
-  return <svg className={`kd-sparkline${muted ? " is-muted" : ""}`} viewBox="0 0 104 40" aria-hidden="true"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+function NacreMark() {
+  return <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M5 32.5C7.8 17.2 15.5 9.5 24 7c8.5 2.5 16.2 10.2 19 25.5-5 6.2-11.5 9.3-19 9.3S10 38.7 5 32.5Z" stroke="currentColor" strokeWidth="1.5" /><path d="M24 8v31M13 16l8 22M35 16l-8 22M7.5 26l11.7 12M40.5 26 28.8 38" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /><path d="M10 32c9 3.3 19 3.3 28 0" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" /></svg>;
 }
 
-function MetricCard({ title, value, change, context, icon: Icon, values, muted = false }: { title: string; value: string; change: string; context: string; icon: typeof Activity; values: number[]; muted?: boolean }) {
-  return (
-    <Card className="kd-card kd-metric" aria-label={title}>
-      <div className="kd-card-heading"><h2>{title}</h2><Icon size={16} aria-hidden="true" /></div>
-      <div className="kd-metric-inner"><strong>{value}</strong><Sparkline values={values} muted={muted} /><p><span className={muted ? "is-muted" : ""}>{change}</span> {context}</p></div>
-    </Card>
-  );
+function Sparkline({ values }: { values: number[] }) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values), span = Math.max(...values) - min || 1;
+  const points = values.map((value, index) => `${index * (104 / (values.length - 1))},${35 - ((value - min) / span) * 26}`).join(" ");
+  return <svg className="kd-sparkline" viewBox="0 0 104 40" aria-hidden="true"><polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function FeeBars({ period }: { period: Period }) {
-  const data = chartSeries[period];
-  const [activeIndex, setActiveIndex] = useState(5);
-  const selected = Math.min(activeIndex, data.bars.length - 1);
-  const groupSize = data.bars.length / data.labels.length;
-
-  return (
-    <div className="kd-chart" role="group" aria-label="Illustrative fee income by period">
-      <div className="kd-plot">
-        {[0, 200, 400, 600, 800].map((tick) => <div key={tick} className="kd-chart-gridline" style={{ bottom: `${tick / 8}%` }}><span>{tick}</span></div>)}
-        <div className="kd-floor-reference" style={{ bottom: `${data.floor / 8}%` }} />
-        <div className="kd-chart-bars">
-          {data.bars.map((value, index) => <button key={`${period}-${index}`} type="button" className={`kd-bar${selected === index ? " is-active" : ""}`} style={{ height: `${value / 8}%` }} onMouseEnter={() => setActiveIndex(index)} onFocus={() => setActiveIndex(index)} aria-label={`${data.labels[Math.floor(index / groupSize)]}: ${value} relative fee units`} />)}
-        </div>
-        <div className="kd-chart-tooltip" style={{ left: `${((selected + .5) / data.bars.length) * 100}%`, bottom: `calc(${data.bars[selected] / 8}% + 10px)` }}>{data.labels[Math.floor(selected / groupSize)]}: {data.bars[selected]}</div>
-      </div>
-      <div className="kd-chart-labels">{data.labels.map((label) => <span key={label}>{label}</span>)}</div>
-    </div>
-  );
+function MetricCard({ title, value, context, icon: Icon, values }: { title: string; value: string; context: string; icon: typeof Activity; values: number[] }) {
+  return <Card className="kd-card kd-metric"><div className="kd-card-heading"><h2>{title}</h2><Icon size={16} aria-hidden="true" /></div><div className="kd-metric-inner"><strong>{value}</strong><Sparkline values={values} /><p>{context}</p></div></Card>;
 }
 
-function shortAddress(account: string) {
-  return `${account.slice(0, 6)}…${account.slice(-4)}`;
+function FeeChart({ windows }: { windows: FeeWindow[] }) {
+  const shown = windows.slice(-24);
+  const [active, setActive] = useState(shown.length - 1);
+  const selected = Math.min(Math.max(active, 0), shown.length - 1);
+  const ceiling = Math.max(...shown.map((row) => row.feesUsd), 1) * 1.18;
+  return <div className="kd-chart kd-research-chart" role="group" aria-label="Modeled fees in the latest 24 overlapping 30-day windows"><div className="kd-plot">
+    {[0, .25, .5, .75, 1].map((fraction) => <div key={fraction} className="kd-chart-gridline" style={{ bottom: `${fraction * 100}%` }}><span>{money(ceiling * fraction)}</span></div>)}
+    <div className="kd-chart-bars">{shown.map((window, index) => <button key={window.end} type="button" className={`kd-bar${selected === index ? " is-active" : ""}`} style={{ height: `${Math.max(2, window.feesUsd / ceiling * 100)}%` }} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} aria-label={`${shortDate(window.start)} to ${shortDate(window.end)}: ${exactMoney(window.feesUsd)} modeled fees`} />)}</div>
+    {shown[selected] && <div className="kd-chart-tooltip" style={{ left: `${((selected + .5) / shown.length) * 100}%`, bottom: `calc(${shown[selected].feesUsd / ceiling * 100}% + 11px)` }}>{shortDate(shown[selected].start)}–{shortDate(shown[selected].end)} · {money(shown[selected].feesUsd)}</div>}
+  </div><div className="kd-chart-labels">{shown.map((window, index) => <span key={window.end}>{index % 4 === 0 || index === shown.length - 1 ? shortDate(window.end) : ""}</span>)}</div></div>;
 }
 
 export function NacreDashboard() {
-  const [period, setPeriod] = useState<Period>("7D");
-  const [activityRange, setActivityRange] = useState<ActivityRange>("Today");
-  const [activitySearch, setActivitySearch] = useState("");
-  const [positionSearch, setPositionSearch] = useState("");
+  const [pools, setPools] = useState<Pool[]>([]);
+  const [backtests, setBacktests] = useState<Record<string, Backtest>>({});
+  const [quoteState, setQuoteState] = useState<{ key: string; data: QuoteResearch } | null>(null);
+  const [selectedPoolId, setSelectedPoolId] = useState("usdc-weth-005");
+  const [principalInput, setPrincipalInput] = useState("100000");
+  const [principalUsd, setPrincipalUsd] = useState(100000);
+  const [loadedPrincipalUsd, setLoadedPrincipalUsd] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [refreshIndex, setRefreshIndex] = useState(0);
   const [navSearch, setNavSearch] = useState("");
-  const [selectedQuote, setSelectedQuote] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("#overview");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -150,122 +99,107 @@ export function NacreDashboard() {
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      setLoading(true); setError("");
+      try {
+        const list = await getJson<Pool[]>("/api/research/pools", controller.signal);
+        const results = await Promise.all(list.map((pool) => getJson<Backtest>(`/api/research/pools/${pool.id}/backtest?principalUsd=${principalUsd}`, controller.signal)));
+        if (controller.signal.aborted) return;
+        setPools(list);
+        setBacktests(Object.fromEntries(results.map((result) => [result.pool.id, result])));
+        setLoadedPrincipalUsd(principalUsd);
+      } catch (reason) { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Could not load the research API"); }
+      finally { if (!controller.signal.aborted) setLoading(false); }
+    }
+    void load();
+    return () => controller.abort();
+  }, [principalUsd, refreshIndex]);
+
+  useEffect(() => {
+    if (!backtests[selectedPoolId]) return;
+    const controller = new AbortController();
+    const key = `${selectedPoolId}:${principalUsd}`;
+    getJson<QuoteResearch>(`/api/research/pools/${selectedPoolId}/quotes?principalUsd=${principalUsd}`, controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setQuoteState({ key, data }); })
+      .catch((reason) => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : "Could not load pricing model"); });
+    return () => controller.abort();
+  }, [selectedPoolId, principalUsd, backtests]);
+
+  useEffect(() => {
     let live = true;
     const provider = window.ethereum;
-    const onAccountsChanged = (accounts: string[]) => {
-      if (!live) return;
-      if (sessionStorage.getItem("nacre-wallet-manually-disconnected") === "1") return;
+    const changed = (accounts: string[]) => {
+      if (!live || sessionStorage.getItem("nacre-wallet-manually-disconnected") === "1") return;
       setWalletAccount(accounts[0] ?? null);
       if (accounts[0]) setWalletDialogOpen(false);
     };
     async function checkWallet() {
       try {
         if (sessionStorage.getItem("nacre-wallet-manually-disconnected") === "1") return;
-        const accounts = provider ? (await provider.request({ method: "eth_accounts" }) as string[]) : [];
+        const accounts = provider ? await provider.request({ method: "eth_accounts" }) as string[] : [];
         if (!live) return;
         setWalletAccount(accounts[0] ?? null);
         if (!accounts[0] && sessionStorage.getItem("nacre-wallet-prompt-dismissed") !== "1") setWalletDialogOpen(true);
-      } catch {
-        if (live && sessionStorage.getItem("nacre-wallet-prompt-dismissed") !== "1") setWalletDialogOpen(true);
-      }
+      } catch { if (live && sessionStorage.getItem("nacre-wallet-prompt-dismissed") !== "1") setWalletDialogOpen(true); }
     }
-    void checkWallet();
-    provider?.on?.("accountsChanged", onAccountsChanged);
-    return () => {
-      live = false;
-      provider?.removeListener?.("accountsChanged", onAccountsChanged);
-    };
+    void checkWallet(); provider?.on?.("accountsChanged", changed);
+    return () => { live = false; provider?.removeListener?.("accountsChanged", changed); };
   }, []);
-
   useEffect(() => {
-    const onHashChange = () => setActiveSection(window.location.hash || "#overview");
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const changed = () => setActiveSection(window.location.hash || "#overview");
+    window.addEventListener("hashchange", changed);
+    return () => window.removeEventListener("hashchange", changed);
   }, []);
 
-  const visiblePositions = useMemo(() => positions.filter((position) => `${position.pair} ${position.pool} ${position.status}`.toLowerCase().includes(positionSearch.toLowerCase())), [positionSearch]);
-  const visibleUpdates = updates.filter((item) => (activityRange === "This week" || item.day === activityRange) && `${item.title} ${item.detail}`.toLowerCase().includes(activitySearch.toLowerCase()));
-  const visibleMainNav = mainNavigation.filter((item) => item.label.toLowerCase().includes(navSearch.toLowerCase()));
-  const visibleInsightNav = insightNavigation.filter((item) => item.label.toLowerCase().includes(navSearch.toLowerCase()));
-
-  function dismissWalletPrompt() {
-    sessionStorage.setItem("nacre-wallet-prompt-dismissed", "1");
-    setWalletDialogOpen(false);
-    setWalletError("");
+  const current = loadedPrincipalUsd === principalUsd ? backtests[selectedPoolId] : undefined;
+  const quoteResearch = quoteState?.key === `${selectedPoolId}:${principalUsd}` ? quoteState.data : null;
+  const selectedPool = pools.find((pool) => pool.id === selectedPoolId);
+  const recentValues = current?.windows.slice(-12).map((row) => row.feesUsd) ?? [];
+  const visibleNav = useMemo(() => navigation.filter((item) => item.label.toLowerCase().includes(navSearch.toLowerCase())), [navSearch]);
+  function applyPrincipal() {
+    const value = Number(principalInput);
+    if (!Number.isFinite(value) || value < 100 || value > 10_000_000) { setError("Enter capital between $100 and $10,000,000."); return; }
+    setError(""); setPrincipalUsd(value);
   }
-
+  function dismissWalletPrompt() { sessionStorage.setItem("nacre-wallet-prompt-dismissed", "1"); setWalletDialogOpen(false); setWalletError(""); }
   async function connectWallet() {
-    if (!window.ethereum) {
-      setWalletError("No browser wallet was found. You can still explore the demo data.");
-      return;
-    }
-    setConnecting(true);
-    setWalletError("");
+    if (!window.ethereum) { setWalletError("No browser wallet was found. You can still explore the research data."); return; }
+    setConnecting(true); setWalletError("");
     try {
       const accounts = await window.ethereum.request({ method: "eth_requestAccounts" }) as string[];
-      if (accounts[0]) {
-        sessionStorage.removeItem("nacre-wallet-manually-disconnected");
-        setWalletAccount(accounts[0]);
-        setWalletDialogOpen(false);
-      }
-    } catch {
-      setWalletError("The connection was not completed. You can continue with demo data.");
-    } finally {
-      setConnecting(false);
-    }
+      if (accounts[0]) { sessionStorage.removeItem("nacre-wallet-manually-disconnected"); setWalletAccount(accounts[0]); setWalletDialogOpen(false); }
+    } catch { setWalletError("The connection was not completed. You can continue without a wallet."); }
+    finally { setConnecting(false); }
   }
-
   async function disconnectWallet() {
-    sessionStorage.setItem("nacre-wallet-manually-disconnected", "1");
-    setWalletAccount(null);
-    setWalletError("");
-    try {
-      await window.ethereum?.request({
-        method: "wallet_revokePermissions",
-        params: [{ eth_accounts: {} }],
-      });
-    } catch {
-      // Some injected wallets do not expose permission revocation; the app still disconnects for this session.
-    }
+    sessionStorage.setItem("nacre-wallet-manually-disconnected", "1"); setWalletAccount(null); setWalletError("");
+    try { await window.ethereum?.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] }); }
+    catch { /* Wallets without revocation can still disconnect for this session. */ }
   }
 
-  function navLink(item: (typeof mainNavigation)[number]) {
-    const Icon = item.icon;
-    return <a key={item.href + item.label} href={item.href} className={`kd-nav-link${activeSection === item.href ? " is-active" : ""}`} aria-current={activeSection === item.href ? "page" : undefined} onClick={() => { setActiveSection(item.href); setMobileNavOpen(false); }} title={sidebarCollapsed ? item.label : undefined}><Icon size={17} aria-hidden="true" /><span>{item.label}</span></a>;
-  }
+  return <div className={`dashboard${sidebarCollapsed ? " is-collapsed" : ""}`} id="overview">
+    {mobileNavOpen && <button className="kd-sidebar-scrim" type="button" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
+    <aside className={`kd-sidebar${mobileNavOpen ? " is-open" : ""}`} aria-label="Dashboard navigation">
+      <div className="kd-sidebar-brand-row"><Link href="/" className="kd-brand" aria-label="Nacre home"><span className="kd-brand-icon"><NacreMark /></span><span>Nacre</span></Link><button className="kd-collapse-button" type="button" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>{sidebarCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button><button className="kd-mobile-close" type="button" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)}><X size={18} /></button></div>
+      <label className="kd-sidebar-search"><Search size={17} aria-hidden="true" /><Input type="search" aria-label="Search navigation" placeholder="Search navigation" value={navSearch} onChange={(event) => setNavSearch(event.target.value)} /><kbd>⌘ K</kbd></label>
+      <nav className="kd-sidebar-nav"><div className="kd-nav-group"><p>WORKSPACE</p>{visibleNav.filter((item) => item.href !== "#pricing").map((item) => { const Icon = item.icon; return <a key={item.href} href={item.href} className={`kd-nav-link${activeSection === item.href ? " is-active" : ""}`} aria-current={activeSection === item.href ? "page" : undefined} onClick={() => { setActiveSection(item.href); setMobileNavOpen(false); }} title={sidebarCollapsed ? item.label : undefined}><Icon size={17} /><span>{item.label}</span></a>; })}</div><div className="kd-nav-group"><p>RESEARCH</p>{visibleNav.filter((item) => item.href === "#pricing").map((item) => { const Icon = item.icon; return <a key={item.href} href={item.href} className={`kd-nav-link${activeSection === item.href ? " is-active" : ""}`} onClick={() => { setActiveSection(item.href); setMobileNavOpen(false); }}><Icon size={17} /><span>{item.label}</span></a>; })}</div><div className="kd-nav-group kd-support-nav"><p>SUPPORT</p><Link href="/#model" className="kd-nav-link"><CircleHelp size={17} /><span>How Nacre works</span></Link><Link href="/" className="kd-nav-link"><ArrowUpRight size={17} /><span>Back to website</span></Link></div></nav>
+      {walletAccount ? <DropdownMenu.Root><DropdownMenu.Trigger asChild><button className="kd-account-card" type="button" aria-label="Wallet menu"><span className="kd-account-avatar"><NacreMark /></span><span><strong>{shortAddress(walletAccount)}</strong><small>Wallet connected</small></span><ChevronDown size={16} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu" side="top" align="start" sideOffset={8}><p>CONNECTED WALLET</p><span className="kd-menu-address">{shortAddress(walletAccount)}</span><DropdownMenu.Separator /><DropdownMenu.Item className="kd-disconnect-item" onSelect={() => void disconnectWallet()}><LogOut size={15} /> Disconnect wallet</DropdownMenu.Item></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root> : <button className="kd-account-card" type="button" onClick={() => setWalletDialogOpen(true)}><span className="kd-account-avatar">N</span><span><strong>Research workspace</strong><small>Wallet optional</small></span><ChevronDown size={16} /></button>}
+    </aside>
 
-  return (
-    <div className={`dashboard${sidebarCollapsed ? " is-collapsed" : ""}`} id="overview">
-      {mobileNavOpen && <button className="kd-sidebar-scrim" type="button" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)} />}
-      <aside className={`kd-sidebar${mobileNavOpen ? " is-open" : ""}`} aria-label="Dashboard navigation">
-        <div className="kd-sidebar-brand-row"><Link href="/" className="kd-brand" aria-label="Nacre home"><span className="kd-brand-icon"><NacreMark /></span><span>Nacre</span></Link><button className="kd-collapse-button" type="button" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>{sidebarCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}</button><button className="kd-mobile-close" type="button" aria-label="Close navigation" onClick={() => setMobileNavOpen(false)}><X size={18} /></button></div>
-        <label className="kd-sidebar-search"><Search size={17} aria-hidden="true" /><input type="search" aria-label="Search navigation" placeholder="Search anything" value={navSearch} onChange={(event) => setNavSearch(event.target.value)} /><kbd>⌘ K</kbd></label>
-        <nav className="kd-sidebar-nav"><div className="kd-nav-group"><p>MAIN NAVIGATION</p>{visibleMainNav.map(navLink)}</div><div className="kd-nav-group"><p>ANALYTICS &amp; INSIGHTS</p>{visibleInsightNav.map(navLink)}</div><div className="kd-nav-group kd-support-nav"><p>SUPPORT</p><Link href="/#model" className="kd-nav-link"><CircleHelp size={17} /><span>How Nacre works</span></Link><Link href="/" className="kd-nav-link"><ArrowUpRight size={17} /><span>Back to website</span></Link></div></nav>
-        {walletAccount ? (
-          <DropdownMenu.Root>
-            <DropdownMenu.Trigger asChild><button className="kd-account-card" type="button" aria-label="Wallet menu"><span className="kd-account-avatar"><NacreMark /></span><span><strong>{shortAddress(walletAccount)}</strong><small>Wallet connected</small></span><ChevronDown size={16} aria-hidden="true" /></button></DropdownMenu.Trigger>
-            <DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu" side="top" align="start" sideOffset={8}><p>CONNECTED WALLET</p><span className="kd-menu-address">{shortAddress(walletAccount)}</span><DropdownMenu.Separator /><DropdownMenu.Item className="kd-disconnect-item" onSelect={() => void disconnectWallet()}><LogOut size={15} /> Disconnect wallet</DropdownMenu.Item></DropdownMenu.Content></DropdownMenu.Portal>
-          </DropdownMenu.Root>
-        ) : <button className="kd-account-card" type="button" onClick={() => setWalletDialogOpen(true)}><span className="kd-account-avatar">DE</span><span><strong>Demo workspace</strong><small>Connect wallet to begin</small></span><ChevronDown size={16} aria-hidden="true" /></button>}
-      </aside>
-
-      <main className="kd-main">
-        <header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} aria-hidden="true" /><span>Overview</span><span className="kd-breadcrumb-slash">/</span><strong>Dashboard</strong></div><div className="kd-topbar-actions"><a href="#activity" aria-label="View activity" onClick={() => setActiveSection("#activity")}><Bell size={17} /></a></div></header>
-        <div className="kd-content">
-          <div className="kd-page-intro"><div><h1>Hello, liquidity provider <span aria-hidden="true">✳</span></h1><p>Here is the latest picture of your fee income and protection.</p></div><div className="kd-page-actions"><label className="kd-period-select"><CalendarDays size={16} /><select aria-label="Time range" value={period} onChange={(event) => setPeriod(event.target.value as Period)}><option value="7D">Last 7 days</option><option value="30D">Last 30 days</option><option value="90D">Last 90 days</option></select><ChevronDown size={14} /></label></div></div>
-
-          <div className="kd-overview-grid"><div className="kd-primary-column"><div className="kd-metrics-grid"><MetricCard title="Eligible Fees" value="$2,482" change="+12.8%" context="last 7 days" icon={Activity} values={[18, 23, 21, 28, 26, 33, 30]} /><MetricCard title="Protected Floor" value="$3,100" change="3 positions" context="currently covered" icon={ShieldCheck} values={[18, 18, 21, 22, 26, 26, 28]} /><MetricCard title="Open Shortfall" value="$617" change="19.9%" context="eligible for cover" icon={ArrowDownRight} values={[31, 29, 26, 27, 23, 21, 19]} muted /></div>
-            <Card className="kd-card kd-trend-panel" id="analytics"><div className="kd-card-heading"><h2><Activity size={17} /> Fee Income Trend</h2><label className="kd-small-select"><CalendarDays size={15} /><select aria-label="Chart range" value={period} onChange={(event) => setPeriod(event.target.value as Period)}><option value="7D">Last 7 days</option><option value="30D">Last 30 days</option><option value="90D">Last 90 days</option></select><ChevronDown size={13} /></label></div><div className="kd-trend-inner"><div className="kd-trend-summary"><strong>{chartSeries[period].total}</strong><span>{chartSeries[period].change}</span><small>vs previous period</small></div><FeeBars period={period} /></div></Card></div>
-
-            <Card className="kd-card kd-updates-panel" id="activity"><div className="kd-card-heading"><h2>Latest Updates</h2><Activity size={16} aria-hidden="true" /></div><div className="kd-updates-inner"><div className="kd-update-tabs" role="group" aria-label="Activity range">{(["Today", "Yesterday", "This week"] as ActivityRange[]).map((item) => <button key={item} type="button" className={activityRange === item ? "is-active" : ""} aria-pressed={activityRange === item} onClick={() => setActivityRange(item)}>{item}</button>)}</div><label className="kd-activity-search"><Search size={17} /><input type="search" aria-label="Search activities" placeholder="Search activities" value={activitySearch} onChange={(event) => setActivitySearch(event.target.value)} /></label><p className="kd-update-count"><strong>{visibleUpdates.length}</strong> illustrative updates {activityRange === "This week" ? "this week" : activityRange.toLowerCase()}</p><div className="kd-update-list">{visibleUpdates.map((item) => { const Icon = item.icon; return <div className="kd-update-item" key={item.title}><span className={`kd-update-icon ${item.tone}`}><Icon size={16} /></span><div><strong>{item.title}</strong><p>{item.detail}</p></div><time>{item.time}</time></div>; })}{visibleUpdates.length === 0 && <p className="kd-empty-updates">No updates match your search.</p>}</div></div></Card></div>
-
-          <section className="kd-data-section" id="positions"><Card className="kd-card kd-table-panel"><div className="kd-card-heading"><h2><Layers3 size={17} /> Position Monitoring</h2><label className="kd-table-search"><Search size={16} /><input type="search" aria-label="Search positions" placeholder="Search positions" value={positionSearch} onChange={(event) => setPositionSearch(event.target.value)} /></label></div><div className="kd-table-inner"><div className="kd-table-scroll"><table><thead><tr><th>POSITION</th><th>ACTIVE RANGE</th><th>ELIGIBLE FEES</th><th>FEE FLOOR</th><th>STATUS</th><th aria-label="Details" /></tr></thead><tbody>{visiblePositions.map((position) => <tr key={position.pair}><td><div className="kd-pair-cell"><span className="kd-token">{position.mark}</span><span><strong>{position.pair}</strong><small>{position.pool}</small></span></div></td><td>{position.range}</td><td>{position.fees}</td><td>{position.floor}</td><td><span className={`kd-status${position.status === "Near edge" ? " is-warning" : ""}`}>{position.status}</span></td><td><a href="#market" aria-label={`See cover quotes for ${position.pair}`}><ArrowUpRight size={16} /></a></td></tr>)}</tbody></table>{visiblePositions.length === 0 && <div className="kd-table-empty">No positions match “{positionSearch}”.</div>}</div></div></Card></section>
-
-          <section className="kd-market-section" id="market"><div className="kd-market-intro"><div><h2>Cover Market</h2><p>Compare sample underwriter terms for the same fee floor.</p></div><span>BEST QUOTED PREMIUM <strong>2.4%</strong></span></div><div className="kd-quote-grid">{quotes.map((quote) => <Card className={`kd-card kd-quote-card${selectedQuote === quote.name ? " is-selected" : ""}`} key={quote.name}><div className="kd-card-heading"><h3>{quote.name}</h3><span>{quote.note}</span></div><div className="kd-quote-inner"><span className="kd-quote-mark">{quote.initials}</span><div><strong>{quote.premium}</strong><small>premium of floor</small></div><p>Capacity <b>{quote.capacity}</b></p><button type="button" onClick={() => setSelectedQuote(quote.name)}>{selectedQuote === quote.name ? <>Selected for review <Check size={15} /></> : <>Review quote <ArrowRight size={15} /></>}</button></div></Card>)}</div><p className="kd-demo-note"><CircleHelp size={14} /> Illustrative positions and quotes only. No live cover is offered on this page.</p></section>
-        </div>
-      </main>
-
-      <Dialog.Root open={walletDialogOpen} onOpenChange={(open) => { if (!open) dismissWalletPrompt(); else setWalletDialogOpen(true); }}><Dialog.Portal><Dialog.Overlay className="kd-wallet-overlay" /><Dialog.Content className="kd-wallet-dialog"><button className="kd-wallet-close" type="button" aria-label="Close wallet prompt" onClick={dismissWalletPrompt}><X size={18} /></button><span className="kd-dialog-logo"><NacreMark /></span><Dialog.Title>Explore Nacre with a wallet</Dialog.Title><Dialog.Description>Connect when you are ready. You can dismiss this window and explore sample positions, fee data, and cover quotes now.</Dialog.Description>{walletError && <p className="kd-wallet-error" role="alert">{walletError}</p>}<Button className="kd-dialog-connect" onClick={connectWallet} disabled={connecting}><Wallet size={16} /> {connecting ? "Connecting…" : "Connect wallet"}</Button><button className="kd-dialog-skip" type="button" onClick={dismissWalletPrompt}>Continue with demo <ArrowRight size={16} /></button><p className="kd-dialog-note">No signature is needed to view the dashboard.</p></Dialog.Content></Dialog.Portal></Dialog.Root>
-    </div>
-  );
+    <main className="kd-main"><header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} /><span>Research</span><span className="kd-breadcrumb-slash">/</span><strong>Dashboard</strong></div><div className="kd-topbar-actions"><Badge variant="outline" className="kd-research-badge">HISTORICAL DATA</Badge><DropdownMenu.Root><DropdownMenu.Trigger asChild><button type="button" className="kd-notification-button" aria-label="Notifications"><Bell size={17} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu kd-notification-menu" side="bottom" align="end" sideOffset={8}><p>NOTIFICATIONS</p><span>No pool or policy updates yet.</span></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></div></header>
+      <div className="kd-content"><div className="kd-page-intro"><div><h1>Build a fee floor market <span aria-hidden="true">✳</span></h1><p>Explore historical fee yield, then follow the steps to launch a funded v4 protection pool.</p></div><Badge variant="outline" className="kd-no-live-badge">0 LIVE POOLS</Badge></div>
+        <Card className="kd-card kd-controls-card" id="backtest"><div className="kd-card-heading"><h2><Compass size={16} /> Backtest inputs</h2><span>UNISWAP V3 REFERENCE</span></div><div className="kd-controls-inner"><label className="kd-field"><span>Historical pair</span><span className="kd-select-wrap"><select value={selectedPoolId} onChange={(event) => setSelectedPoolId(event.target.value)} aria-label="Historical reference pair">{pools.length ? pools.map((pool) => <option key={pool.id} value={pool.id}>{pool.symbol} · {pool.feeTier}</option>) : <option value={selectedPoolId}>Loading references…</option>}</select><ChevronDown size={15} /></span></label><label className="kd-field"><span>Modeled capital (USD)</span><Input type="number" min="100" max="10000000" step="100" value={principalInput} onChange={(event) => setPrincipalInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") applyPrincipal(); }} /></label><Button type="button" className="kd-apply-button" onClick={applyPrincipal}>Run backtest <ArrowRight size={15} /></Button><Button type="button" variant="outline" size="icon" className="kd-refresh-button" aria-label="Refresh research data" onClick={() => setRefreshIndex((value) => value + 1)}><RefreshCw size={15} /></Button></div></Card>
+        {error && <div className="kd-error-state" role="alert"><CircleHelp size={17} /><span>{error}</span><Button size="sm" variant="outline" onClick={() => setRefreshIndex((value) => value + 1)}>Retry</Button></div>}
+        {loading && <div className="kd-loading-state" role="status">Loading historical fee data…</div>}
+        {current && <><div className="kd-metrics-grid kd-research-metrics"><MetricCard title="Recent 30 days" value={money(current.recent.feesUsd)} context={`${shortDate(current.recent.start)}–${shortDate(current.recent.end)} · modeled fees`} icon={Activity} values={recentValues} /><MetricCard title="Best 30 days" value={money(current.best.feesUsd)} context={`${shortDate(current.best.start)}–${shortDate(current.best.end)} · historical high`} icon={ArrowUpRight} values={recentValues} /><MetricCard title="Worst 30 days" value={money(current.worst.feesUsd)} context={`${shortDate(current.worst.start)}–${shortDate(current.worst.end)} · historical low`} icon={ShieldCheck} values={recentValues} /><MetricCard title="Observed days" value={String(current.sampleDays)} context={`${current.windowCount} overlapping 30-day windows`} icon={Database} values={recentValues} /></div>
+          <div className="kd-overview-grid kd-research-grid"><Card className="kd-card kd-trend-panel" id="analytics"><div className="kd-card-heading"><h2><Activity size={17} /> Historical fee windows</h2><span>{selectedPool?.symbol} · {selectedPool?.feeTier}</span></div><div className="kd-trend-inner"><div className="kd-trend-summary"><strong>{money(current.recent.feesUsd)}</strong><small>latest modeled 30-day fees on {money(principalUsd)} capital</small></div><FeeChart key={selectedPoolId + principalUsd} windows={current.windows} /><p className="kd-chart-caption">Latest 24 of {current.windowCount} overlapping windows · pool-level base APY, not earnings of a specific LP.</p></div></Card>
+            <Card className="kd-card kd-launch-panel" id="launch"><div className="kd-card-heading"><h2><Layers3 size={17} /> Launch path</h2><span>4 STEPS</span></div><div className="kd-launch-inner"><div className="kd-launch-heading"><Badge variant="outline">NO ACTIVE POOLS</Badge><p>A protection market launches when its liquidity and coverage are both funded.</p></div><ol>{launchSteps.map((step) => <li key={step.number}><span>{step.number}</span><div><strong>{step.title}</strong><p>{step.detail}</p></div></li>)}</ol><a href="#reference-pools" className="kd-text-link">Compare reference pairs <ArrowRight size={15} /></a></div></Card></div>
+          <section className="kd-data-section" id="reference-pools"><Card className="kd-card kd-table-panel"><div className="kd-card-heading"><h2><Database size={17} /> Historical reference pools</h2><span>3 SOURCES · ETHEREUM UNISWAP V3</span></div><div className="kd-table-inner"><div className="kd-table-scroll"><table><thead><tr><th>REFERENCE PAIR</th><th>RECENT 30D</th><th>BEST 30D</th><th>WORST 30D</th><th>DATA</th><th>SELECT</th></tr></thead><tbody>{pools.map((pool) => { const result = backtests[pool.id]; return <tr key={pool.id}><td><div className="kd-pair-cell"><span className="kd-token">{pool.symbol.split("/")[0].slice(0, 3)}</span><span><strong>{pool.symbol}</strong><small>{pool.protocol} · {pool.feeTier}</small></span></div></td><td>{result ? exactMoney(result.recent.feesUsd) : "—"}</td><td>{result ? exactMoney(result.best.feesUsd) : "—"}</td><td>{result ? exactMoney(result.worst.feesUsd) : "—"}</td><td><a href={pool.dataSource} target="_blank" rel="noreferrer" className="kd-source-link" aria-label={`Source data for ${pool.symbol}`}><ExternalLink size={14} /> Source</a></td><td><Button variant="ghost" size="sm" onClick={() => { setSelectedPoolId(pool.id); document.getElementById("backtest")?.scrollIntoView({ behavior: "smooth" }); }}>{selectedPoolId === pool.id ? <><Check size={14} /> Selected</> : <>View <ArrowRight size={14} /></>}</Button></td></tr>; })}</tbody></table></div></div></Card><p className="kd-data-note"><CircleHelp size={14} /> These are historical v3 references. Nacre has no live v4 pool or active protection policy in this workspace.</p></section>
+          <section className="kd-market-section" id="pricing"><div className="kd-market-intro"><div><h2>Indicative premium model</h2><p>Explore how a higher fee floor changes modeled shortfall and premium.</p></div><span>UNDERWRITER QUOTES <strong>0</strong></span></div>{quoteResearch ? <Tabs defaultValue="current" className="kd-pricing-tabs"><TabsList className="kd-pricing-tab-list">{quoteResearch.quotes.map((tier) => <TabsTrigger key={tier.id} value={tier.id}>{tier.id === "current" ? "Current run rate" : "Stretch floor"}</TabsTrigger>)}</TabsList>{quoteResearch.quotes.map((tier) => <TabsContent value={tier.id} key={tier.id}><Card className="kd-card kd-pricing-card"><div className="kd-card-heading"><h3><ShieldCheck size={16} /> {tier.label}</h3><Badge variant="outline">MODELED · NOT EXECUTABLE</Badge></div><div className="kd-pricing-inner"><div><small>30-DAY FEE FLOOR</small><strong>{exactMoney(tier.feeFloorUsd)}</strong><span>The amount this scenario aims to protect.</span></div><div><small>INDICATIVE PREMIUM</small><strong>{exactMoney(tier.indicativePremiumUsd)}</strong><span>Research estimate. A maker must set a real price.</span></div><div><small>FULLY BACKED CAP</small><strong>{exactMoney(tier.payoutCapUsd)}</strong><span>Collateral needed to cover zero eligible fees.</span></div><div><small>NET FLOOR AFTER PREMIUM</small><strong>{exactMoney(tier.minimumNetFeesAfterPremiumUsd)}</strong><span>Before gas and token price changes.</span></div></div><p className="kd-pricing-footnote">{tier.payoutWindowCount} of {quoteResearch.windowCount} historical windows fell below this floor. {quoteResearch.pricingMethod}</p></Card></TabsContent>)}</Tabs> : <Card className="kd-card kd-pricing-card"><div className="kd-pricing-empty">{loading ? "Calculating scenarios…" : "Choose a reference pair to see modeled premium tiers."}</div></Card>}<p className="kd-demo-note"><CircleHelp size={14} /> Pool-level estimates are research inputs, not executable Aqua quotes or an offer of coverage.</p></section>
+        </>}
+        {!current && !loading && !error && <Card className="kd-card kd-empty-data"><div>No research data is available yet. Start the Bun server and refresh this page.</div></Card>}
+      </div></main>
+    <Dialog.Root open={walletDialogOpen} onOpenChange={(open) => { if (!open) dismissWalletPrompt(); else setWalletDialogOpen(true); }}><Dialog.Portal><Dialog.Overlay className="kd-wallet-overlay" /><Dialog.Content className="kd-wallet-dialog"><button className="kd-wallet-close" type="button" aria-label="Close wallet prompt" onClick={dismissWalletPrompt}><X size={18} /></button><span className="kd-dialog-logo"><NacreMark /></span><Dialog.Title>Explore Nacre with a wallet</Dialog.Title><Dialog.Description>Connect when you are ready, or explore historical fee data and the launch steps without a wallet.</Dialog.Description>{walletError && <p className="kd-wallet-error" role="alert">{walletError}</p>}<Button className="kd-dialog-connect" onClick={connectWallet} disabled={connecting}><Wallet size={16} /> {connecting ? "Connecting…" : "Connect wallet"}</Button><button className="kd-dialog-skip" type="button" onClick={dismissWalletPrompt}>Continue to research <ArrowRight size={16} /></button><p className="kd-dialog-note">No signature is needed to view the dashboard.</p></Dialog.Content></Dialog.Portal></Dialog.Root>
+  </div>;
 }
