@@ -12,6 +12,11 @@ test("first start seeds research data and serves backtests and premium tiers", a
     expect(pools.statusCode).toBe(200);
     expect(pools.json()).toHaveLength(3);
 
+    const prices = await app.inject({ method: "GET", url: "/api/live-price-history" });
+    expect(prices.statusCode).toBe(200);
+    expect(prices.json().source).toBe("Pyth");
+    expect(prices.json().points.length).toBeGreaterThan(10);
+
     const backtest = await app.inject({ method: "GET", url: "/api/pools/usdc-weth-005/backtest?principalUsd=100000" });
     expect(backtest.statusCode).toBe(200);
     expect(backtest.json().windowCount).toBeGreaterThan(0);
@@ -71,5 +76,32 @@ test("sandbox funding, position coverage, and tick exit remain capacity bounded"
       payload: { participant, amountUsd: 1000, requestCover: true } });
     expect(rejected.statusCode).toBe(409);
     expect((await app.inject({ method: "GET", url: `/api/portfolio?participant=${participant}` })).json().positions).toHaveLength(1);
+  } finally { await app.close(); }
+});
+
+test("fresh oracle quote is recorded and can explicitly move a sandbox tick", async () => {
+  const publishedAt = new Date().toISOString();
+  const live = {
+    source: "Pyth" as const, network: "Pyth Core", sourceUrl: "https://www.pyth.network/price-feeds",
+    fetchedAt: publishedAt,
+    assets: { WETH: { usd: 2700, publishedAt }, USDC: { usd: 1, publishedAt } },
+    wethUsdc: 2700,
+  };
+  const app = buildApp(":memory:", async () => live);
+  try {
+    const created = await app.inject({ method: "POST", url: "/api/markets", payload: {
+      creator: "participant-oracle", priceUsd: 2000, lowerPriceUsd: 1800,
+      upperPriceUsd: 2200, liquidityTargetUsd: 1000, collateralBudgetUsd: 100,
+    } });
+    const marketId = created.json().market.id as string;
+    const current = await app.inject({ method: "GET", url: "/api/live-prices" });
+    expect(current.json().source).toBe("Pyth");
+    const history = await app.inject({ method: "GET", url: "/api/live-price-history" });
+    expect(history.json().points.at(-1).priceUsdc).toBe(2700);
+    const synced = await app.inject({ method: "POST", url: `/api/markets/${marketId}/oracle-sync` });
+    expect(synced.statusCode).toBe(200);
+    expect(synced.json().market.priceUsd).toBe(2700);
+    expect(synced.json().market.inRange).toBe(false);
+    expect(synced.json().source).toBe("Pyth");
   } finally { await app.close(); }
 });

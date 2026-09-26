@@ -8,7 +8,9 @@ const from = new Date(Date.parse(`${through}T00:00:00Z`) - 179 * 86_400_000).toI
 const pools = await Promise.all(POOLS.map(async (pool) => {
   const [response, volumeResponse] = await Promise.all([
     fetch(`https://yields.llama.fi/chart/${pool.llamaId}`),
-    fetch(`https://api.geckoterminal.com/api/v2/networks/eth/pools/${pool.address}/ohlcv/day?aggregate=1&limit=200&currency=usd`),
+    fetch(`https://api.geckoterminal.com/api/v2/networks/eth/pools/${pool.address}/ohlcv/day?aggregate=1&limit=200&currency=usd`, {
+      headers: { Accept: "application/json;version=20230203" },
+    }),
   ]);
   if (!response.ok) throw new Error(`DefiLlama ${pool.id}: HTTP ${response.status}`);
   if (!volumeResponse.ok) throw new Error(`GeckoTerminal ${pool.id}: HTTP ${volumeResponse.status}`);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, ArrowRight, CircleHelp, Droplets, PiggyBank, Plus, RefreshCw, ShieldCheck } from "lucide-react";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TokenPairIcon } from "@/components/token-pair-icon";
-import { PoolPriceChart, type PriceEvent } from "@/components/pool-price-chart";
+import { PoolPriceChart, type OraclePoint } from "@/components/pool-price-chart";
 
 export type WorkspaceRole = "lp" | "underwriter";
 
@@ -32,6 +32,12 @@ type Position = {
   feeFloorUsd: number; premiumUsd: number; payoutCapUsd: number; createdAt: string;
 };
 type Pledge = { id: string; marketId: string; capacityUsd: number; createdAt: string };
+type LivePrices = {
+  source: "Pyth" | "Chainlink"; network: string; sourceUrl: string; fetchedAt: string;
+  assets: { WETH: { usd: number; publishedAt: string; confidenceUsd?: number };
+    USDC: { usd: number; publishedAt: string; confidenceUsd?: number } };
+  wethUsdc: number;
+};
 const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 
 async function api<T>(path: string, method = "GET", body?: object): Promise<T> {
@@ -65,7 +71,10 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
   const router = useRouter();
   const participant = useParticipant();
   const [markets, setMarkets] = useState<Market[]>([]);
-  const [priceEvents, setPriceEvents] = useState<PriceEvent[]>([]);
+  const [oraclePoints, setOraclePoints] = useState<OraclePoint[]>([]);
+  const [livePrices, setLivePrices] = useState<LivePrices | null>(null);
+  const [liveError, setLiveError] = useState(false);
+  const initializedCreatePrice = useRef(false);
   const [selectedId, setSelectedId] = useState(marketId ?? "");
   const [quoteState, setQuoteState] = useState<{ marketId: string; data: Quote } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -86,6 +95,26 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
     ? quoteState.data : null;
 
   useEffect(() => {
+    let active = true;
+    const refresh = () => {
+      void api<LivePrices>("live-prices").then((value) => {
+        if (!active) return;
+        setLivePrices(value);
+        setLiveError(false);
+        if (!initializedCreatePrice.current) {
+          initializedCreatePrice.current = true;
+          setPrice(value.wethUsdc.toFixed(2));
+          setLower((value.wethUsdc * .9).toFixed(2));
+          setUpper((value.wethUsdc * 1.1).toFixed(2));
+        }
+      }).catch(() => { if (active) { setLivePrices(null); setLiveError(true); } });
+    };
+    refresh();
+    const timer = setInterval(refresh, 30_000);
+    return () => { active = false; clearInterval(timer); };
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     void api<{ markets: Market[] }>("markets").then(({ markets: rows }) => {
       if (controller.signal.aborted) return;
@@ -96,13 +125,13 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
   }, [refreshKey, marketId]);
 
   useEffect(() => {
-    if (!marketId || !selectedId) return;
+    if (!marketId) return;
     let active = true;
-    void api<{ events: PriceEvent[] }>(`markets/${selectedId}/price-history`)
-      .then(({ events }) => { if (active) setPriceEvents(events); })
-      .catch(() => { if (active) setPriceEvents([]); });
+    void api<{ points: OraclePoint[] }>("live-price-history")
+      .then(({ points }) => { if (active) setOraclePoints(points); })
+      .catch(() => { if (active) setOraclePoints([]); });
     return () => { active = false; };
-  }, [marketId, selectedId, refreshKey]);
+  }, [marketId, livePrices]);
 
   useEffect(() => {
     if (!marketId || !selectedId || !Number(deposit)) return;
@@ -153,10 +182,16 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
     }), "Sandbox tick updated. New coverage availability has been recalculated.");
   }
 
+  async function syncOraclePrice() {
+    if (!selected || !livePrices) return;
+    await change(() => api(`markets/${selected.id}/oracle-sync`, "POST"),
+      "Fresh oracle reference applied to the sandbox tick. Coverage availability was recalculated.");
+  }
+
   return <div className="mw-page">
     <div className="mw-banner"><CircleHelp size={16} /><p><strong>Interactive sandbox</strong> · Pool funding, deposits, price moves, and coverage are saved locally by the Bun server. No tokens move and no policy is active on-chain.</p></div>
     <div className="mw-heading"><div>{marketId && <Link className="mw-back-link" href="/dashboard/pools">← All pools</Link>}{marketId && selected ? <div className="mw-title-with-icon"><TokenPairIcon pair={selected.pair} size="large" /><h2>{selected.pair}</h2></div> : <h2>{marketId ? "Pool details" : "Pool directory"}</h2>}<p>{marketId ? "Review funding, range, and available protection before joining." : "Explore funded markets, then open a pool to provide liquidity or underwrite."}</p></div>{!marketId && <Button className="kd-apply-button" onClick={() => setCreating(!creating)}><Plus size={15} /> Create pool</Button>}</div>
-    {creating && !marketId && <Card className="kd-card mw-form-card"><div className="kd-card-heading"><h2><Droplets size={16} /> New pool draft</h2><Badge variant="outline">WETH / USDC · 0.05%</Badge></div><div className="mw-form-inner"><div className="mw-fields"><AmountField label="Current ETH price (USD)" value={price} onChange={setPrice} min={1} /><AmountField label="Lower range price" value={lower} onChange={setLower} min={1} /><AmountField label="Upper range price" value={upper} onChange={setUpper} min={1} /><AmountField label="LP funding target (USD)" value={target} onChange={setTarget} min={100} /><AmountField label="Protection capacity target (USD)" value={budget} onChange={setBudget} min={1} /></div><p>Price and ticks are sandbox inputs. A real v4 pool must use the deployed hook and an independent price feed.</p><Button className="kd-apply-button" disabled={busy || !participant} onClick={createMarket}>Create draft <ArrowRight size={15} /></Button></div></Card>}
+    {creating && !marketId && <Card className="kd-card mw-form-card"><div className="kd-card-heading"><h2><Droplets size={16} /> New pool draft</h2><Badge variant="outline">WETH / USDC · 0.05%</Badge></div><div className="mw-form-inner"><div className="mw-fields"><AmountField label="Current ETH price (USD)" value={price} onChange={setPrice} min={1} /><AmountField label="Lower range price" value={lower} onChange={setLower} min={1} /><AmountField label="Upper range price" value={upper} onChange={setUpper} min={1} /><AmountField label="LP funding target (USD)" value={target} onChange={setTarget} min={100} /><AmountField label="Protection capacity target (USD)" value={budget} onChange={setBudget} min={1} /></div><p>{livePrices ? `Starting price follows the latest ${livePrices.source} WETH/USDC reference. ` : "Live oracle quote unavailable; enter a starting price. "}Prices and ticks remain editable sandbox inputs.</p><Button className="kd-apply-button" disabled={busy || !participant} onClick={createMarket}>Create draft <ArrowRight size={15} /></Button></div></Card>}
     {error && <div className="mw-message is-error" role="alert">{error}</div>}{notice && <div className="mw-message" role="status">{notice}</div>}
     {!marketId && !markets.length && !creating && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre pool drafts yet</h2><p>Create a sandbox market to test liquidity funding, underwriting interest, tick movement, and limited cover.</p><Button className="kd-apply-button" onClick={() => setCreating(true)}><Plus size={15} /> Create first pool</Button></div></Card>}
     {!marketId && !!markets.length && <><div className="mw-directory-summary"><span>MARKETS <strong>{markets.length}</strong></span><span>LP CAPITAL <strong>{usd(markets.reduce((sum, market) => sum + market.investedUsd, 0))}</strong></span><span>AVAILABLE COVER <strong>{usd(markets.reduce((sum, market) => sum + market.coverRemainingUsd, 0))}</strong></span></div><div className="mw-directory-header"><h3>Available markets</h3><span>LOCAL SANDBOX · WETH / USDC</span></div><div className="mw-directory-grid">{markets.map((market) => <Link key={market.id} href={`/dashboard/pools/${market.id}`} className="mw-directory-card"><div className="mw-directory-top"><TokenPairIcon pair={market.pair} size="large" /><Badge variant="outline">{market.status.replaceAll("_", " ")}</Badge></div><div><h3>{market.pair}</h3><p>{market.feeTier} fee · {usd(market.priceUsd)} / ETH</p></div><div className="mw-directory-metrics"><div><span>LP funded</span><strong>{usd(market.investedUsd)}</strong><small>of {usd(market.liquidityTargetUsd)}</small></div><div><span>Cover left</span><strong>{usd(market.coverRemainingUsd)}</strong><small>{usd(market.pledgedUsd)} pledged</small></div></div><div className="mw-directory-progress"><span>Liquidity funding</span><progress max={market.liquidityTargetUsd} value={market.investedUsd} /></div><div className="mw-directory-open">View pool <ArrowRight size={15} /></div></Link>)}</div></>}
@@ -167,10 +202,22 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
           <div className="kd-card-heading"><h2>Pool overview</h2><Badge variant="outline">{selected.feeTier} FEE</Badge></div>
           <div className="mw-market-overview-inner">
             <div className="mw-overview-pair"><TokenPairIcon pair={selected.pair} size="large" /><div><strong>{selected.pair}</strong><span>V4 CONCEPT · SANDBOX</span></div></div>
-            <div className="mw-overview-price"><span>Current pool price</span><strong>{usd(selected.priceUsd)}</strong><small>per WETH · tick {selected.currentTick}</small></div>
+            <div className="mw-overview-price"><span>Sandbox pool price</span><strong>{usd(selected.priceUsd)}</strong><small>per WETH · tick {selected.currentTick}</small></div>
             <div className="mw-overview-row"><span>LP capital</span><strong>{usd(selected.investedUsd)}</strong></div>
             <div className="mw-overview-row"><span>Protection pledged</span><strong>{usd(selected.pledgedUsd)}</strong></div>
             <div className="mw-overview-row"><span>Cover available</span><strong>{usd(selected.coverRemainingUsd)}</strong></div>
+          </div>
+        </Card>
+        <Card className="kd-card mw-oracle-card">
+          <div className="kd-card-heading"><h2><Activity size={15} /> Live oracle</h2><span>{livePrices ? livePrices.source.toUpperCase() : "UNAVAILABLE"}</span></div>
+          <div className="mw-oracle-inner">
+            {livePrices ? <>
+              <div className="mw-oracle-primary"><span>WETH / USDC</span><strong>{usd(livePrices.wethUsdc)}</strong><small>derived from WETH/USD ÷ USDC/USD</small></div>
+              <div className="mw-oracle-row"><span>WETH / USD</span><strong>{usd(livePrices.assets.WETH.usd)}</strong></div>
+              <div className="mw-oracle-row"><span>USDC / USD</span><strong>{usd(livePrices.assets.USDC.usd)}</strong></div>
+              <p>{livePrices.source} · {livePrices.network} · published {new Date(livePrices.assets.WETH.publishedAt).toLocaleTimeString()}. Refreshes every 30 seconds.</p>
+              <a href={livePrices.sourceUrl} target="_blank" rel="noreferrer">View feed <ArrowRight size={12} /></a>
+            </> : <p>{liveError ? "Fresh oracle quotes are temporarily unavailable. The sandbox price has not changed." : "Fetching fresh WETH and USDC quotes…"}</p>}
           </div>
         </Card>
         <Card className="kd-card mw-market-overview">
@@ -184,7 +231,7 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
         </Card>
       </aside>
       <section className="mw-market-center" aria-label="Price and funding">
-        <PoolPriceChart events={priceEvents} lower={selected.lowerPriceUsd} upper={selected.upperPriceUsd} current={selected.priceUsd} />
+        <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={selected.lowerPriceUsd} upper={selected.upperPriceUsd} current={selected.priceUsd} />
         <Card className="kd-card mw-funding-card">
           <div className="kd-card-heading"><h2><Droplets size={16} /> Launch funding</h2><Badge variant="outline">{selected.funded ? "BOTH SIDES FUNDED" : "FUNDING IN PROGRESS"}</Badge></div>
           <div className="mw-funding-inner">
@@ -229,7 +276,7 @@ export function WorkspacePools({ marketId, role, onRoleChange }: { marketId?: st
         </Card>}
         <Card className="kd-card mw-trade-card mw-scenario-card">
           <div className="kd-card-heading"><h2><RefreshCw size={16} /> Price scenario</h2><span>MANUAL TICK</span></div>
-          <div className="mw-trade-inner"><AmountField label="New WETH price (USD)" value={simulatedPrice} onChange={setSimulatedPrice} min={1} /><Button variant="outline" disabled={busy || !simulatedPrice} onClick={() => void movePrice()}>Record price move</Button><small className="mw-action-note">Adds a point to the sandbox chart. This is not a live oracle price.</small></div>
+          <div className="mw-trade-inner"><AmountField label="New WETH price (USD)" value={simulatedPrice} onChange={setSimulatedPrice} min={1} /><Button variant="outline" disabled={busy || !simulatedPrice} onClick={() => void movePrice()}>Record manual move</Button><Button variant="outline" disabled={busy || !livePrices} onClick={() => void syncOraclePrice()}>Use fresh oracle price <RefreshCw size={13} /></Button><small className="mw-action-note">Oracle sync re-reads the feed on the server and updates this shared sandbox tick. It does not settle an on-chain policy.</small></div>
         </Card>
       </aside>
     </div>}

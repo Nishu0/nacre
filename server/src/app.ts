@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { backtest, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
+import { getLivePrices, type LivePrices } from "./live-prices";
 import { getMarket, listMarkets, listPositions, presentMarket, priceToTick, quotePosition, VALID_REFERENCE } from "./market-model";
 
 type CreateMarket = { creator: string; priceUsd: number; lowerPriceUsd: number;
@@ -14,7 +15,7 @@ const validParticipant = (value: unknown): value is string =>
 const inRange = (value: unknown, min: number, max: number): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 
-export function buildApp(databasePath?: string) {
+export function buildApp(databasePath?: string, priceProvider: () => Promise<LivePrices> = getLivePrices) {
   const app = Fastify({ logger: true });
   const db = openDb(databasePath);
   const existingObservations = db.query("SELECT COUNT(*) AS count FROM observations").get() as { count: number };
@@ -48,6 +49,37 @@ export function buildApp(databasePath?: string) {
       yieldSource: `https://defillama.com/yields/pool/${pool.llamaId}`,
       capturedAt: seeded.find((row) => row.id === pool.id)?.captured_at ?? null,
     }));
+  });
+
+  app.get("/api/live-prices", async (_request, reply) => {
+    try {
+      const live = await priceProvider();
+      if (live.source === "Pyth") db.prepare(`INSERT OR IGNORE INTO oracle_price_samples
+        (published_at, weth_usdc, weth_usd, usdc_usd, source) VALUES (?, ?, ?, ?, ?)`)
+        .run(live.assets.WETH.publishedAt, live.wethUsdc,
+          live.assets.WETH.usd, live.assets.USDC.usd, live.source);
+      return live;
+    }
+    catch { return reply.code(503).send({ error: "Fresh oracle prices are unavailable. Try again shortly." }); }
+  });
+
+  app.get("/api/live-price-history", async () => {
+    const snapshot = JSON.parse(readFileSync(
+      new URL("../data/pyth-weth-history.json", import.meta.url), "utf8",
+    )) as { capturedAt: string; points: [string, number][] };
+    const since = Date.now() - 25 * 60 * 60 * 1000;
+    const stored = db.query(`SELECT published_at, weth_usdc FROM oracle_price_samples
+      WHERE published_at >= ? AND source = 'Pyth' ORDER BY published_at`)
+      .all(new Date(since).toISOString()) as { published_at: string; weth_usdc: number }[];
+    const byTime = new Map<string, number>();
+    if (Date.parse(snapshot.capturedAt) >= Date.now() - 48 * 60 * 60 * 1000) {
+      for (const [timestamp, price] of snapshot.points) {
+        if (Date.parse(timestamp) >= since) byTime.set(timestamp, price);
+      }
+    }
+    for (const row of stored) byTime.set(row.published_at, row.weth_usdc);
+    return { source: "Pyth", points: [...byTime].sort(([a], [b]) => a.localeCompare(b))
+      .map(([timestamp, priceUsdc]) => ({ timestamp, priceUsdc })) };
   });
 
   app.get<{ Params: { poolId: string }; Querystring: { principalUsd?: string } }>(
@@ -214,6 +246,30 @@ export function buildApp(databasePath?: string) {
       db.prepare("INSERT INTO market_price_events VALUES (?, ?, ?, ?, ?)")
         .run(crypto.randomUUID(), row.id, request.body.priceUsd, tick, new Date().toISOString());
       return { market: presentMarket(db, getMarket(db, row.id)!) };
+    },
+  );
+
+  app.post<{ Params: { marketId: string } }>(
+    "/api/markets/:marketId/oracle-sync", async (request, reply) => {
+      const row = getMarket(db, request.params.marketId);
+      if (!row) return reply.code(404).send({ error: "Unknown market" });
+      try {
+        // Read again server-side. A client-supplied price is never treated as an oracle quote.
+        const live = await priceProvider();
+        const priceUsd = live.wethUsdc;
+        if (!inRange(priceUsd, 0.01, 1_000_000)) throw new Error("Invalid live price");
+        const tick = priceToTick(priceUsd);
+        db.transaction(() => {
+          db.prepare("UPDATE market_drafts SET price_usd = ?, tick = ? WHERE id = ?")
+            .run(priceUsd, tick, row.id);
+          db.prepare("INSERT INTO market_price_events VALUES (?, ?, ?, ?, ?)")
+            .run(crypto.randomUUID(), row.id, priceUsd, tick, new Date().toISOString());
+        })();
+        return { market: presentMarket(db, getMarket(db, row.id)!),
+          source: live.source, publishedAt: live.assets.WETH.publishedAt };
+      } catch {
+        return reply.code(503).send({ error: "Fresh oracle prices are unavailable. Sandbox tick was not changed." });
+      }
     },
   );
 
