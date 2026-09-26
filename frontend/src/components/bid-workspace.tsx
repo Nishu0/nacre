@@ -101,7 +101,12 @@ function BidForm({ market, current, account, onConnect, compete }: { compete?: C
   return <div className="bw-form-grid"><div className="bw-left-column"><Card className="kd-card"><div className="kd-card-heading"><h2>Your bid range</h2><span>nWETH / nUSDC</span></div><div className="mw-trade-inner">
     <p>Set the price range you want to cover. Investors will use these exact bins and your bid’s duration.</p>
     <div className="cw-terms"><span>On-chain pool price</span><strong>{money(current)}</strong></div>
-    <div className="bps-presets">{[2, 5, 10].map((pct) => <Button key={pct} variant="outline" onClick={() => { setLower(Math.max(minimum, current * (1 - pct / 100)).toFixed(2)); setUpper(Math.min(maximum, current * (1 + pct / 100)).toFixed(2)); }}>±{pct}% spread</Button>)}</div>
+    <div className="bw-spread-presets" role="group" aria-label="Quick price ranges">{[2, 5, 10].map((pct) => {
+      const nextLower = Math.max(minimum, current * (1 - pct / 100)).toFixed(2);
+      const nextUpper = Math.min(maximum, current * (1 + pct / 100)).toFixed(2);
+      const selected = priceInputToTick(lower) === priceInputToTick(nextLower) && priceInputToTick(upper) === priceInputToTick(nextUpper);
+      return <button type="button" key={pct} aria-pressed={selected} onClick={() => { setLower(nextLower); setUpper(nextUpper); }}><strong>±{pct}%</strong><span>spread</span></button>;
+    })}</div>
     <PoolRangeEditor minimum={minimum} maximum={maximum} current={current} currentLabel="POOL PRICE" lower={Number(lower)} upper={Number(upper)} onLower={(v) => setLower(String(v))} onUpper={(v) => setUpper(String(v))} />
     <small>Range illustration; bars are not measured liquidity distribution.</small>
     {!valid && <p role="status">Enter a range inside {money(minimum)}–{money(maximum)}.</p>}

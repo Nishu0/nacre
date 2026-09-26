@@ -157,3 +157,12 @@
   color: #1e3d29;
   border-color: #497957;
 }
+
+.bw-spread-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 4px; border: 1px solid #dce7df; border-radius: 10px; background: #f3f7f4; }
+.bw-spread-presets button { display: flex; align-items: center; justify-content: center; gap: 5px; width: 100%; min-width: 0; min-height: 40px; padding: 8px 6px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #42634c; font: inherit; font-size: 12px; line-height: 20px; cursor: pointer; transition: background-color 150ms, border-color 150ms; }
+.bw-spread-presets button strong { font-size: 13px; font-weight: 650; white-space: nowrap; }
+.bw-spread-presets button span { font-weight: 400; }
+.bw-spread-presets button:hover { background: #e7f0e9; }
+.bw-spread-presets button[aria-pressed="true"] { color: #234b31; border-color: #b5d0bd; background: #fff; }
+.bw-spread-presets button:focus-visible { outline: 2px solid #478761; outline-offset: 2px; }
+@media (max-width: 400px) { .bw-spread-presets { gap: 3px; } .bw-spread-presets button { flex-direction: column; gap: 0; padding: 6px 2px; line-height: 17px; } }
