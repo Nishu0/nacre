@@ -238,3 +238,12 @@
 .bid-investor-navigation { display: flex; align-items: end; flex-wrap: wrap; gap: 18px; }
 .bid-investor-navigation .mw-field { flex: 1; min-width: 240px; }
 .bid-investor-navigation select { width: 100%; }
+.cw-bid-batch { display: grid; gap: 14px; padding: 18px; border: 1px solid #c9dbcf; border-radius: 12px; background: #f6faf7; color: #30503c; }
+.cw-batch-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.cw-batch-heading button { background: #fff; border: 1px solid #bfd1c4; border-radius: 6px; padding: 5px 9px; color: #7e3f34; cursor: pointer; }
+.cw-bid-batch p, .cw-bid-batch small { margin: 0; color: #566c5e; font-size: 12px; line-height: 1.5; }
+.cw-batch-list { display: grid; gap: 10px; list-style: none; margin: 0; padding: 0; }
+.cw-batch-list li { display: grid; gap: 10px; padding: 14px; border: 1px solid #dce7df; border-radius: 9px; background: #fff; font-size: 13px; }
+.cw-batch-details { display: flex; flex-wrap: wrap; gap: 6px 14px; color: #526859; font-size: 12px; }
+.cw-batch-heading button:disabled { opacity: .5; cursor: not-allowed; }
+.cw-batch-heading button:focus-visible { outline: 2px solid #4b805d; outline-offset: 2px; }

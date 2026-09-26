@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { baseClient, basescanTx, ensureBaseSepolia, faucetAbi, injectedClient,
   NACRE_REPEAT_FAUCET, NACRE_TEST_USDC, repeatFaucetAbi } from "@/lib/nacre-chain";
 import { NACRE_TEST_WETH } from "@/lib/test-pools";
+import { walletErrorMessage } from "@/lib/wallet-error";
 import { readConfirmedBalance } from "@/lib/confirmed-balance";
 
 const assets = [
@@ -60,26 +61,41 @@ function FaucetCard({ asset, account, onConnect }: { asset: Asset; account: stri
     } finally { refreshingBalance.current = false; setRefreshing(false); }
   }
 
+  async function confirmClaim(tx: Hex) {
+    let replaced = false;
+    const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000,
+      onReplaced: ({ reason }) => { if (reason !== "repriced") replaced = true; },
+    });
+    if (replaced) { setHash(null); throw new Error("The claim was cancelled or replaced in your wallet. You can try again."); }
+    if (receipt.status !== "success") { setHash(null); throw new Error("The faucet transaction reverted. You can try again."); }
+    setHash(receipt.transactionHash);
+    setConfirmed(true);
+    setConfirmedBlock(receipt.blockNumber);
+    await refreshBalance(receipt.blockNumber);
+  }
+
   async function claim() {
     if (!account || locked.current || refreshingBalance.current) return;
     ++balanceVersion.current;
-    locked.current = true; setBusy(true); setError(""); setHash(null); setConfirmed(false);
+    locked.current = true; setBusy(true); setError("");
     setBalanceMessage("");
     try {
+      if (hash && !confirmed) { await confirmClaim(hash); return; }
+      setHash(null); setConfirmed(false);
       await ensureBaseSepolia();
       const wallet = injectedClient();
+      const [connected] = await wallet.getAddresses();
+      if (connected?.toLowerCase() !== account.toLowerCase()) throw new Error("Wallet changed. Reconnect the wallet you want to fund.");
+      const ethBalance = await baseClient.getBalance({ address: account as Address });
+      if (ethBalance === 0n) throw new Error("Add Base Sepolia ETH to this wallet for network gas, then retry. Test tokens are free, but claiming requires gas.");
       const call = { account: account as Address, address: asset.faucet, abi: repeatFaucetAbi, functionName: "claim" as const };
       const estimated = await baseClient.estimateContractGas(call);
       if (estimated > BigInt(500_000)) throw new Error("Unexpected faucet gas estimate. Please retry.");
       const gas = estimated * BigInt(130) / BigInt(100) + BigInt(10_000);
       const tx = await wallet.writeContract({ ...call, chain: wallet.chain, gas });
       setHash(tx);
-      const receipt = await baseClient.waitForTransactionReceipt({ hash: tx, timeout: 120_000 });
-      if (receipt.status !== "success") throw new Error("The faucet transaction reverted.");
-      setConfirmed(true);
-      setConfirmedBlock(receipt.blockNumber);
-      await refreshBalance(receipt.blockNumber);
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Faucet claim failed."); }
+      await confirmClaim(tx);
+    } catch (reason) { setError(walletErrorMessage(reason, "Could not claim tokens. Check your wallet connection and Base Sepolia ETH for gas, then retry.")); }
     finally { locked.current = false; setBusy(false); }
   }
   const shown = balance?.account.toLowerCase() === account?.toLowerCase() ? balance : null;
@@ -92,7 +108,7 @@ function FaucetCard({ asset, account, onConnect }: { asset: Asset; account: stri
     {confirmed && <p className="nf-success" role="status">{asset.claim} {asset.symbol} claimed. You can claim again whenever you need more.</p>}
     {hash && <a className="nf-tx" href={basescanTx(hash)} target="_blank" rel="noreferrer">View transaction <ExternalLink size={14} /></a>}
     {!account ? <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={16} /></Button>
-      : <Button className="kd-apply-button" disabled={busy || refreshing} onClick={() => void claim()}>{refreshing ? "Updating balance…" : busy ? "Claiming and confirming…" : `Claim ${asset.claim} ${asset.symbol}`}</Button>}
+      : <Button className="kd-apply-button" disabled={busy || refreshing} onClick={() => void claim()}>{refreshing ? "Updating balance…" : busy ? "Claiming and confirming…" : hash && !confirmed ? "Check pending claim" : `Claim ${asset.claim} ${asset.symbol}`}</Button>}
   </div></Card>;
 }
 

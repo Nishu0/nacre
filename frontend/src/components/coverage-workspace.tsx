@@ -115,12 +115,16 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
     const value = bids.reduce((n, bid) => n + bid.amount, 0n);
     if (!BigInt(RANGE_FACTORY)) throw new Error("Select a deployed pool first.");
     await action.approve(owner, RANGE_FACTORY, value);
-    action.setStep("Fund this range in your wallet…");
-    await action.confirm(await injectedClient().writeContract({ account: owner, address: RANGE_FACTORY,
-      abi: limitedFactoryAbi, functionName: "createOffers", args: [bids], gas: BigInt(bids.length) * 3500000n }));
+    action.setStep(`Preparing ${bids.length} ${bids.length === 1 ? "bid" : "bids"}…`);
+    const call = { account: owner, address: RANGE_FACTORY, abi: limitedFactoryAbi, functionName: "createOffers" as const, args: [bids] as const };
+    const estimated = await baseClient.estimateContractGas(call);
+    const gas = estimated * 120n / 100n + 25000n;
+    if (gas > 16_000_000n) throw new Error("This batch needs too much gas. Remove a bid and submit a smaller batch.");
+    action.setStep(`Confirm funding ${bids.length} ${bids.length === 1 ? "bid" : "bids"} in your wallet…`);
+    await action.confirm(await injectedClient().writeContract({ ...call, gas }));
     setQueue([]);
   });
-  return <Card className="kd-card mw-trade-card"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Post a funded bid</h2><span>FUNDED ON-CHAIN</span></div>
+  return <Card className="kd-card mw-trade-card"><div className="kd-card-heading"><h2><ShieldCheck size={16} /> Create coverage bids</h2><span>FUNDED ON-CHAIN</span></div>
     <div className="mw-trade-inner">
       <p>Fund this price range. Investors can select a narrower range inside it. All positions share your capital and spot limit; your duration and premium apply to each purchase.</p>
       <div className="cw-terms"><strong>{Number.isFinite(tickLower) && Number.isFinite(tickUpper) ? rangeText(tickLower, tickUpper) : "Choose a valid range"}</strong><span>Ticks {tickLower} to {tickUpper} · {(tickUpper - tickLower) / 10} bins</span></div>
@@ -135,8 +139,20 @@ export function CoverageFunding({ account, onConnect, lower, upper, poolId, init
       <div className="cw-terms"><span>For a {cap} nUSDC cap over {days} days</span><strong>{Number.isFinite(bps) ? (Number(cap) * bps / 10000).toFixed(2) : "—"} nUSDC premium</strong></div>
       {valid && <div className="mw-underwriter-sim"><div><span>Premium if all selected spots buy the maximum cap</span><strong>{(Number(spots) * Number(cap) * bps / 10000).toFixed(4)} nUSDC</strong></div><div><span>Net loss if those claims use every cap</span><strong>{(Number(spots) * Number(cap) * (1 - bps / 10000)).toFixed(4)} nUSDC</strong></div></div>}
       <p className="mw-risk-note">Premiums are earned when an LP buys coverage. Claims can consume the full cap. Unused capital can be withdrawn; active collateral stays reserved until settlement.</p>
-      <Button variant="outline" disabled={action.busy || !valid || queue.length >= 4} onClick={() => setQueue([...queue, draftBid()])}>Add this range to batch ({queue.length}/4)</Button>
-      {!!queue.length && <div className="cw-terms"><strong>Batch · {queue.length} bids · {amount(queue.reduce((n, b) => n + b.amount, 0n))} nUSDC</strong>{queue.map((bid, i) => <div key={i}><span>{rangeText(bid.lower, bid.upper)} · {bid.spots} spots · {bid.premiumBps / 100}%</span> <button disabled={action.busy} type="button" onClick={() => setQueue(queue.filter((_, j) => i !== j))}>Remove</button></div>)}<small>Only these queued bids are submitted. Edit the range and add another to compete across multiple ranges.</small></div>}
+      <section className="cw-bid-batch" aria-label="Bid batch">
+        <div className="cw-batch-heading"><strong>Your bid batch</strong><span>{queue.length} / 4 bids</span></div>
+        <p>Choose a range and terms, add it below, then change the form to add another bid.</p>
+        <Button variant="outline" disabled={action.busy || !valid || queue.length >= 4} onClick={() => setQueue((current) => current.length < 4 ? [...current, draftBid()] : current)}>{queue.length >= 4 ? "Batch full · fund these bids first" : queue.length ? "Add another bid to batch" : "Add bid to batch"}</Button>
+        {!queue.length ? <small>No bids queued. You can add up to four, or fund the current bid directly.</small> : <>
+          <ol className="cw-batch-list">{queue.map((bid, i) => <li key={i}>
+            <div className="cw-batch-heading"><strong>Bid {i + 1}</strong><button disabled={action.busy} type="button" aria-label={`Remove bid ${i + 1}`} onClick={() => setQueue((current) => current.filter((_, j) => i !== j))}>Remove</button></div>
+            <strong>{rangeText(bid.lower, bid.upper)}</strong>
+            <div className="cw-batch-details"><span>{amount(bid.amount)} nUSDC backing</span><span>{bid.spots} spots</span><span>{bid.duration / 86400} days</span><span>{bid.premiumBps / 100}% premium</span><span>{amount(bid.cap)} nUSDC cap / position</span></div>
+          </li>)}</ol>
+          <div className="cw-batch-heading"><span>Total backing</span><strong>{amount(queue.reduce((n, bid) => n + bid.amount, 0n))} nUSDC</strong></div>
+          <small>Only the bids listed here will be funded. After confirmation, you can create another batch.</small>
+        </>}
+      </section>
       {error && <p role="alert" className="mw-premium-warning">{error}</p>}
       {!account ? <Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet to fund</Button>
         : <Button className="kd-apply-button" disabled={action.busy || (!queue.length && !valid) || !data?.configured || !!error || !BigInt(LIMITED_FACTORY)} onClick={() => void fund()}>{action.busy ? action.step : queue.length ? `Fund ${queue.length} bids in one transaction` : "Fund limited bid for these bins"}</Button>}
