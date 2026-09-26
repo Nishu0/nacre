@@ -1,3 +1,4 @@
+import { testPool } from "../../frontend/src/lib/test-pools";
 import type { Database } from "bun:sqlite";
 import { getObservations } from "./db";
 import { rollingWindows, roundUsd } from "./backtest";
@@ -59,7 +60,7 @@ export function presentMarket(db: Database, row: MarketRow) {
     && totals.pledgedUsd >= row.collateral_budget_usd;
   return {
     id: row.id, creator: row.creator, referencePoolId: row.reference_pool_id,
-    pair: "WETH / nUSDC", feeTier: "0.05%", priceUsd: row.price_usd,
+    pair: `${testPool(deployment?.pool_id)?.symbol ?? "WETH"} / nUSDC`, feeTier: "0.05%", priceUsd: row.price_usd,
     lowerPriceUsd: row.lower_price_usd, upperPriceUsd: row.upper_price_usd,
     currentTick: row.tick, tickLower: row.tick_lower, tickUpper: row.tick_upper,
     liquidityTargetUsd: row.liquidity_target_usd,

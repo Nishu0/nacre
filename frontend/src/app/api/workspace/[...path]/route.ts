@@ -23,7 +23,7 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
   }
   const incoming = new URL(request.url);
   const upstream = new URL(`/api/${path.join("/")}`, process.env.NACRE_API_URL ?? "http://127.0.0.1:3001");
-  for (const key of ["fresh", "depositUsd", "participant", "account", "marketId", "lowerPriceUsd", "upperPriceUsd", "days", "feeTargetUsd"]) {
+  for (const key of ["fresh", "poolId", "depositUsd", "participant", "account", "marketId", "lowerPriceUsd", "upperPriceUsd", "days", "feeTargetUsd"]) {
     const value = incoming.searchParams.get(key);
     if (value !== null) upstream.searchParams.set(key, value);
   }

@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { baseClient, injectedClient, ensureBaseSepolia, erc20Abi, priceToRawTick, basescanTx } from "@/lib/nacre-chain";
-import { COVERAGE_APP, COVERAGE_TOKEN, COVERAGE_VAULT, COVERAGE_POSITIONS, RANGE_FACTORY,
+import { testPool } from "@/lib/test-pools";
+import { COVERAGE_APP, COVERAGE_TOKEN, COVERAGE_VAULT, COVERAGE_POSITIONS,
   coverageVaultAbi, coverageNftAbi, coverageAppAbi, rangeFactoryAbi, rangeOfferAbi,
   tickPrice, type CoverageOffer, type CoverageRequest } from "@/lib/coverage-contracts";
 import { useCoverage, refreshCoverage } from "@/lib/use-coverage";
@@ -19,7 +20,7 @@ const statuses = ["Unknown", "Awaiting purchase", "Covered", "Settled", "Cancell
 const rangeText = (lower: number, upper: number) => `${dollars(tickPrice(lower))} – ${dollars(tickPrice(upper))}`;
 const durationOptions = [7, 14, 30, 60, 90];
 function matches(offer: CoverageOffer, request: CoverageRequest) {
-  return !offer.closed && offer.tickLower === request.tickLower && offer.tickUpper === request.tickUpper
+  return offer.poolId === request.poolId && !offer.closed && offer.tickLower === request.tickLower && offer.tickUpper === request.tickUpper
     && offer.duration === request.duration && BigInt(offer.available) >= BigInt(request.payoutCap)
     && !same(offer.owner, request.lp);
 }
@@ -67,10 +68,11 @@ function useCoverageAction(account: string | null) {
       {hash && <a className="mw-evidence-link" href={basescanTx(hash)} target="_blank" rel="noreferrer">View transaction <ExternalLink size={13} /></a>}</> };
 }
 
-export function CoverageFunding({ account, onConnect, lower, upper }: {
-  account: string | null; onConnect: () => Promise<void>; lower: number; upper: number;
+export function CoverageFunding({ account, onConnect, lower, upper, poolId }: {
+  account: string | null; onConnect: () => Promise<void>; lower: number; upper: number; poolId?: string;
 }) {
-  const { data, error } = useCoverage();
+  const { data, error } = useCoverage(poolId);
+  const RANGE_FACTORY = testPool(poolId)?.factory;
   const action = useCoverageAction(account);
   const [capital, setCapital] = useState("100");
   const [days, setDays] = useState(30);
@@ -93,6 +95,7 @@ export function CoverageFunding({ account, onConnect, lower, upper }: {
   const fund = () => action.run(async (owner) => {
     if (!valid || !data?.configured || error) throw new Error("Enter valid terms and wait for the live coverage connection.");
     const value = parseUnits(capital, 6);
+    if (!RANGE_FACTORY) throw new Error("Select a deployed pool first.");
     await action.approve(owner, RANGE_FACTORY, value);
     action.setStep("Fund this range in your wallet…");
     await action.confirm(await injectedClient().writeContract({ account: owner, address: RANGE_FACTORY,
@@ -119,16 +122,16 @@ export function CoverageFunding({ account, onConnect, lower, upper }: {
     </div></Card>;
 }
 
-export function CoverageRequestForm({ account, days, feeTarget, maximumTarget, refreshKey }: {
-  account: string | null; days: number; feeTarget?: number; maximumTarget?: number; refreshKey: number;
+export function CoverageRequestForm({ poolId, account, days, feeTarget, maximumTarget, refreshKey }: {
+  poolId?: string; account: string | null; days: number; feeTarget?: number; maximumTarget?: number; refreshKey: number;
 }) {
-  const { data, error } = useCoverage();
+  const { data, error } = useCoverage(poolId);
   const action = useCoverageAction(account);
   const [chosen, setChosen] = useState("");
   const owned = data?.positions.filter((position) => same(position.owner, account)) ?? [];
   const selected = owned.find((position) => position.tokenId === chosen) ?? owned.at(-1);
   const inRange = !!selected && !!data && data.currentTick >= selected.tickLower && data.currentTick < selected.tickUpper;
-  const availableOffers = selected && feeTarget ? data?.offers.filter((offer) => !offer.closed
+  const availableOffers = selected && feeTarget ? data?.offers.filter((offer) => offer.poolId === selected.poolId && !offer.closed
     && !same(offer.owner, account) && offer.tickLower === selected.tickLower && offer.tickUpper === selected.tickUpper
     && offer.duration === days * 86400 && BigInt(offer.available) >= parseUnits(feeTarget.toFixed(6), 6)) ?? [] : [];
   const valid = !!feeTarget && !!maximumTarget && feeTarget > 0 && feeTarget <= maximumTarget && inRange && availableOffers.length > 0;
@@ -213,7 +216,7 @@ function CoveragePolicy({ request, offers, account, now, currentTick, disabled }
 function OfferRow({ offer, account, disabled, onChoose }: { offer: CoverageOffer; account: string | null; disabled: boolean; onChoose?: (offer: CoverageOffer) => void }) {
   const action = useCoverageAction(account);
   return <div className="cw-policy"><div className="cw-row"><strong>{offer.duration / 86400} days · {offer.premiumBps / 100}% premium</strong><span>{offer.closed ? "Closed to new coverage" : "Funded offer"}</span></div>
-    <p>{rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>
+    <p>{testPool(offer.poolId)?.symbol ?? "WETH"} / nUSDC · {rangeText(offer.tickLower, offer.tickUpper)} · {(offer.tickUpper - offer.tickLower) / 10} bins</p>
     <div className="cw-row"><span>Available <strong>{amount(offer.available)} nUSDC</strong></span><a href={`https://sepolia.basescan.org/address/${offer.address}`} target="_blank" rel="noreferrer">Contract <ExternalLink size={12} /></a></div>
     {onChoose && !offer.closed && BigInt(offer.available) > BigInt(0) && !same(offer.owner, account) && <Button variant="outline" onClick={() => onChoose(offer)}>Use these bins & duration</Button>}
     {same(offer.owner, account) && (!offer.closed || BigInt(offer.available) > BigInt(0)) && <Button variant="outline" disabled={action.busy || disabled} onClick={() => void action.run(async (owner) => {
@@ -224,8 +227,8 @@ function OfferRow({ offer, account, disabled, onChoose }: { offer: CoverageOffer
   </div>;
 }
 
-export function CoverageBoard({ account, role, portfolio = false, onChoose }: { account: string | null; role: "lp" | "underwriter"; portfolio?: boolean; onChoose?: (offer: CoverageOffer) => void }) {
-  const { data, error, now, refresh } = useCoverage();
+export function CoverageBoard({ account, role, portfolio = false, onChoose, poolId }: { account: string | null; role: "lp" | "underwriter"; portfolio?: boolean; poolId?: string; onChoose?: (offer: CoverageOffer) => void }) {
+  const { data, error, now, refresh } = useCoverage(poolId);
   const offers = data?.offers.filter((offer) => !portfolio || same(offer.owner, account)) ?? [];
   const mine = new Set(data?.offers.filter((offer) => same(offer.owner, account)).map((offer) => offer.address.toLowerCase()));
   const requests = data?.requests.filter((request) => role === "lp" ? same(request.lp, account)
@@ -238,7 +241,7 @@ export function CoverageBoard({ account, role, portfolio = false, onChoose }: { 
         {offers.map((offer) => <OfferRow key={offer.address} offer={offer} account={account} disabled={!!error} onChoose={onChoose} />)}
         <h3>{role === "lp" ? "Your coverage requests" : "LP requests and policies"}</h3>
         {!requests.length && <p>{account ? "No matching requests yet." : "Connect a wallet to view your requests."}</p>}
-        {requests.map((request) => <CoveragePolicy key={request.id} request={request} offers={data.offers} account={account} now={now} currentTick={data.currentTick} disabled={!!error} />)}
+        {requests.map((request) => <CoveragePolicy key={request.id} request={request} offers={data.offers} account={account} now={now} currentTick={data.poolTicks[request.poolId] ?? data.currentTick} disabled={!!error} />)}
       </>}
     </div></Card>;
 }

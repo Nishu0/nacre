@@ -5,6 +5,8 @@ import { backtest, feeRequestPreview, indicativeQuotes } from "./backtest";
 import { getObservations, openDb, seedDb } from "./db";
 import { POOLS, type PoolId, type Snapshot } from "./market-data";
 import { coverageSnapshot } from "./coverage";
+import { TEST_POOLS, TEST_WETH_POOL, testPool } from "../../frontend/src/lib/test-pools";
+import { readAtMintBlock } from "./position-registration";
 import { getHyperliquidHistory, type PriceHistory } from "./hyperliquid";
 import { getLivePrices, type LivePrices } from "./live-prices";
 import { buildRiskAnalysis } from "./risk-analysis";
@@ -84,10 +86,11 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     }));
   });
 
-  app.get<{ Querystring: { fresh?: string } }>("/api/coverage", async (request, reply) => {
+  app.get<{ Querystring: { fresh?: string; poolId?: string } }>("/api/coverage", async (request, reply) => {
+    if (request.query.poolId && !testPool(request.query.poolId)) return reply.code(400).send({ error: "Unknown coverage pool" });
     try {
       const rows = db.query("SELECT token_id FROM market_chain_positions").all() as { token_id: string }[];
-      return await coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1");
+      return await coverageSnapshot(rows.map((row) => row.token_id), request.query.fresh === "1", request.query.poolId);
     } catch (error) {
       app.log.error(error, "Coverage chain read failed");
       return reply.code(503).send({ error: "Could not read coverage from Base Sepolia. Please retry." });
@@ -175,12 +178,6 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
       if (!row) return reply.code(404).send({ error: "Unknown market" });
       const market = presentMarket(db, row);
       if (market.deployment) return { market };
-      if (!market.funded || !market.inRange) {
-        return reply.code(409).send({ error: "Both funding targets and an in-range tick are required before launch." });
-      }
-      if (db.query("SELECT market_id FROM market_deployments LIMIT 1").get()) {
-        return reply.code(409).send({ error: "The fixed WETH / nUSDC hook pool has already been assigned to another market." });
-      }
       const txHash = request.body?.txHash;
       if (!txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
         return reply.code(400).send({ error: "A confirmed transaction hash is required." });
@@ -194,7 +191,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
           throw new Error("This is not a successful pool launch transaction.");
         }
         const launched = receipt.logs.find((log) => {
-          if (log.address.toLowerCase() !== LAUNCHER.toLowerCase()) return false;
+          if (!TEST_POOLS.some((pool) => pool.launcher.toLowerCase() === log.address.toLowerCase())) return false;
           try {
             const decoded = decodeEventLog({ abi: launchEvents, data: log.data, topics: log.topics });
             return decoded.eventName === "PoolLaunched" && decoded.args.admin.toLowerCase() === ADMIN.toLowerCase();
@@ -203,6 +200,17 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         if (!launched) throw new Error("The transaction has no Nacre pool launch event.");
         const decoded = decodeEventLog({ abi: launchEvents, data: launched.data, topics: launched.topics });
         const poolId = decoded.args.poolId;
+        if (!TEST_POOLS.some((pool) => pool.poolId === poolId && pool.launcher.toLowerCase() === launched.address.toLowerCase())) {
+          throw new Error("Unrecognized pool deployment.");
+        }
+        // The test-WETH bootstrap initializes its immutable pair in its constructor.
+        // Its verified event proves initialization without inventing sandbox funding.
+        if (poolId !== TEST_WETH_POOL && (!market.funded || !market.inRange)) {
+          throw new Error("Both funding targets and an in-range tick are required before launch.");
+        }
+        if (db.query("SELECT market_id FROM market_deployments WHERE pool_id = ?").get(poolId)) {
+          throw new Error("This pool has already been assigned to a market.");
+        }
         db.prepare("INSERT INTO market_deployments VALUES (?, ?, ?, ?)")
           .run(row.id, txHash, poolId, new Date().toISOString());
         return { market: presentMarket(db, row) };
@@ -236,14 +244,14 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         });
         if (!mint) throw new Error("No PositionManager NFT mint to this wallet was found.");
         const tokenId = decodeEventLog({ abi: positionEvents, data: mint.data, topics: mint.topics }).args.tokenId;
-        const [owner, [key]] = await Promise.all([
+        const [owner, [key]] = await readAtMintBlock(receipt.blockNumber, (blockNumber) => Promise.all([
           chainClient.readContract({ address: POSITION_MANAGER, abi: positionReads,
-            functionName: "ownerOf", args: [tokenId] }),
+            functionName: "ownerOf", args: [tokenId], blockNumber }),
           chainClient.readContract({ address: POSITION_MANAGER, abi: positionReads,
-            functionName: "getPoolAndPositionInfo", args: [tokenId] }),
-        ]);
+            functionName: "getPoolAndPositionInfo", args: [tokenId], blockNumber }),
+        ]));
         if (owner.toLowerCase() !== account.toLowerCase()
-          || key.currency0.toLowerCase() !== WETH.toLowerCase()
+          || key.currency0.toLowerCase() !== (testPool(presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toLowerCase()
           || key.currency1.toLowerCase() !== TEST_USDC.toLowerCase()
           || key.hooks.toLowerCase() !== HOOK.toLowerCase()
           || key.fee !== 500 || key.tickSpacing !== 10) {
@@ -261,7 +269,7 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
         db.prepare(`INSERT OR IGNORE INTO market_chain_positions
           (token_id, market_id, owner, tx_hash, weth_raw, usdc_raw, minted_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
           .run(tokenId.toString(), market.id, account.toLowerCase(), txHash,
-            transferred(WETH).toString(), transferred(TEST_USDC).toString(), new Date().toISOString());
+            transferred(testPool(presentMarket(db, market).deployment?.poolId)?.weth ?? WETH).toString(), transferred(TEST_USDC).toString(), new Date().toISOString());
         return { tokenId: tokenId.toString(), txHash, marketId: market.id };
       } catch (reason) {
         return reply.code(409).send({ error: reason instanceof Error ? reason.message : "Could not verify position mint." });
@@ -277,15 +285,16 @@ export function buildApp(databasePath?: string, priceProvider: () => Promise<Liv
     if (marketId && !getMarket(db, marketId)) {
       return reply.code(404).send({ error: "Unknown market." });
     }
-    const rows = db.query(`SELECT token_id, market_id, tx_hash, weth_raw, usdc_raw, minted_at
-      FROM market_chain_positions
-      WHERE (? IS NULL OR owner = ?) AND (? IS NULL OR market_id = ?)
-      ORDER BY minted_at DESC`).all(account?.toLowerCase() ?? null, account?.toLowerCase() ?? null,
+    const rows = db.query(`SELECT p.token_id, p.market_id, p.tx_hash, p.weth_raw, p.usdc_raw, p.minted_at, d.pool_id
+      FROM market_chain_positions p LEFT JOIN market_deployments d ON d.market_id = p.market_id
+      WHERE (? IS NULL OR p.owner = ?) AND (? IS NULL OR p.market_id = ?)
+      ORDER BY p.minted_at DESC`).all(account?.toLowerCase() ?? null, account?.toLowerCase() ?? null,
       marketId ?? null, marketId ?? null) as {
-      token_id: string; market_id: string; tx_hash: string;
+      token_id: string; market_id: string; tx_hash: string; pool_id: string;
       weth_raw: string; usdc_raw: string; minted_at: string;
     }[];
     return { positions: rows.map((row) => ({ tokenId: row.token_id, marketId: row.market_id,
+      wethSymbol: testPool(row.pool_id)?.symbol ?? "WETH", poolId: row.pool_id,
       txHash: row.tx_hash, wethRaw: row.weth_raw, usdcRaw: row.usdc_raw, mintedAt: row.minted_at })) };
   });
 

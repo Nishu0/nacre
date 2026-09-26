@@ -13,11 +13,12 @@ import { PoolPriceChart } from "@/components/pool-price-chart";
 import { PoolRiskAnalysis, type RiskReport } from "@/components/pool-risk-analysis";
 import { CoverageFunding, CoverageRequestForm, CoverageBoard, CoverageStats } from "@/components/coverage-workspace";
 import { preparePositionMint, positionMintError } from "@/lib/position-mint";
+import { testPool, TEST_WETH_POOL } from "@/lib/test-pools";
 import { tickPrice } from "@/lib/coverage-contracts";
 import { useHyperliquidPrice } from "@/lib/use-hyperliquid-price";
 import { PoolRangeEditor } from "@/components/pool-range-editor";
 import { baseClient, basescanTx, ensureBaseSepolia, erc20Abi, injectedClient, mintParameters,
-  NACRE_TEST_USDC, BASE_WETH, UNISWAP_PERMIT2,
+  NACRE_TEST_USDC, BASE_WETH as CANONICAL_WETH, UNISWAP_PERMIT2,
   UNISWAP_POSITION_MANAGER, UNISWAP_STATE_VIEW, permit2Abi,
   stateViewAbi, wethAbi, sqrtPriceX96ToWethUsd } from "@/lib/nacre-chain";
 
@@ -45,7 +46,7 @@ type FeePreview = {
   suggestedFeeTargetUsd: number; feeTargetUsd: number; indicativePremiumUsd: number;
   method: string;
 };
-type ChainPosition = { tokenId: string; marketId: string; txHash: string; wethRaw: string; usdcRaw: string; mintedAt: string };
+type ChainPosition = { wethSymbol: string; poolId: string; tokenId: string; marketId: string; txHash: string; wethRaw: string; usdcRaw: string; mintedAt: string };
 const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 const unixSeconds = () => Math.floor(Date.now() / 1000);
 
@@ -96,6 +97,11 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   const [mintConfirmed, setMintConfirmed] = useState(false);
   const [mintSaved, setMintSaved] = useState(false);
   const selected = markets.find((market) => market.id === selectedId);
+  const poolConfig = testPool(selected?.deployment?.poolId);
+  const BASE_WETH = poolConfig?.weth ?? CANONICAL_WETH;
+  const wethSymbol = poolConfig?.symbol ?? "WETH";
+  const isTestWeth = selected?.deployment?.poolId === TEST_WETH_POOL;
+  const faucetMarket = markets.find((market) => market.deployment?.poolId === TEST_WETH_POOL);
   const deployedPoolId = selected?.deployment?.poolId;
   const selectedChainPositions = chainPositions.filter((position) => position.marketId === selectedId);
   const selectedWeth = selectedChainPositions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
@@ -133,7 +139,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     ]).then(([weth, usdc]) => { if (active) { setWethBalance(weth); setUsdcBalance(usdc); } })
       .catch(() => { if (active) { setWethBalance(null); setUsdcBalance(null); } });
     return () => { active = false; };
-  }, [marketId, walletAccount, tokenRefresh]);
+  }, [marketId, walletAccount, tokenRefresh, BASE_WETH]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -215,7 +221,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   }, [marketId, selectedId, role, deposit, lower, upper]);
 
   async function wrapWeth() {
-    if (!walletAccount || !quote || mintBusy) return;
+    if (!walletAccount || !quote || mintBusy || isTestWeth) return;
     const needed = parseUnits(quote.split.ethAmount.toFixed(8), 18);
     const deficit = needed > (wethBalance ?? BigInt(0)) ? needed - (wethBalance ?? BigInt(0)) : BigInt(0);
     if (!deficit) return;
@@ -235,7 +241,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
   async function approveForPosition(token: Address, amount: bigint, account: Address) {
     if (amount <= BigInt(0)) return;
     const wallet = injectedClient();
-    const tokenLabel = token.toLowerCase() === BASE_WETH.toLowerCase() ? "WETH" : "nUSDC";
+    const tokenLabel = token.toLowerCase() === BASE_WETH.toLowerCase() ? wethSymbol : "nUSDC";
     const tokenAllowance = await baseClient.readContract({ address: token, abi: erc20Abi,
       functionName: "allowance", args: [account, UNISWAP_PERMIT2] });
     if (tokenAllowance < amount) {
@@ -271,11 +277,11 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
         baseClient.readContract({ address: UNISWAP_STATE_VIEW, abi: stateViewAbi,
           functionName: "getSlot0", args: [selected.deployment.poolId as Hex] }),
       ]);
-      if (weth < wethAmount) throw new Error(`Wrap ${formatUnits(wethAmount - weth, 18)} test ETH into WETH first.`);
+      if (weth < wethAmount) throw new Error(isTestWeth ? "Claim free nWETH from the faucet first." : `Wrap ${formatUnits(wethAmount - weth, 18)} test ETH into WETH first.`);
       if (usdc < usdcAmount) throw new Error(`Claim test nUSDC from the faucet first. Required: ${formatUnits(usdcAmount, 6)}.`);
       if (slot[0] === BigInt(0)) throw new Error("The Uniswap pool has not been initialized.");
       const params = mintParameters({ sqrtPriceX96: slot[0], lowerPriceUsd: lower,
-        upperPriceUsd: upper, wethAmount, usdcAmount, recipient: account });
+        upperPriceUsd: upper, wethAmount, usdcAmount, recipient: account, wethToken: BASE_WETH });
       await approveForPosition(BASE_WETH, wethAmount, account);
       await approveForPosition(NACRE_TEST_USDC, usdcAmount, account);
       setMintStep("Estimating gas and checking your position…");
@@ -316,7 +322,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
     {!marketId && !markets.length && <Card className="kd-card kd-empty-panel"><div className="kd-empty-panel-inner"><div className="kd-empty-art"><Droplets size={28} strokeWidth={1.4} /></div><Badge variant="outline">POOL DIRECTORY</Badge><h2>No Nacre markets yet</h2><p>Create a market proposal to define a pair, range, and launch targets.</p><Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={15} /> {hasPoolDraft ? "Resume saved draft" : "Create first pool"}</Link></Button></div></Card>}
     {!marketId && !!markets.length && <>
       <div className="mw-directory-summary"><span>MARKETS <strong>{markets.length}</strong></span><span>DEPLOYED <strong>{markets.filter((market) => market.deployment).length}</strong></span><span>LIQUIDITY POSITIONS <strong>{chainPositions.length}</strong></span></div>
-      <div className="mw-directory-header"><h3>Available markets</h3><span>BASE SEPOLIA · WETH / nUSDC</span></div>
+      <div className="mw-directory-header"><h3>Available markets</h3><span>BASE SEPOLIA · TEST POOLS</span></div>
       <div className="mw-directory-grid">{markets.map((market) => {
         const minted = chainPositions.filter((position) => position.marketId === market.id);
         const usdcAtMint = minted.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
@@ -334,10 +340,10 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
         <div className="kd-card-heading"><h2><Activity size={16} /> Pool overview</h2><Badge variant="outline">{selected.feeTier} FEE · {selected.deployment ? "BASE SEPOLIA" : "PROPOSAL"}</Badge></div>
         <div className="mw-overview-wide-inner">
           <div className="mw-overview-tiles">
-            <div><span>ON-CHAIN POOL PRICE</span><strong>{poolSlot ? usd(poolSlot.priceUsd) : "—"}</strong><small>{poolSlot ? `per WETH · tick ${poolSlot.tick}` : "Available after deployment"}</small></div>
+            <div><span>ON-CHAIN POOL PRICE</span><strong>{poolSlot ? usd(poolSlot.priceUsd) : "—"}</strong><small>{poolSlot ? `per ${wethSymbol} · tick ${poolSlot.tick}` : "Available after deployment"}</small></div>
             <div><span>{liveError ? "LAST ETH PERP / USDC" : "LIVE ETH PERP / USDC"}</span><strong>{livePrices ? usd(livePrices.wethUsdc) : "—"}</strong><small>{livePrices ? `${livePrices.source} · ${new Date(livePrices.assets.WETH.publishedAt).toLocaleTimeString()}` : liveError ? "Live feed unavailable" : "Connecting live feed…"}</small></div>
             <div><span>LIQUIDITY POSITIONS</span><strong>{selectedChainPositions.length}</strong><small>Verified Base Sepolia mints</small></div>
-            <div><span>WETH PROVIDED</span><strong>{Number(formatUnits(selectedWeth, 18)).toFixed(5)}</strong><small>At mint</small></div>
+            <div><span>{wethSymbol} PROVIDED</span><strong>{Number(formatUnits(selectedWeth, 18)).toFixed(5)}</strong><small>At mint</small></div>
             <div><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(selectedUsdc, 6)).toFixed(2)}</strong><small>At mint</small></div>
           </div>
           <div className="mw-overview-range">
@@ -351,7 +357,7 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
       <div className="mw-market-layout">
       <section className="mw-market-center" aria-label="Price and funding">
         <PoolPriceChart points={oraclePoints} livePrice={livePrices?.wethUsdc} publishedAt={livePrices?.assets.WETH.publishedAt} source={livePrices?.source} lower={lower} upper={upper} current={poolSlot?.priceUsd ?? selected.priceUsd} stale={liveError} />
-        {selected.deployment && <CoverageBoard account={walletAccount} role={role} onChoose={role === "lp" ? (offer) => {
+        {selected.deployment && <CoverageBoard poolId={selected.deployment.poolId} account={walletAccount} role={role} onChoose={role === "lp" ? (offer) => {
           setSelectedRange({ marketId: selectedId, lower: tickPrice(offer.tickLower), upper: tickPrice(offer.tickUpper) });
           setCoverageDays(offer.duration / 86400); setFeeTargetInput("");
         } : undefined} />}
@@ -380,12 +386,12 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
               upper: Number(Math.min(selected.upperPriceUsd, referencePrice + halfWidth).toFixed(2)) });
           } : undefined} />
         {role === "lp" ? <Card className="kd-card mw-trade-card">
-          <div className="kd-card-heading"><h2><PiggyBank size={16} /> Create LP position</h2><span>RANGE · WETH + nUSDC</span></div>
+          <div className="kd-card-heading"><h2><PiggyBank size={16} /> Create LP position</h2><span>RANGE · {wethSymbol} + nUSDC</span></div>
           <div className="mw-trade-inner">
             <p>Choose an amount and position range. The token split is modeled for this market; fee targets below use historical pool-level data.</p>
             <AmountField label="nUSDC to model (USD equivalent)" value={deposit} onChange={(value) => { setDeposit(value); setFeeTargetInput(""); }} min={100} />
             {quote && <>
-              <div className="mw-split"><div><small>WETH required</small><strong>{usd(quote.split.swapUsd)}</strong><span>{quote.split.ethAmount} WETH</span></div><div><small>nUSDC required</small><strong>{usd(quote.split.usdcAmount)}</strong><span>{(100 - quote.split.ethPercent).toFixed(1)}% of deposit</span></div></div>
+              <div className="mw-split"><div><small>{wethSymbol} required</small><strong>{usd(quote.split.swapUsd)}</strong><span>{quote.split.ethAmount} {wethSymbol}</span></div><div><small>nUSDC required</small><strong>{usd(quote.split.usdcAmount)}</strong><span>{(100 - quote.split.ethPercent).toFixed(1)}% of deposit</span></div></div>
             </>}
             <div className="mw-fee-request">
               <div className="mw-fee-request-head"><strong>Minimum fee target</strong><span>HISTORICAL PREVIEW</span></div>
@@ -399,22 +405,23 @@ export function WorkspacePools({ marketId, role, onRoleChange, walletAccount, on
             {(!walletAccount || (quote && usdcBalance !== null && usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6))) && <Button asChild variant="outline" className="mw-faucet-link"><Link href="/dashboard/faucet">Get test nUSDC for liquidity <ArrowRight size={14} /></Link></Button>}
             <div className="mw-onchain-lp">
               <div><strong>Mint a real testnet LP position</strong><span>{selected.deployment ? "Uniswap v4 · Base Sepolia" : "Available after admin pool deployment"}</span></div>
-              {walletAccount && quote && <div className="mw-token-balance"><span>Need {quote.split.ethAmount} WETH <small>Have {wethBalance === null ? "…" : Number(formatUnits(wethBalance, 18)).toFixed(5)}</small></span><span>Need {usd(quote.split.usdcAmount)} nUSDC <small>Have {usdcBalance === null ? "…" : Number(formatUnits(usdcBalance, 6)).toFixed(2)}</small></span></div>}
+              {walletAccount && quote && <div className="mw-token-balance"><span>Need {quote.split.ethAmount} {wethSymbol} <small>Have {wethBalance === null ? "…" : Number(formatUnits(wethBalance, 18)).toFixed(5)}</small></span><span>Need {usd(quote.split.usdcAmount)} nUSDC <small>Have {usdcBalance === null ? "…" : Number(formatUnits(usdcBalance, 6)).toFixed(2)}</small></span></div>}
               {selected.deployment && !walletAccount && <Button variant="outline" onClick={() => void onConnect()}>Connect wallet to mint</Button>}
               {selected.deployment && walletAccount && quote && <>
-                {wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && <Button variant="outline" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap required test ETH to WETH</Button>}
+                {wethBalance !== null && wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) && (isTestWeth ? <Button asChild variant="outline"><Link href="/dashboard/faucet">Claim 1 nWETH from the faucet <ArrowRight size={14} /></Link></Button> : <Button variant="outline" disabled={mintBusy} onClick={() => void wrapWeth()}>Wrap required test ETH to WETH</Button>)}
                 <Button className="kd-apply-button" disabled={mintBusy || mintConfirmed || wethBalance === null || usdcBalance === null || wethBalance < parseUnits(quote.split.ethAmount.toFixed(8), 18) || usdcBalance < parseUnits(quote.split.usdcAmount.toFixed(6), 6)} onClick={() => void mintOnChain()}>{mintBusy ? mintStep || "Confirming…" : mintConfirmed ? "Position minted" : "Mint position on Base Sepolia"} <ArrowRight size={14} /></Button>
               </>}
               {mintStep && !mintBusy && <small>{mintStep}</small>}{mintError && <p role="alert" className="mw-premium-warning">{mintError}</p>}
               {mintHash && <a href={basescanTx(mintHash)} target="_blank" rel="noreferrer">View mint transaction <ExternalLink size={13} /></a>}
               {mintConfirmed && !mintSaved && <Button variant="outline" disabled={mintBusy} onClick={() => void retryPositionRegistration()}>Retry portfolio registration</Button>}
               {mintTokenId && <strong>Uniswap position #{mintTokenId}</strong>}
-              <small>A live mint needs both tokens. The faucet supplies nUSDC; wrap Base Sepolia ETH for WETH. No SwapVM route is active yet.</small>
+              <small>{isTestWeth ? "Claim both nWETH and nUSDC from the faucet, then approve and mint. Only network gas requires Base Sepolia ETH." : "This original pool uses ETH-backed WETH. For free test tokens, use the nWETH / nUSDC pool in the directory."}</small>
+              {!isTestWeth && faucetMarket && <Button asChild variant="outline"><Link href={`/dashboard/pools/${faucetMarket.id}`}>Use the free nWETH pool <ArrowRight size={14} /></Link></Button>}
             </div>
-            <CoverageRequestForm key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
+            <CoverageRequestForm poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} days={coverageDays}
               feeTarget={feePreview?.feeTargetUsd} maximumTarget={feePreview?.maximumFeeTargetUsd} refreshKey={tokenRefresh} />
           </div>
-        </Card> : <><CoverageFunding key={walletAccount ?? "disconnected"} account={walletAccount} onConnect={onConnect} lower={lower} upper={upper} /><details className="cw-calculator"><summary>Historical risk calculator</summary><Card className="kd-card mw-trade-card">
+        </Card> : <><CoverageFunding poolId={selected.deployment?.poolId} key={walletAccount ?? "disconnected"} account={walletAccount} onConnect={onConnect} lower={lower} upper={upper} /><details className="cw-calculator"><summary>Historical risk calculator</summary><Card className="kd-card mw-trade-card">
           <div className="kd-card-heading"><h2><ShieldCheck size={16} /> Backtest estimates</h2><span>RESEARCH</span></div>
           <div className="mw-trade-inner">
             <p>Model how much capacity you would back for this range, then set your premium for the example LP position.</p>
@@ -463,7 +470,8 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
     return () => { active = false; };
   }, [walletAccount, role]);
 
-  const wethProvided = positions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
+  const nwethProvided = positions.filter((position) => position.wethSymbol === "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
+  const wethProvided = positions.filter((position) => position.wethSymbol !== "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const usdcProvided = positions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
 
   if (role === "underwriter") {
@@ -477,14 +485,15 @@ export function WorkspacePortfolio({ role, walletAccount, onConnect }: {
     {!walletAccount ? <Card className="kd-card mw-panel"><div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>Connect your wallet</h2><p>Your WETH/nUSDC positions will appear here after they are minted and verified.</p><Button className="kd-apply-button" onClick={() => void onConnect()}>Connect wallet <ArrowRight size={14} /></Button></div></Card> : <>
       <div className="mw-stats">
         <Card className="kd-card"><div className="mw-stat"><span>LIQUIDITY POSITIONS</span><strong>{positions.length}</strong><small>Verified Base Sepolia mints</small></div></Card>
-        <Card className="kd-card"><div className="mw-stat"><span>WETH PROVIDED</span><strong>{Number(formatUnits(wethProvided, 18)).toFixed(5)}</strong><small>At mint</small></div></Card>
+        <Card className="kd-card"><div className="mw-stat"><span>nWETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(nwethProvided, 18)).toFixed(5) : "—"}</strong><small>Faucet token · at mint</small></div></Card>
+      <Card className="kd-card"><div className="mw-stat"><span>WETH PROVIDED</span><strong>{Number(formatUnits(wethProvided, 18)).toFixed(5)}</strong><small>At mint</small></div></Card>
         <Card className="kd-card"><div className="mw-stat"><span>nUSDC PROVIDED</span><strong>{Number(formatUnits(usdcProvided, 6)).toFixed(2)}</strong><small>At mint</small></div></Card>
       </div>
       {error && <div className="mw-message is-error" role="alert">{error}</div>}
       <Card className="kd-card mw-panel"><div className="kd-card-heading"><h2><PiggyBank size={16} /> Your LP positions</h2><span>{positions.length} ON-CHAIN</span></div>
         <div className="mw-position-list">{loading ? <div className="mw-portfolio-empty"><p>Loading your positions…</p></div> : positions.length ? positions.map((position) => <div className="mw-position" key={position.tokenId}>
-          <TokenPairIcon pair="WETH / nUSDC" size="small" />
-          <div><strong>Uniswap position #{position.tokenId}</strong><small>{Number(formatUnits(BigInt(position.wethRaw), 18)).toFixed(5)} WETH + {Number(formatUnits(BigInt(position.usdcRaw), 6)).toFixed(2)} nUSDC · {new Date(position.mintedAt).toLocaleDateString()}</small></div>
+          <TokenPairIcon pair={`${position.wethSymbol} / nUSDC`} size="small" />
+          <div><strong>Uniswap position #{position.tokenId}</strong><small>{Number(formatUnits(BigInt(position.wethRaw), 18)).toFixed(5)} {position.wethSymbol} + {Number(formatUnits(BigInt(position.usdcRaw), 6)).toFixed(2)} nUSDC · {new Date(position.mintedAt).toLocaleDateString()}</small></div>
           <Button asChild variant="outline" size="sm"><a href={basescanTx(position.txHash)} target="_blank" rel="noreferrer">BaseScan <ExternalLink size={13} /></a></Button>
         </div>) : <div className="mw-portfolio-empty"><PiggyBank size={24} /><h2>No on-chain positions yet</h2><p>Mint a WETH/nUSDC position in the deployed pool to see it here.</p><Button asChild variant="outline"><Link href="/dashboard/pools">View pools <ArrowRight size={14} /></Link></Button></div>}</div>
       </Card>
@@ -514,7 +523,8 @@ export function WorkspaceOverview({ role, walletAccount, onConnect }: {
     return () => { active = false; };
   }, [walletAccount, role]);
 
-  const wethProvided = positions.reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
+  const nwethProvided = positions.filter((position) => position.wethSymbol === "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
+  const wethProvided = positions.filter((position) => position.wethSymbol !== "nWETH").reduce((sum, position) => sum + BigInt(position.wethRaw), BigInt(0));
   const usdcProvided = positions.reduce((sum, position) => sum + BigInt(position.usdcRaw), BigInt(0));
 
   return <div className="mw-role-overview">
@@ -522,6 +532,7 @@ export function WorkspaceOverview({ role, walletAccount, onConnect }: {
     {error && <div className="mw-message is-error" role="alert">{error}</div>}
     <div className="mw-stats mw-role-stats">{role === "lp" ? <>
       <Card className="kd-card"><div className="mw-stat"><span>LIQUIDITY POSITIONS</span><strong>{walletAccount ? positions.length : "—"}</strong><small>Verified Base Sepolia mints</small></div></Card>
+      <Card className="kd-card"><div className="mw-stat"><span>nWETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(nwethProvided, 18)).toFixed(5) : "—"}</strong><small>Faucet token · at mint</small></div></Card>
       <Card className="kd-card"><div className="mw-stat"><span>WETH PROVIDED</span><strong>{walletAccount ? Number(formatUnits(wethProvided, 18)).toFixed(5) : "—"}</strong><small>At mint</small></div></Card>
       <Card className="kd-card"><div className="mw-stat"><span>nUSDC PROVIDED</span><strong>{walletAccount ? Number(formatUnits(usdcProvided, 6)).toFixed(2) : "—"}</strong><small>At mint</small></div></Card>
     </> : <CoverageStats account={walletAccount} />}</div>

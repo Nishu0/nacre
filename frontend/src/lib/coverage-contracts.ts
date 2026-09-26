@@ -44,17 +44,20 @@ export const coverageNftAbi = parseAbi([
   `function getPoolAndPositionInfo(uint256) view returns (${key} poolKey,uint256 info)`,
 ]);
 export type CoverageOffer = {
+  poolId: string;
   address: `0x${string}`; owner: string; tickLower: number; tickUpper: number;
   duration: number; premiumBps: number; deposited: string; withdrawn: string;
   available: string; closed: boolean;
 };
 export type CoverageRequest = {
+  poolId: string;
   id: string; lp: string; underwriter: string; tokenId: string; feeFloor: string;
   payoutCap: string; premium: string; quoteDeadline: number; startAt: number;
   endAt: number; duration: number; status: number; tickLower: number; tickUpper: number;
 };
-export type CoveragePosition = { tokenId: string; owner: string; tickLower: number; tickUpper: number };
+export type CoveragePosition = { poolId: string; tokenId: string; owner: string; tickLower: number; tickUpper: number };
 export type CoverageSnapshot = {
+  poolTicks: Record<string, number>;
   configured: boolean; blockNumber: string; currentTick: number; offers: CoverageOffer[];
   requests: CoverageRequest[]; positions: CoveragePosition[]; reserved: string;
 };

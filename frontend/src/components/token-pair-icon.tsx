@@ -6,7 +6,7 @@ type TokenSymbol = "ETH" | "USDC" | "USDT";
 
 function normalizeSymbol(value: string): TokenSymbol | null {
   const symbol = value.trim().toUpperCase();
-  if (symbol === "WETH" || symbol === "ETH") return "ETH";
+  if (symbol === "WETH" || symbol === "NWETH" || symbol === "ETH") return "ETH";
   if (symbol === "USDC" || symbol === "NUSDC") return "USDC";
   if (symbol === "USDT") return "USDT";
   return null;

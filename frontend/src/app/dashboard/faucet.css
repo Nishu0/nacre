@@ -30,3 +30,5 @@
 .nf-contract-link:hover { color: #2d643d; text-decoration: underline; }
 .nf-contract-link:focus-visible { outline: 2px solid #568667; outline-offset: 3px; }
 @media (max-width: 760px) { .nf-grid { grid-template-columns: 1fr; } .nf-inner { padding: 17px; } }
+
+.nf-success { color: #315e3d; font-size: 12px; line-height: 1.6; }

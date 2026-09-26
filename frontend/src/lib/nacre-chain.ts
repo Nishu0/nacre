@@ -103,8 +103,10 @@ function approximateSqrtAtTick(tick: number): bigint {
 
 export function mintParameters(input: {
   sqrtPriceX96: bigint; lowerPriceUsd: number; upperPriceUsd: number;
-  wethAmount: bigint; usdcAmount: bigint; recipient: Address;
+  wethAmount: bigint; usdcAmount: bigint; recipient: Address; wethToken?: Address;
 }) {
+  const wethToken = input.wethToken ?? BASE_WETH;
+  if (BigInt(wethToken) >= BigInt(NACRE_TEST_USDC)) throw new Error("Unsupported pool token ordering.");
   const lowerTick = priceToRawTick(input.lowerPriceUsd);
   const upperTick = priceToRawTick(input.upperPriceUsd);
   if (lowerTick >= upperTick) throw new Error("Position range is narrower than one Uniswap tick spacing.");
@@ -125,8 +127,8 @@ export function mintParameters(input: {
   liquidity = liquidity * BigInt(99) / BigInt(100);
   if (liquidity <= BigInt(0)) throw new Error("Amount is too small for this position range.");
   const wethFirst = BigInt(BASE_WETH.toLowerCase()) < BigInt(NACRE_TEST_USDC.toLowerCase());
-  const currency0 = wethFirst ? BASE_WETH : NACRE_TEST_USDC;
-  const currency1 = wethFirst ? NACRE_TEST_USDC : BASE_WETH;
+  const currency0 = wethFirst ? wethToken : NACRE_TEST_USDC;
+  const currency1 = wethFirst ? NACRE_TEST_USDC : wethToken;
   const amount0Max = wethFirst ? input.wethAmount : input.usdcAmount;
   const amount1Max = wethFirst ? input.usdcAmount : input.wethAmount;
   const poolKey = { currency0, currency1, fee: 500, tickSpacing: 10, hooks: NACRE_HOOK };
