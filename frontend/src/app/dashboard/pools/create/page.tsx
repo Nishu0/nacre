@@ -3,7 +3,7 @@ import { NacreDashboard } from "@/components/nacre-dashboard";
 
 export const metadata: Metadata = {
   title: "Create pool — Nacre",
-  description: "Configure and review a Nacre sandbox pool draft.",
+  description: "Choose a coverage range, funding terms, and create a funded Nacre bid.",
 };
 
 export default function CreatePoolPage() {

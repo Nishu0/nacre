@@ -135,3 +135,25 @@
 .bw-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
 .bw-form-grid .mw-trade-inner { display: grid; gap: 18px; }
 @media (max-width: 900px) { .bw-form-grid { grid-template-columns: 1fr; } }
+
+/* Overview actions use explicit colors instead of the landing page theme. */
+.dashboard .kd-page-intro .kd-apply-button,
+.dashboard .mw-wallet-balances .kd-apply-button {
+  background: #294b34;
+  color: #fff;
+}
+.dashboard .kd-page-intro .kd-apply-button:hover,
+.dashboard .mw-wallet-balances .kd-apply-button:hover {
+  background: #1e3d29;
+  color: #fff;
+}
+.dashboard .mw-wallet-balances [data-slot="button"][data-variant="outline"] {
+  background: #fff;
+  color: #294b34;
+  border-color: #8eaf97;
+}
+.dashboard .mw-wallet-balances [data-slot="button"][data-variant="outline"]:hover {
+  background: #edf5ef;
+  color: #1e3d29;
+  border-color: #497957;
+}

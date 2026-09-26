@@ -6,7 +6,7 @@ import { Dialog, DropdownMenu } from "radix-ui";
 import {
   Activity, ArrowRight, ArrowUpRight, Bell, ChevronDown, CircleHelp,
   Compass, Database, ExternalLink, Layers3, LayoutGrid, LogOut, Menu,
-  PiggyBank, Droplets, DollarSign,
+  PiggyBank, Droplets, DollarSign, Plus,
   PanelLeftClose, PanelLeftOpen, RefreshCw, Search, ShieldCheck, Wallet, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WorkspacePortfolio, type WorkspaceRole } from "@/components/market-workspace";
+import { PoolBidCreateFlow } from "@/components/pool-bid-create-flow";
 import { BidWorkspace } from "@/components/bid-workspace";
 import { WorkspaceBalances } from "@/components/workspace-balances";
 import { TestUsdcFaucet } from "@/components/test-usdc-faucet";
@@ -56,7 +57,7 @@ const pageCopy: Record<DashboardView, { title: string; description: string }> = 
   overview: { title: "Build a fee floor market", description: "Explore historical fee yield, then follow the steps to launch a funded v4 protection pool." },
   pools: { title: "Coverage bids", description: "Underwriters fund ranges. Investors choose from available funded bids." },
   "pool-detail": { title: "Coverage bids", description: "Choose a funded range to get started." },
-  "pool-create": { title: "Coverage bids", description: "Underwriters set the available ranges and terms." },
+  "pool-create": { title: "Create pool", description: "Choose your coverage range, set funding terms, and review before creating." },
   portfolio: { title: "Portfolio", description: "Review verified Base Sepolia liquidity positions." },
   faucet: { title: "Test token faucet", description: "Claim nUSDC and nWETH for your Base Sepolia positions." },
   backtest: { title: "Fee backtest", description: "Compare historical Uniswap fee windows at your chosen capital size." },
@@ -242,9 +243,10 @@ export function NacreDashboard({ view = "overview", initialPoolId = "usdc-weth-0
     </aside>
 
     <main className="kd-main"><header className="kd-topbar"><div className="kd-breadcrumb"><button className="kd-mobile-menu" type="button" aria-label="Open navigation" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><LayoutGrid size={17} /><span>{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "Workspace" : "Research"}</span><span className="kd-breadcrumb-slash">/</span><strong>{view === "pool-detail" ? "Pools / Detail" : view === "pool-create" ? "Pools / Create" : roleNavLabel(view, role)}</strong></div><div className="kd-topbar-actions"><Badge variant="outline" className="kd-research-badge">{researchView ? "HISTORICAL DATA" : "NACRE WORKSPACE"}</Badge><DropdownMenu.Root><DropdownMenu.Trigger asChild><button type="button" className="kd-notification-button" aria-label="Notifications"><Bell size={17} /></button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="kd-account-menu kd-notification-menu" side="bottom" align="end" sideOffset={8}><p>NOTIFICATIONS</p><span>No pool or policy updates yet.</span></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root></div></header>
-      <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge></div>
+      <div className="kd-content"><div className="kd-page-intro"><div><h1>{view === "overview" ? role === "lp" ? "LP overview" : "Underwriter overview" : pageCopy[view].title} <span aria-hidden="true">✳</span></h1><p>{view === "overview" ? "Your wallet balances on Base Sepolia." : view === "portfolio" && role === "underwriter" ? "Review active on-chain coverage policies." : pageCopy[view].description}</p></div><div className="flex flex-wrap items-center gap-3"><Badge variant="outline" className="kd-no-live-badge">{["overview", "pools", "pool-create", "pool-detail", "portfolio", "faucet"].includes(view) ? "BASE SEPOLIA · DEMO" : "HISTORICAL RESEARCH"}</Badge>{view === "overview" && role === "underwriter" && <Button asChild className="kd-apply-button"><Link href="/dashboard/pools/create"><Plus size={16} /> Create pool</Link></Button>}</div></div>
         {view === "overview" && <WorkspaceBalances account={walletAccount} onConnect={connectWallet} />}
-        {["pools", "pool-detail", "pool-create"].includes(view) && <BidWorkspace key={`${role}:${walletAccount}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
+        {view === "pool-create" && <PoolBidCreateFlow account={walletAccount} onConnect={connectWallet} />}
+        {["pools", "pool-detail"].includes(view) && <BidWorkspace key={`${role}:${walletAccount}`} role={role} onRoleChange={changeRole} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "portfolio" && <WorkspacePortfolio role={role} walletAccount={walletAccount} onConnect={connectWallet} />}
         {view === "faucet" && <TestUsdcFaucet account={walletAccount} onConnect={connectWallet} />}
         {view === "launch" && <div className="kd-launch-page"><LaunchPath expanded /><Card className="kd-card kd-launch-aside"><div className="kd-card-heading"><h2><ShieldCheck size={17} /> Funding gate</h2><span>MARKET STATUS</span></div><div className="kd-launch-aside-inner"><span className="kd-launch-status">NOT FUNDED</span><h2>Both sides commit before a market opens.</h2><p>LP capital establishes the pool. Underwriter collateral backs the selected fee floor. Once both are committed, coverage can begin.</p><Link href="/dashboard/pools" className="kd-text-link">View pool directory <ArrowRight size={15} /></Link></div></Card></div>}

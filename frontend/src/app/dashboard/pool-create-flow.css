@@ -41,7 +41,7 @@
 .pcf-fixed-pair [data-slot=badge] { margin-left: auto; border-color: #d3e6d7; background: #f1f8f2; color: #5e8a68; font: 10px var(--font-geist-mono), monospace; }
 .pcf-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .pcf-field { display: grid; align-content: start; gap: 8px; min-width: 0; color: #425648; font-size: 12px; font-weight: 650; }
-.pcf-field input { height: 44px; border-color: #dde7df; border-radius: 8px; background: #fff; color: #294231; font-size: 14px; }
+.pcf-field input, .pcf-field select { height: 44px; border-color: #dde7df; border-radius: 8px; background: #fff; color: #294231; font-size: 14px; }
 .pcf-field input:focus-visible { border-color: #75a381; box-shadow: 0 0 0 3px #badbc24d; }
 .pcf-field small { color: #93a196; font-size: 11px; font-weight: 400; line-height: 1.4; }
 .pcf-oracle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; border: 1px solid #dbe9de; border-radius: 8px; background: #f5faf5; }
@@ -112,3 +112,5 @@
 @media (max-width: 920px) { .pcf-layout { grid-template-columns: 1fr; } .pcf-aside { grid-template-columns: 1fr 1fr; } .pcf-sandbox-note { grid-column: 1 / -1; } }
 @media (max-width: 680px) { .pcf-steps { gap: 4px; } .pcf-step { flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px 4px; } .pcf-step-icon { width: 34px; height: 34px; } .pcf-step strong { font-size: 11px; } .pcf-step small { display: none; } .pcf-field-grid, .pcf-funding-summary, .pcf-aside { grid-template-columns: 1fr; } .pcf-oracle-row { align-items: flex-start; flex-direction: column; } .pcf-card-heading, .pcf-card-body { padding-inline: 16px; } .pcf-topline { align-items: flex-start; } .pcf-topline > div { align-items: flex-end; flex-direction: column; } .pcf-topline > div > span { max-width: 155px; text-align: right; } .pcf-discard-confirm { align-items: flex-start; flex-wrap: wrap; } .pcf-discard-confirm > div { flex-basis: 100%; } .pcf-sandbox-note { grid-column: auto; } }
 @media (max-width: 410px) { .pcf-range-preview > div:first-child { align-items: flex-start; flex-direction: column; } .pcf-fixed-pair [data-slot=badge] { display: none; } .pcf-success { padding: 30px 18px; } }
+
+.pcf-field select { width: 100%; padding: 0 12px; border: 1px solid #dde7df; }

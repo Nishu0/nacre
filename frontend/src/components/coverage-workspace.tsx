@@ -25,7 +25,7 @@ function matches(offer: CoverageOffer, request: CoverageRequest) {
     && offer.duration === request.duration && BigInt(offer.available) >= BigInt(request.payoutCap)
     && !same(offer.owner, request.lp);
 }
-function useCoverageAction(account: string | null) {
+export function useCoverageAction(account: string | null) {
   const lock = useRef(false);
   const [step, setStep] = useState("");
   const [error, setError] = useState("");
